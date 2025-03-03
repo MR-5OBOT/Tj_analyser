@@ -3,13 +3,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# matplotlib setup
-plt.style.use("dark_background")
-plt.figure(figsize=(6, 6))
-
 
 def csv_reader(file_path):
-    df = pd.read_csv(file_path)
+    # df = pd.read_csv(file_path)
+    df = pd.read_excel(file_path)
     # df.info()
     # print(df.head())
     return df
@@ -106,10 +103,10 @@ def extra_stats(df):
     convert_risk = df["risk_percentage"].str.replace("%", "").astype(float)
     avg_risk = convert_risk.mean()
     # max dd
-    df['peak'] = df['balance'].cummax()  # Running max balance
-    df['drawdown'] = (df['peak'] - df['balance']) / df['peak']  # Drawdown fraction
-    max_dd_percent = df['drawdown'].max() * 100  # Max drawdown in %
-    
+    df["peak"] = df["balance"].cummax()  # Running max balance
+    df["drawdown"] = (df["peak"] - df["balance"]) / df["peak"]  # Drawdown fraction
+    max_dd_percent = df["drawdown"].max() * 100  # Max drawdown in %
+
     best_trade = df["profit_loss"].max()
     worst_trade = df["profit_loss"].min()
     avg_rr = df["rr"].mean()
@@ -125,8 +122,16 @@ def extra_stats(df):
     print()
 
 
+# data visualizations
+
+# matplotlib setup
+plt.style.use("dark_background")
+plt.figure(figsize=(6, 6))
+
+
 if __name__ == "__main__":
-    file_path = "data/the-lab-report-2024-December.csv"
+    # file_path = "data/the-lab-report-2024-December.csv"
+    file_path = "data/journals_for_data_analysis.xlsx"  # index_col=0
     df = csv_reader(file_path)
     overall_stats(df)
     day_of_week_stats(df)

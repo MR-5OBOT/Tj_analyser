@@ -3,5 +3,6 @@ seaborn
 numpy
 pandas
 # streamlit
-# openpyxl
+openpyxl
+xlsx2csv
 # plotly
