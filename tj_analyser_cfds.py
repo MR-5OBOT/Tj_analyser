@@ -8,12 +8,14 @@ def overall_stats(df):
     # Work on a copy to avoid modifying the original
     df_copy = df.copy()
 
-    wins = df['outcome'].value_counts()[['WIN']]
-    losses = df['outcome'].value_counts()[['LOSS']]
+    wins = df["outcome"].value_counts()[["WIN"]]
+    losses = df["outcome"].value_counts()[["LOSS"]]
     winrate = wins.count() / (wins + losses)
 
     # Clean the data by removing % and converting to float
-    pl_numeric = df["p/l_by_percentage"].str.replace('%', '').astype(float)
+    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
+    # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%") # add % to the col data if it's allready converted
+
     # Average Win (mean of positive values)
     avg_win_percentage = pl_numeric[pl_numeric > 0].mean()
     # Average Loss (mean of negative values)
@@ -143,7 +145,7 @@ def hour_of_day_stats(df):
     max_11 = df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12)]["p/l_by_percentage"].max()
 
     # Get best hour by p/l
-    pl_numeric = df["p/l_by_percentage"].str.replace('%', '').astype(float)
+    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
     df_copy["hour"] = df_copy["entry_time_td"].dt.components["hours"].fillna(0).astype(int)
     max_by_hour = pl_numeric.groupby(df_copy["hour"]).max()
     best_hour = max_by_hour.idxmax() if not max_by_hour.isna().all() else None
@@ -177,19 +179,21 @@ def balance_history_plot(df):
     # Ensure date is in datetime format for better plotting
     df["date"] = pd.to_datetime(df["date"])
     x = df["date"]
-    y = df["p/l_by_rr"].cumsum()  # Cumulative RR
+    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
+    y = pl_numeric.cumsum()
     # Plot setup
     plt.figure(figsize=(10, 6))  # Larger figure size
-    plt.plot(x, y, label="Cumulative RR")
+    plt.plot(x, y, label="P/L by %")
     plt.title("Performance By Risk-Reward Ratio")
     plt.xlabel("Date")
     plt.ylabel("Cumulative RR")
     plt.xticks(rotation=45, ha="right")
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
-    # plt.tight_layout() 
+    # plt.tight_layout()
     plt.show()
     return df
+
 
 if __name__ == "__main__":
     # df = pd.read_excel(file_path)
