@@ -1,4 +1,4 @@
-date,symbol,entry_time,exit_time,risk_by_percentage,outcome,p/l_by_pips,p/l_by_rr,p/l_by_percentage
+date,symbol,entry_time,entry_exit,risk_by_percentage,outcome,p/l_by_pips,p/l_by_rr,p/l_by_percentage
 2025-03-03,EURUSD,09:12:34,10:31:34,1.45%,WIN,180,2.67,0.52%
 2025-03-04,BTC,08:47:19,09:56:19,0.92%,LOSS,-120,-1.0,-0.17%
 2025-03-05,US30,09:33:50,10:43:50,1.78%,BE,3,0.0,0.29%
