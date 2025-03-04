@@ -4,6 +4,21 @@ import pandas as pd
 import seaborn as sns
 
 
+def cols_check(df):
+    if (
+        "date" not in df.columns
+        or "symbol" not in df.columns
+        or "entry_time" not in df.columns
+        or "entry_exit" not in df.columns
+        or "risk_by_percentage" not in df.columns
+        or "outcome" not in df.columns
+        or "p/l_by_pips" not in df.columns
+        or "p/l_by_rr" not in df.columns
+    ):
+        print("Error: One or more required columns missing.")
+        # quit()
+
+
 def overall_stats(df):
     # Work on a copy to avoid modifying the original
     df_copy = df.copy()
@@ -14,7 +29,6 @@ def overall_stats(df):
 
     # Clean the data by removing % and converting to float
     pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
-    # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%") # add % to the col data if it's allready converted
 
     # Average Win (mean of positive values)
     avg_win_percentage = pl_numeric[pl_numeric > 0].mean()
@@ -175,18 +189,23 @@ def visualizations_setup():
 
 
 # balance history graph
-def balance_history_plot(df):
-    # Ensure date is in datetime format for better plotting
-    df["date"] = pd.to_datetime(df["date"])
+def pl_percentage_plot(df):
+    df["date"] = pd.to_datetime(df["date"])  # Ensure date is in datetime format
+
+    risk_converted = df["risk_by_percentage"].str.replace("%", "").astype(float)
+    pl_numeric = risk_converted * df["p/l_by_rr"]  # risk * rr
+    df["p/l_by_percentage"] = pl_numeric  # creat the column
+    # add % to the col data if it's allready converted
+    df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
+
     x = df["date"]
-    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
     y = pl_numeric.cumsum()
     # Plot setup
     plt.figure(figsize=(10, 6))  # Larger figure size
     plt.plot(x, y, label="P/L by %")
-    plt.title("Performance By Risk-Reward Ratio")
+    plt.title("Performance By Percentage Gains")
     plt.xlabel("Date")
-    plt.ylabel("Cumulative RR")
+    plt.ylabel("P/L by %Cumulative Gains by Percentage")
     plt.xticks(rotation=45, ha="right")
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
@@ -199,25 +218,12 @@ if __name__ == "__main__":
     # df = pd.read_excel(file_path)
     file_path = "./data/tj_cdfs_tpl.csv"  # index_col=0
     df = pd.read_csv(file_path)
-    print(df.head())
-    print()
-    if (
-        "date" not in df.columns
-        or "entry_time" not in df.columns
-        or "entry_exit" not in df.columns
-        or "p/l_by_pips" not in df.columns
-        or "p/l_by_rr" not in df.columns
-        or "p/l_by_percentage" not in df.columns
-        or "risk_by_percentage" not in df.columns
-        or "outcome" not in df.columns
-        or "symbol" not in df.columns
-    ):
-        print("Error: One or more required columns missing.")
-        # quit()
-
-    overall_stats(df)
-    hour_of_day_stats(df)
-    df = day_of_week_stats(df)  # Assign the returned df_copy back to df
+    # print(df.columns)
+    cols_check(df)
+    # overall_stats(df)
+    # hour_of_day_stats(df)
+    # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
+    # df.pop("p/l_by_percentage")
+    pl_percentage_plot(df)
     df.to_csv("output_data.csv", index=False)
     print("DataFrame saved to 'output_data.csv'")
-    balance_history_plot(df)
