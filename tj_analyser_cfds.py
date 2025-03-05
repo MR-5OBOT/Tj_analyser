@@ -266,6 +266,28 @@ def pl_hist(df):
     plt.show()
     return df
 
+def risk_vs_reward(df):
+    df_copy = df.copy()
+    if "risk_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns:
+            raise ValueError("Column 'p/l_by_percentage, p/l_by_rr' not found in DataFrame")
+
+    x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
+    y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
+    data = [x,y]
+    # Plot setup
+    plt.style.use("dark_background")
+    plt.figure(figsize=(6, 6))
+    sns.scatterplot(data)
+    plt.title("Risk vs Rewards")
+    # plt.xlabel("P/L by %")
+    # plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
+    plt.legend()
+    # plt.grid(True, linestyle="--", alpha=0.7)  # Uncomment if you want grid
+    plt.tight_layout()
+    plt.savefig("risk_vs_reward.png")
+    plt.show()
+    return df
+
 
 if __name__ == "__main__":
     # df = pd.read_excel(file_path)
@@ -277,13 +299,14 @@ if __name__ == "__main__":
     # df["p/l_by_percentage"] = risk_converted * df["p/l_by_rr"]
     # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
 
-    # cols_check(df)
-    # overall_stats(df)
-    # hour_of_day_stats(df)
-    # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
-    # pl_percentage_plot(df)
-    # pl_by_symbol_rr(df)
+    cols_check(df)
+    overall_stats(df)
+    df = day_of_week_stats(df)  # Assign the returned df_copy back to df
+    hour_of_day_stats(df)
+    pl_percentage_plot(df)
+    pl_by_symbol_rr(df)
     pl_hist(df)
+    risk_vs_reward(df)
 
     df.to_csv("output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
