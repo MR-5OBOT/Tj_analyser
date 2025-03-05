@@ -23,9 +23,9 @@ def overall_stats(df):
     # Work on a copy to avoid modifying the original
     df_copy = df.copy()
 
-    wins = df["outcome"].value_counts()[["WIN"]]
-    losses = df["outcome"].value_counts()[["LOSS"]]
-    winrate = wins.count() / (wins + losses)
+    wins = df["outcome"].value_counts()[["WIN"]].values.item()  # Get the scalar value
+    losses = df["outcome"].value_counts()[["LOSS"]].values.item()  # Get the scalar value
+    winrate = float((wins / df.shape[0]) * 100)
 
     # Clean the data by removing % and converting to float
     pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
@@ -62,6 +62,7 @@ def overall_stats(df):
     print()
     print("Overall stats: ")
     print(f"Total Trades : {total_trades}")
+    print(f"Win-Rate : {winrate:.2f}%")
     print(f"Total P/L : {total_pl:.2f}%")
     print(f"Average Win Percentage: {avg_win_percentage:.2f}%")
     print(f"Average Loss Percentage: {avg_loss_percentage:.2f}%")
@@ -243,12 +244,11 @@ if __name__ == "__main__":
     # df = pd.read_excel(file_path)
     file_path = "./data/tj_cdfs_tpl.csv"
     df = pd.read_csv(file_path)
-    cols_check(df)
-    # overall_stats(df)
+    # cols_check(df)
+    overall_stats(df)
     # hour_of_day_stats(df)
     # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
-    # df.pop("p/l_by_percentage")
-    pl_percentage_plot(df)
-    pl_by_symbol_rr(df)
+    # pl_percentage_plot(df)
+    # pl_by_symbol_rr(df)
     df.to_csv("output_data.csv", index=False)
     print("DataFrame saved to 'output_data.csv'")
