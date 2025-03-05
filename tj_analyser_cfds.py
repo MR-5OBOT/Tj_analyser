@@ -41,7 +41,7 @@ def overall_stats(df):
     # max dd
     df_copy["peak"] = pl_numeric.cummax()  # Running max balance
     df_copy["drawdown"] = (df_copy["peak"] - pl_numeric) / df_copy["peak"]  # Drawdown fraction
-    max_dd_percent = df_copy["drawdown"].max() * 100  # Max drawdown in %
+    max_dd_percent = df_copy["drawdown"].max() # Max drawdown in %
 
     best_trade = pl_numeric.max()
     worst_trade = pl_numeric.min()
