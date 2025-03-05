@@ -190,7 +190,7 @@ def visualizations_setup():
 
 # balance history graph
 def pl_percentage_plot(df):
-    df["date"] = pd.to_datetime(df["date"])  # Ensure date is in datetime format
+    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
 
     risk_converted = df["risk_by_percentage"].str.replace("%", "").astype(float)
     pl_numeric = risk_converted * df["p/l_by_rr"]  # risk * rr
@@ -201,29 +201,54 @@ def pl_percentage_plot(df):
     x = df["date"]
     y = pl_numeric.cumsum()
     # Plot setup
-    plt.figure(figsize=(10, 6))  # Larger figure size
+    visualizations_setup()
     plt.plot(x, y, label="P/L by %")
     plt.title("Performance By Percentage Gains")
-    plt.xlabel("Date")
-    plt.ylabel("P/L by %Cumulative Gains by Percentage")
+    # plt.xlabel("Date")
+    plt.ylabel("P/L by %")
+    plt.xticks(df["date"][::5], rotation=45, ha="right") # [::5] dates evry 5 days for better visualizations
+    plt.legend()
+    # plt.grid(True, linestyle="--", alpha=0.7)
+    # plt.tight_layout()
+    plt.savefig("cumulative_gains_by_percentage.png")
+    plt.show()
+    return df
+
+def pl_by_symbol_rr(df):
+    symbols = df["symbol"].value_counts()
+    x = symbols.index
+    height = symbols.values
+    print(symbols)
+    print()
+    print(x)
+    print()
+    print(height)
+
+    # Plot setup
+    visualizations_setup()
+    # x = df.groupby("symbol")["p/l_by_rr"].sum().index
+    plt.bar(x, height=height, label="P/L by symbol")
+    plt.title("Performance By Percentage Gains")
+    # plt.xlabel("Symbols")
+    plt.ylabel("R/R")
     plt.xticks(rotation=45, ha="right")
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
     # plt.tight_layout()
+    plt.savefig("pl_by_symbol_rr.png")
     plt.show()
     return df
 
-
 if __name__ == "__main__":
     # df = pd.read_excel(file_path)
-    file_path = "./data/tj_cdfs_tpl.csv"  # index_col=0
+    file_path = "./data/tj_cdfs_tpl.csv"
     df = pd.read_csv(file_path)
-    # print(df.columns)
     cols_check(df)
     # overall_stats(df)
     # hour_of_day_stats(df)
     # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
     # df.pop("p/l_by_percentage")
     pl_percentage_plot(df)
+    pl_by_symbol_rr(df)
     df.to_csv("output_data.csv", index=False)
     print("DataFrame saved to 'output_data.csv'")
