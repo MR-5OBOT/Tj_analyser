@@ -64,7 +64,7 @@ def overall_stats(df):
     print(f"Worst trade: {worst_trade:.2f}%")
     print(f"Max Drawdown: {max_dd_percent:.2f}%")
     # df["drawdown"] = df["drawdown"].map("{:.4f}".format)  # for clean columns
-    return winrate, max_dd_percent, avg_win_percentage, avg_loss_percentage, total_trades, best_trade, worst_trade
+    return winrate, max_dd_percent, avg_win_percentage, avg_loss_percentage, total_trades, best_trade, worst_trade, pl_numeric
 
 
 def day_of_week_stats(df, position=1):
@@ -185,11 +185,12 @@ def visualizations_setup():
 def pl_percentage_plot(df):
     df["date"] = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
 
-    risk_converted = df["risk_by_percentage"].str.replace("%", "").astype(float)
+    df_copy = df.copy()
+    risk_converted = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
     pl_numeric = risk_converted * df["p/l_by_rr"]  # risk * rr
-    df["p/l_by_percentage"] = pl_numeric  # creat the column
+    # df_copy["p/l_by_percentage"] = pl_numeric  # creat the column
     # add % to the col data if it's allready converted
-    df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
+    # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
 
     x = df["date"]
     y = pl_numeric.cumsum()
@@ -234,9 +235,15 @@ def pl_by_symbol_rr(df):
 
 if __name__ == "__main__":
     # df = pd.read_excel(file_path)
-    file_path = "./data/tj_cdfs_tpl.csv"
+    file_path = "./data/tj_cfds_tpl.csv"
     df = pd.read_csv(file_path)
-    # cols_check(df)
+    
+    # df.pop("p/l_by_percentage")
+    # risk_converted = df["risk_by_percentage"].str.replace("%", "").astype(float)
+    # df["p/l_by_percentage"] = risk_converted * df["p/l_by_rr"]
+    # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
+
+    cols_check(df)
     overall_stats(df)
     # hour_of_day_stats(df)
     # df = day_of_week_stats(df)  # Assign the returned df_copy back to df

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-df = pd.read_csv("./output_data.csv")  # index_col=0
+df = pd.read_csv("./data/tj_cfds_tpl.csv")  # index_col=0
 
 # num_rows = len(df)
 #
