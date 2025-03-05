@@ -45,19 +45,11 @@ def overall_stats(df):
 
     best_trade = pl_numeric.max()
     worst_trade = pl_numeric.min()
-    avg_rr = df["p/l_by_rr"].mean()
-
-    # Step 1: Check format using the first value
-    first_value = str(df["risk_by_percentage"].iloc[0])  # Convert to string to check
-    if first_value.endswith("%"):
-        # If percentage string, remove % and convert to float
-        df_copy["risk_converted"] = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    else:
-        # If decimal, multiply by 100
-        df_copy["risk_converted"] = df["risk_by_percentage"] * 100
-    # Step 2: Format for printing (optional)
-    df_copy["risk_formatted"] = df_copy["risk_converted"].map("{:.2f}%".format)
+    # Avg risk
+    df_copy["risk_converted"] = df["risk_by_percentage"].str.replace("%", "").astype(float)
     avg_risk = df_copy["risk_converted"].mean()
+    # avg rr
+    avg_rr = df["p/l_by_rr"].mean()
 
     print()
     print("Overall stats: ")
