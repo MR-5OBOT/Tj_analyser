@@ -256,13 +256,13 @@ def pl_hist(df):
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
     plt.hist(x, bins=10, edgecolor="black", alpha=0.7, label="P/L Distribution")
-    plt.title("P/L % Distribution")
-    plt.xlabel("P/L By %")
+    plt.title("Distribution of P/L by %")
+    plt.xlabel("P/L by %")
     plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)  # Uncomment if you want grid
     plt.tight_layout()
-    plt.savefig("pl_distribution.png", dpi=300)
+    plt.savefig("pl_distribution.png")
     plt.show()
     return df
 
@@ -286,4 +286,4 @@ if __name__ == "__main__":
     pl_hist(df)
 
     df.to_csv("output_data.csv", index=False)
-    print("DataFrame saved to 'output_data.csv'")
+    print("--DataFrame saved to 'output_data.csv--'")
