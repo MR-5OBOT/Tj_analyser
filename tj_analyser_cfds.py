@@ -60,8 +60,8 @@ def overall_stats(df):
     print(f"Average Loss Percentage: {avg_loss_percentage:.2f}%")
     print(f"Avg Risk: {avg_risk:.2f}%")
     print(f"Avg R/R: {avg_rr:.2f}")
-    print(f"Best trade: ${best_trade:.2f}")
-    print(f"Worst trade: ${worst_trade:.2f}")
+    print(f"Best trade: {best_trade:.2f}%")
+    print(f"Worst trade: {worst_trade:.2f}%")
     print(f"Max Drawdown: {max_dd_percent:.2f}%")
     # df["drawdown"] = df["drawdown"].map("{:.4f}".format)  # for clean columns
     return winrate, max_dd_percent, avg_win_percentage, avg_loss_percentage, total_trades, best_trade, worst_trade
