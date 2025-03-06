@@ -20,12 +20,7 @@ def cols_check(df):
 
 
 def overall_stats(df):
-    if (
-        "date" not in df.columns
-        or "p/l_by_percentage" not in df.columns
-        or "p/l_by_rr" not in df.columns
-        or "outcome" not in df.columns
-    ):
+    if "date" not in df.columns or "p/l_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns or "outcome" not in df.columns:
         raise ValueError("Column 'date, outcome, p/l_by_percentage, p/l_by_rr' not found in DataFrame")
 
     df_copy = df.copy()
@@ -55,7 +50,7 @@ def overall_stats(df):
     # max dd
     df_copy["peak"] = pl_numeric.cummax()  # Running max balance
     df_copy["drawdown"] = (df_copy["peak"] - pl_numeric) / df_copy["peak"]  # Drawdown fraction
-    max_dd_percent = df_copy["drawdown"].max() # Max drawdown in %
+    max_dd_percent = df_copy["drawdown"].max()  # Max drawdown in %
 
     print()
     print("Overall stats: ")
@@ -79,10 +74,7 @@ def day_of_week_stats(df, position=1):
     Returns:
     - Tuple of win counts for Monday through Friday
     """
-    if (
-        "date" not in df.columns
-        or "outcome" not in df.columns
-    ):
+    if "date" not in df.columns or "outcome" not in df.columns:
         raise ValueError("Column 'date, outcome' not found in DataFrame")
     # Work on a copy to avoid modifying the original
     df_copy = df.copy()
@@ -194,6 +186,7 @@ def hour_of_day_stats(df):
 
 # data visualizations --------------------------------------------------
 
+
 # balance history graph
 def pl_percentage_plot(df):
     if "date" not in df.columns or "risk_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns:
@@ -216,13 +209,14 @@ def pl_percentage_plot(df):
     plt.title("Performance By Percentage Gains")
     # plt.xlabel("Date")
     plt.ylabel("P/L by %")
-    plt.xticks(df["date"][::5], rotation=45, ha="right") # [::5] dates evry 5 days for better visualizations
+    plt.xticks(df["date"][::5], rotation=45, ha="right")  # [::5] dates evry 5 days for better visualizations
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
     # plt.tight_layout()
-    plt.savefig("cumulative_gains_by_percentage.png")
+    plt.savefig("./exported_data/gains_by_percentage.png")
     plt.show()
     return df
+
 
 def pl_by_symbol_rr(df):
     if "symbol" not in df.columns:
@@ -246,10 +240,11 @@ def pl_by_symbol_rr(df):
     plt.show()
     return df
 
+
 def pl_hist(df):
     df_copy = df.copy()
     if "p/l_by_percentage" not in df.columns:
-            raise ValueError("Column 'p/l_by_percentage' not found in DataFrame")
+        raise ValueError("Column 'p/l_by_percentage' not found in DataFrame")
 
     x = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
     # Plot setup
@@ -262,51 +257,52 @@ def pl_hist(df):
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)  # Uncomment if you want grid
     plt.tight_layout()
-    plt.savefig("pl_distribution.png")
+    plt.savefig("./exported_data/pl_distribution.png")
     plt.show()
     return df
 
-def risk_vs_reward(df):
+
+def risk_vs_reward_scatter(df):
     df_copy = df.copy()
-    if "risk_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns:
-            raise ValueError("Column 'p/l_by_percentage, p/l_by_rr' not found in DataFrame")
+    if "risk_by_percentage" not in df.columns or "p/l_by_percentage" not in df.columns:
+        raise ValueError("Column 'risk_by_percentage' or 'p/l_by_percentage' not found in DataFrame")
 
     x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
     y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
-    data = [x,y]
+
     # Plot setup
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
-    sns.scatterplot(data)
+    sns.scatterplot(x=x, y=y, label='Data', alpha=0.6)
     plt.title("Risk vs Rewards")
-    # plt.xlabel("P/L by %")
-    # plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
+    plt.xlabel("Risk by Percentage")
+    plt.ylabel("P/L by Percentage")
+    # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
     plt.legend()
-    # plt.grid(True, linestyle="--", alpha=0.7)  # Uncomment if you want grid
+    # plt.grid(True, linestyle="--", alpha=0.7)
     plt.tight_layout()
-    plt.savefig("risk_vs_reward.png")
+    plt.savefig("./exported_data/risk_vs_reward.png")
     plt.show()
-    return df
 
 
 if __name__ == "__main__":
     # df = pd.read_excel(file_path)
     file_path = "./data/tj_cfds_tpl.csv"
     df = pd.read_csv(file_path)
-    
+
     # df.pop("p/l_by_percentage")
     # risk_converted = df["risk_by_percentage"].str.replace("%", "").astype(float)
     # df["p/l_by_percentage"] = risk_converted * df["p/l_by_rr"]
     # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
 
-    cols_check(df)
-    overall_stats(df)
-    df = day_of_week_stats(df)  # Assign the returned df_copy back to df
-    hour_of_day_stats(df)
-    pl_percentage_plot(df)
-    pl_by_symbol_rr(df)
-    pl_hist(df)
-    risk_vs_reward(df)
+    # cols_check(df)
+    # overall_stats(df)
+    # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
+    # hour_of_day_stats(df)
+    # pl_percentage_plot(df)
+    # pl_by_symbol_rr(df)
+    # pl_hist(df)
+    risk_vs_reward_scatter(df)
 
-    df.to_csv("output_data.csv", index=False)
+    df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
