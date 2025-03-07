@@ -273,7 +273,33 @@ def risk_vs_reward_scatter(df):
     # Plot setup
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
-    sns.scatterplot(x=x, y=y, label='Data', alpha=0.6)
+    sns.scatterplot(x=x, y=y, label="Data", alpha=0.6)
+    plt.title("Risk vs Rewards")
+    plt.xlabel("Risk by Percentage")
+    plt.ylabel("P/L by Percentage")
+    # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
+    plt.legend()
+    # plt.grid(True, linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig("./exported_data/risk_vs_reward.png")
+    plt.show()
+
+
+def pl_by_time_heatmap(df):
+    """
+    visualizations about day of week and houres of day.
+    """
+    df_copy = df.copy()
+    if "date" not in df.columns or "p/l_by_percentage" not in df.columns:
+        raise ValueError("Column 'date' or 'p/l_by_percentage' not found in DataFrame")
+
+    x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
+    y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
+
+    # Plot setup
+    plt.style.use("dark_background")
+    plt.figure(figsize=(6, 6))
+    sns.scatterplot(x=x, y=y, data=df, hue="outcome", palette="YlGnBu")
     plt.title("Risk vs Rewards")
     plt.xlabel("Risk by Percentage")
     plt.ylabel("P/L by Percentage")
@@ -302,7 +328,8 @@ if __name__ == "__main__":
     # pl_percentage_plot(df)
     # pl_by_symbol_rr(df)
     # pl_hist(df)
-    risk_vs_reward_scatter(df)
+    # risk_vs_reward_scatter(df)
+    pl_by_time_heatmap(df)
 
     df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
