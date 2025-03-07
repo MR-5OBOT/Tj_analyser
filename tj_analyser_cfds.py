@@ -27,13 +27,12 @@ def overall_stats(df):
 
     wins = df["outcome"].value_counts()[["WIN"]].values.item()  # Get the scalar value
     losses = df["outcome"].value_counts()[["LOSS"]].values.item()  # Get the scalar value
-    winrate = float((wins / df.shape[0]) * 100)
+    be = df["outcome"].value_counts()[["BE"]].values.item()  # Get the scalar value
+    winrate = float((wins / (wins + losses)) * 100)
 
-    # Clean the data by removing % and converting to float
-    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
-
-    total_pl = pl_numeric.sum()
     total_trades = df.shape[0]  # Gets the number of rows as an integer
+    pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
+    total_pl = pl_numeric.sum()
 
     # Average Win (mean of positive values)
     avg_win_percentage = pl_numeric[pl_numeric > 0].mean()
@@ -53,7 +52,7 @@ def overall_stats(df):
     max_dd_percent = df_copy["drawdown"].max()  # Max drawdown in %
 
     print()
-    print("Overall stats: ")
+    print("--- Overall stats: --- ")
     print(f"Total Trades : {total_trades}")
     print(f"Win-Rate : {winrate:.2f}%")
     print(f"Total P/L : {total_pl:.2f}%")
@@ -101,13 +100,20 @@ def day_of_week_stats(df, position=1):
     thursday_wins = len(df_copy[(df_copy["outcome"] == "WIN") & (df_copy["DoW"] == "thursday")])
     friday_wins = len(df_copy[(df_copy["outcome"] == "WIN") & (df_copy["DoW"] == "friday")])
 
+    monday_losses = len(df_copy[(df_copy["outcome"] == "LOSS") & (df_copy["DoW"] == "monday")])
+    tuesday_losses = len(df_copy[(df_copy["outcome"] == "LOSS") & (df_copy["DoW"] == "tuesday")])
+    wednesday_losses = len(df_copy[(df_copy["outcome"] == "LOSS") & (df_copy["DoW"] == "wednesday")])
+    thursday_losses = len(df_copy[(df_copy["outcome"] == "LOSS") & (df_copy["DoW"] == "thursday")])
+    friday_losses = len(df_copy[(df_copy["outcome"] == "LOSS") & (df_copy["DoW"] == "friday")])
+
     # Print the stats
-    print("\nStats by day of week:")
-    print(f"Total Monday wins: {monday_wins}")
-    print(f"Total Tuesday wins: {tuesday_wins}")
-    print(f"Total Wednesday wins: {wednesday_wins}")
-    print(f"Total Thursday wins: {thursday_wins}")
-    print(f"Total Friday wins: {friday_wins}")
+    print()
+    print("--- Stats by day of week: ---")
+    print(f"[Monday] wins: {monday_wins}, losses: {monday_losses}")
+    print(f"[Tuesday] wins: {tuesday_wins}, losses: {tuesday_losses}")
+    print(f"[Wednesday] wins: {wednesday_wins}, losses: {wednesday_losses}")
+    print(f"[Thursday] wins: {thursday_wins}, losses: {thursday_losses}")
+    print(f"[Friday] wins: {friday_wins}, losses: {friday_losses}")
     return df_copy
 
 
@@ -170,16 +176,17 @@ def hour_of_day_stats(df):
 
     # Print stats
     print()
-    print("Stats by hour of day:")
-    if best_hour is not None:
-        print(f"Best Trading Hour is [{best_hour}:00] with {best_profit:.2f}%")
-    else:
-        print("No trades found.")
-
+    print("--- Stats by hour of day: ---")
     print(f"[08:00] - Wins: {hour_08_wins}, Losses: {hour_08_losses}")
     print(f"[09:00] - Wins: {hour_09_wins}, Losses: {hour_09_losses}")
     print(f"[10:00] - Wins: {hour_10_wins}, Losses: {hour_10_losses}")
     print(f"[11:00] - Wins: {hour_11_wins}, Losses: {hour_11_losses}")
+    if best_hour is not None:
+        print(f"Best Trading Hour is [{best_hour}:00] with {best_profit:.2f}% profits")
+    else:
+        print("No trades found.")
+    print()
+
 
     return (h08, h09, h10, h11), df_copy
 
@@ -347,7 +354,7 @@ if __name__ == "__main__":
     # pl_hist(df)
     # risk_vs_reward_scatter(df)
     # pl_by_time_heatmap(df)
-    boxplot_DoW(df)
+    # boxplot_DoW(df)
 
     df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
