@@ -27,7 +27,7 @@ def overall_stats(df):
 
     wins = df["outcome"].value_counts()[["WIN"]].values.item()  # Get the scalar value
     losses = df["outcome"].value_counts()[["LOSS"]].values.item()  # Get the scalar value
-    be = df["outcome"].value_counts()[["BE"]].values.item()  # Get the scalar value
+    # be = df["outcome"].value_counts()[["BE"]].values.item()  # Get the scalar value
     winrate = float((wins / (wins + losses)) * 100)
 
     total_trades = df.shape[0]  # Gets the number of rows as an integer
@@ -162,10 +162,10 @@ def hour_of_day_stats(df):
     hour_11_losses = len(df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12) & (df_copy["outcome"] == "LOSS")])
 
     # Best profit/loss by hour
-    max_08 = df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09)]["p/l_by_percentage"].max()
-    max_09 = df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10)]["p/l_by_percentage"].max()
-    max_10 = df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11)]["p/l_by_percentage"].max()
-    max_11 = df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12)]["p/l_by_percentage"].max()
+    # max_08 = df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09)]["p/l_by_percentage"].max()
+    # max_09 = df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10)]["p/l_by_percentage"].max()
+    # max_10 = df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11)]["p/l_by_percentage"].max()
+    # max_11 = df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12)]["p/l_by_percentage"].max()
 
     # Get best hour by p/l
     pl_numeric = df["p/l_by_percentage"].str.replace("%", "").astype(float)
@@ -187,7 +187,6 @@ def hour_of_day_stats(df):
         print("No trades found.")
     print()
 
-
     return (h08, h09, h10, h11), df_copy
 
 
@@ -203,26 +202,28 @@ def pl_percentage_plot(df):
     df_copy = df.copy()
     risk_converted = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
     pl_numeric = risk_converted * df["p/l_by_rr"]  # risk * rr
-    # df_copy["p/l_by_percentage"] = pl_numeric  # creat the column
-    # add % to the col data if it's allready converted
-    # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
-
-    x = df["date"]
+    x = df["date"].index
     y = pl_numeric.cumsum()
+
     # Plot setup
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
-    plt.plot(x, y, label="P/L by %")
+    ax = plt.gca()  # Get the current axis
+    sns.lineplot(x=x, y=y, label="P/L by %")
     plt.title("Performance By Percentage Gains")
-    # plt.xlabel("Date")
+    plt.xlabel("Date")
     plt.ylabel("P/L by %")
-    plt.xticks(df["date"][::5], rotation=45, ha="right")  # [::5] dates evry 5 days for better visualizations
+    # plt.xticks(rotation=90)
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
-    # plt.tight_layout()
+
+    # Remove right and top spines
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+    plt.tight_layout()
     plt.savefig("./exported_data/gains_by_percentage.png")
     plt.show()
-    return df
 
 
 def pl_by_symbol_rr(df):
@@ -246,10 +247,9 @@ def pl_by_symbol_rr(df):
     # plt.xticks(rotation=45, ha="right")
     # plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
-    # plt.tight_layout()
-    plt.savefig("pl_by_symbol_rr.png")
+    plt.tight_layout()
+    plt.savefig("./exported_data/pl_by_symbol_rr.png")
     plt.show()
-    return df
 
 
 def pl_hist(df):
@@ -260,8 +260,8 @@ def pl_hist(df):
     risks = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
     # Plot setup
     plt.style.use("dark_background")
-    # plt.figure(figsize=(6, 6))
-    sns.displot(risks, bins=15, kde=True)
+    plt.figure(figsize=(6, 6))
+    sns.histplot(risks, bins=15, kde=True)
     plt.title("Distribution of P/L by %")
     # plt.xlabel("P/L by %")
     # plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
@@ -270,6 +270,7 @@ def pl_hist(df):
     plt.tight_layout()
     plt.savefig("./exported_data/pl_distribution.png")
     plt.show()
+
 
 def boxplot_DoW(df):
     if "p/l_by_percentage" not in df.columns:
@@ -282,10 +283,11 @@ def boxplot_DoW(df):
     plt.figure(figsize=(10, 6))
     sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"])
     plt.title("Boxplot for DoW vs pl by %")
-    # plt.tight_layout()
+    plt.tight_layout()
     plt.savefig("./exported_data/boxplot_DoW_vs_PL.png")
     plt.show()
     return df
+
 
 def risk_vs_reward_scatter(df):
     df_copy = df.copy()
@@ -310,29 +312,30 @@ def risk_vs_reward_scatter(df):
     plt.show()
 
 
-def pl_by_time_heatmap(df):
-    """
-    visualizations about day of week and houres of day.
-    """
-    df_copy = df.copy()
-    if "date" not in df.columns or "p/l_by_percentage" not in df.columns:
-        raise ValueError("Column 'date' or 'p/l_by_percentage' not found in DataFrame")
-
-    x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
-    y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
-
-    # Plot setup
-    plt.style.use("dark_background")
-    plt.figure(figsize=(10, 6))
-    plt.title("Risk vs Rewards")
-    plt.xlabel("Risk by Percentage")
-    plt.ylabel("P/L by Percentage")
-    # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
-    plt.legend()
-    # plt.grid(True, linestyle="--", alpha=0.7)
-    plt.tight_layout()
-    plt.savefig("./exported_data/risk_vs_reward.png")
-    # plt.show()
+# def pl_by_time_heatmap(df):
+#     """
+#     visualizations about day of week and houres of day.
+#     """
+#     df_copy = df.copy()
+#     if "date" not in df.columns or "p/l_by_percentage" not in df.columns:
+#         raise ValueError("Column 'date' or 'p/l_by_percentage' not found in DataFrame")
+#
+#     x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
+#     y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
+#
+#     # Plot setup
+#     plt.style.use("dark_background")
+#     plt.figure(figsize=(10, 6))
+#     sns.heatmap()
+#     plt.title("Risk vs Rewards")
+#     plt.xlabel("Risk by Percentage")
+#     plt.ylabel("P/L by Percentage")
+#     # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
+#     plt.legend()
+#     # plt.grid(True, linestyle="--", alpha=0.7)
+#     plt.tight_layout()
+#     plt.savefig("./exported_data/risk_vs_reward.png")
+#     # plt.show()
 
 
 if __name__ == "__main__":
@@ -353,8 +356,7 @@ if __name__ == "__main__":
     # pl_by_symbol_rr(df)
     # pl_hist(df)
     # risk_vs_reward_scatter(df)
-    # pl_by_time_heatmap(df)
-    # boxplot_DoW(df)
-
+    boxplot_DoW(df)
+    #
     df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
