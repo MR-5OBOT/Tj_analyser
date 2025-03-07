@@ -221,19 +221,23 @@ def pl_percentage_plot(df):
 def pl_by_symbol_rr(df):
     if "symbol" not in df.columns:
         raise ValueError("Column 'symbol' not found in DataFrame")
-    symbols = df["symbol"].value_counts()
-    x = symbols.index
-    height = symbols.values
+
+    # symbols = df["symbol"].value_counts()
+    # x = symbols.index
+    # height = symbols.values
+    dow = df["risk_by_percentage"].str.replace("%", "").astype(float)
+    outcome = df["outcome"]
+
     # Plot setup
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
-    # x = df.groupby("symbol")["p/l_by_rr"].sum().index
-    plt.bar(x, height=height, label="P/L by symbol")
+    # plt.bar(x, height=height, label="P/L by symbol")
+    sns.barplot(x=dow, y=outcome, hue=df["outcome"])
     plt.title("Performance By Percentage Gains")
     # plt.xlabel("Symbols")
-    plt.ylabel("R/R")
-    plt.xticks(rotation=45, ha="right")
-    plt.legend()
+    # plt.ylabel("R/R")
+    # plt.xticks(rotation=45, ha="right")
+    # plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
     # plt.tight_layout()
     plt.savefig("pl_by_symbol_rr.png")
@@ -246,21 +250,35 @@ def pl_hist(df):
     if "p/l_by_percentage" not in df.columns:
         raise ValueError("Column 'p/l_by_percentage' not found in DataFrame")
 
-    x = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
+    risks = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
     # Plot setup
     plt.style.use("dark_background")
-    plt.figure(figsize=(6, 6))
-    plt.hist(x, bins=10, edgecolor="black", alpha=0.7, label="P/L Distribution")
+    # plt.figure(figsize=(6, 6))
+    sns.displot(risks, bins=15, kde=True)
     plt.title("Distribution of P/L by %")
-    plt.xlabel("P/L by %")
-    plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
-    plt.legend()
+    # plt.xlabel("P/L by %")
+    # plt.ylabel("Frequency")  # Fixed typo "Freauency" to "Frequency"
+    # plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)  # Uncomment if you want grid
     plt.tight_layout()
     plt.savefig("./exported_data/pl_distribution.png")
     plt.show()
-    return df
 
+def boxplot_DoW(df):
+    if "p/l_by_percentage" not in df.columns:
+        raise ValueError("Column 'p/l_by_percentage' not found in DataFrame")
+
+    df_copy = df.copy()
+    # Plot setup
+    pl = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
+    plt.style.use("dark_background")
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"])
+    plt.title("Boxplot for DoW vs pl by %")
+    # plt.tight_layout()
+    plt.savefig("./exported_data/boxplot_DoW_vs_PL.png")
+    plt.show()
+    return df
 
 def risk_vs_reward_scatter(df):
     df_copy = df.copy()
@@ -273,10 +291,10 @@ def risk_vs_reward_scatter(df):
     # Plot setup
     plt.style.use("dark_background")
     plt.figure(figsize=(6, 6))
-    sns.scatterplot(x=x, y=y, label="Data", alpha=0.6)
+    sns.scatterplot(x=x, y=y, data=df, hue="outcome", palette="YlGnBu")
     plt.title("Risk vs Rewards")
-    plt.xlabel("Risk by Percentage")
-    plt.ylabel("P/L by Percentage")
+    # plt.xlabel("Risk by Percentage")
+    # plt.ylabel("P/L by Percentage")
     # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
     plt.legend()
     # plt.grid(True, linestyle="--", alpha=0.7)
@@ -298,8 +316,7 @@ def pl_by_time_heatmap(df):
 
     # Plot setup
     plt.style.use("dark_background")
-    plt.figure(figsize=(6, 6))
-    sns.scatterplot(x=x, y=y, data=df, hue="outcome", palette="YlGnBu")
+    plt.figure(figsize=(10, 6))
     plt.title("Risk vs Rewards")
     plt.xlabel("Risk by Percentage")
     plt.ylabel("P/L by Percentage")
@@ -308,7 +325,7 @@ def pl_by_time_heatmap(df):
     # plt.grid(True, linestyle="--", alpha=0.7)
     plt.tight_layout()
     plt.savefig("./exported_data/risk_vs_reward.png")
-    plt.show()
+    # plt.show()
 
 
 if __name__ == "__main__":
@@ -321,15 +338,16 @@ if __name__ == "__main__":
     # df["p/l_by_percentage"] = risk_converted * df["p/l_by_rr"]
     # df["p/l_by_percentage"] = df["p/l_by_percentage"].apply(lambda x: f"{x:.2f}%")
 
-    # cols_check(df)
-    # overall_stats(df)
-    # df = day_of_week_stats(df)  # Assign the returned df_copy back to df
-    # hour_of_day_stats(df)
+    cols_check(df)
+    overall_stats(df)
+    df = day_of_week_stats(df)  # Assign the returned df_copy back to df
+    hour_of_day_stats(df)
     # pl_percentage_plot(df)
     # pl_by_symbol_rr(df)
     # pl_hist(df)
     # risk_vs_reward_scatter(df)
-    pl_by_time_heatmap(df)
+    # pl_by_time_heatmap(df)
+    boxplot_DoW(df)
 
     df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")
