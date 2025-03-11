@@ -5,10 +5,8 @@ from tkinter import filedialog, messagebox
 from tkinter import ttk as ttk
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
-from PIL import Image, ImageTk
 
 # Define required columns for validation
 REQUIRED_COLUMNS = ["date", "symbol", "entry_time", "entry_exit", "risk_by_percentage", "outcome", "p/l_by_rr"]
@@ -271,6 +269,8 @@ def boxplot_DoW(df):
     plt.figure(figsize=(10, 6))
     sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"])
     plt.title("Boxplot for DoW vs pl by %")
+    plt.xlabel("")
+    plt.ylabel("Risk by %")
     plt.tight_layout()
     plt.savefig("./exported_data/boxplot_DoW_vs_PL.png")
     # plt.show()
@@ -298,7 +298,6 @@ def heatmap_rr(df):
     """
     A heatmap showing the cumulative sum of R/R over Day of Week & Hour of Day.
     """
-
     # Function to parse time flexibly
     def parse_time(time_str):
         try:
@@ -324,7 +323,7 @@ def heatmap_rr(df):
     plt.figure(figsize=(10, 6))
     sns.heatmap(matrix, annot=True, cmap="RdBu_r")
     plt.title("Sum of R/R by Days vs Hours")
-    plt.xlabel("")
+    plt.xlabel(" ")
     plt.ylabel("Hour of Entry")
     plt.yticks(rotation=0)
     plt.tight_layout()
@@ -433,11 +432,9 @@ root_frame.grid_rowconfigure(1, weight=1)
 root_frame.grid_rowconfigure(2, weight=1)
 root_frame.grid_rowconfigure(3, weight=1)
 
-
 # Update status function
 def update_status(message, color="green"):
     status_label.config(text=message, foreground=color)
-
 
 # Example integration with on_upload (modify your original on_upload)
 def on_upload():
