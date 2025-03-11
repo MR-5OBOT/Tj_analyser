@@ -2,10 +2,6 @@
 
 A Python-based GUI application for analyzing trading journals, providing statistical insights and visualizations for CFDs and Futures trading data.
 
-## Overview
-
-Tj_Analyser is a tool designed to help traders analyze their trading performance by uploading CSV or Excel files containing trade data. It processes the data to generate detailed statistics (e.g., win rates, total profit/loss, max drawdown) and visualizations (e.g., P/L percentage plots, histograms, boxplots, scatter plots, and risk-reward heatmaps) to assist in performance evaluation. The application features a user-friendly Tkinter GUI with options to import data and access trading templates.
-
 ## Features
 
 - **File Upload**: Supports CSV and Excel files with size validation (default max: 10 MB). Validates required columns (`date`, `symbol`, `entry_time`, `entry_exit`, `risk_by_percentage`, `outcome`, `p/l_by_pips`, `p/l_by_rr`).
