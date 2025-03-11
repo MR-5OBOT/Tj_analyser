@@ -4,7 +4,7 @@ A Python-based GUI application for analyzing trading journals, providing statist
 
 ## Features
 
-- **File Upload**: Supports CSV and Excel files with size validation (default max: 10 MB). Validates required columns (`date`, `symbol`, `entry_time`, `entry_exit`, `risk_by_percentage`, `outcome`, `p/l_by_pips`, `p/l_by_rr`).
+- **File Upload**: Supports CSV and Excel files with size validation (default max: 10 MB).
 - **Statistics**:
   - Overall stats: Total trades, win rate, total P/L, average win/loss percentage, average risk, average risk-reward ratio (R/R), best/worst trade, and max drawdown.
   - Day-of-week performance: Win/loss counts for Monday through Friday.
@@ -18,7 +18,6 @@ A Python-based GUI application for analyzing trading journals, providing statist
 - **GUI**:
   - Simple Tkinter interface with buttons for CFDs/Futures templates and data import.
   - Status bar for real-time feedback (e.g., "Uploading file...", "Data processed successfully").
-- **Safety**: Includes directory checks (`./exported_data/`), error handling for file parsing, and column validation.
 
 ## Installation
 
