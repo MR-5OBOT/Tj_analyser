@@ -3,6 +3,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox
 from tkinter import ttk as ttk
+from PIL import Image, ImageTk
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -443,7 +444,7 @@ def on_upload():
         update_status("Upload failed", "red")
 
 # Title label
-title_label = ttk.Label(root_frame, text="Trade Journal Analyser", style="TLabel")
+title_label = ttk.Label(root_frame, text="Trading Journal Analyser", style="TLabel")
 title_label.grid(column=0, row=0, columnspan=2, pady=(0, 10), sticky="n")
 
 # Buttons
@@ -465,3 +466,4 @@ root.protocol("WM_DELETE_WINDOW", root.quit)
 
 if __name__ == "__main__":
     root.mainloop()
+
