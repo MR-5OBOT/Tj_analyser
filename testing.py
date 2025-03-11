@@ -28,16 +28,15 @@ def calc_stats(df):
     total_trades = len(df)
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
-        if df["pl_by_percentage"].str.endswith("%").all()
-        else df["pl_by_percentage"] * 100
-    )
+        if df["pl_by_percentage"].dtype == "object"
+        else df["pl_by_percentage"] * 100)
     pl = pl_raw.cumsum()
     total_pl = pl_raw.sum()
     avg_win = pl_raw[pl_raw > 0].mean() or 0
     avg_loss = pl_raw[pl_raw < 0].mean() or 0
     risk_converted = (
         df["risk_by_percentage"].str.replace("%", "").astype(float)
-        if df["risk_by_percentage"].str.endswith("%").all()
+        if df["risk_by_percentage"].dtype == 'object'
         else df["risk_by_percentage"] * 100
     )
     avg_risk = risk_converted.mean() or 0
@@ -69,7 +68,7 @@ def plot_gains_curve(df, pl):
     plt.style.use("dark_background")
     sns.lineplot(x=x, y=pl, label="Equity")
     plt.title("Equity Curve")
-    plt.xlabel("")
+    plt.xlabel("", fontsize=8)
     plt.ylabel("Cumulative P/L (%)")
     plt.legend()
     plt.xticks(rotation=70)
@@ -148,29 +147,10 @@ def heatmap_rr(df):
 
 
 # PDF Export
-def export_to_pdf(df, stats, pl, pl_raw):
+def export_to_pdf(df, pl, pl_raw):
     pdf_path = "./exported_data/trading_report.pdf"
     with PdfPages(pdf_path) as pdf:
-        # Page 1: Stats
-        # plt.figure(figsize=(6, 6))  # Letter size
-        # plt.style.use("dark_background")
-        #
-        # # Build stats text
-        # stats_text = "Trading Stats\n"  # Title
-        # stats_text += "-" * 20 + "\n\n"  # Separator
-        #
-        # # Overall Stats
-        # stats_text += "Overall:\n"
-        # for key, value in stats["Overall"].items():
-        #     stats_text += f"  {key}: {value}\n"
-        #
-        # # Center the text, make it bigger
-        # plt.text(0.5, 0.5, stats_text, fontsize=11, ha="center", color="white", wrap=True, family="monospace")
-        # plt.axis("off")
-        # pdf.savefig()
-        # plt.close()
 
-        # Rest of your plots (unchanged)
         plt.figure(figsize=(8, 6))
         plot_gains_curve(df, pl)
         pdf.savefig()
@@ -200,13 +180,12 @@ def export_to_pdf(df, stats, pl, pl_raw):
         heatmap_rr(df)
         pdf.savefig()
         plt.close()
-
     return pdf_path
 
 
 # GUI and Processing
 def upload_file(root_frame):
-    file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Excel Files", "*.xlsx")], parent=root_frame)
+    file_path = filedialog.askopenfilename(filetypes=[], parent=root_frame)
     if not file_path:
         return None
     df = pd.read_csv(file_path) if file_path.endswith(".csv") else pd.read_excel(file_path)
@@ -226,7 +205,7 @@ def process_data(df):
     boxplot_DoW(df, pl_raw)
     risk_vs_reward_scatter(df, pl_raw)
     heatmap_rr(df)
-    pdf_path = export_to_pdf(df, stats, pl, pl_raw)
+    pdf_path = export_to_pdf(df, pl, pl_raw)
     # df.to_csv("./exported_data/trade_data.csv", index=False)
     return stats, pdf_path
 
