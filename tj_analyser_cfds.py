@@ -1,3 +1,7 @@
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk as ttk
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -20,7 +24,12 @@ def cols_check(df):
 
 
 def overall_stats(df):
-    if "date" not in df.columns or "p/l_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns or "outcome" not in df.columns:
+    if (
+        "date" not in df.columns
+        or "p/l_by_percentage" not in df.columns
+        or "p/l_by_rr" not in df.columns
+        or "outcome" not in df.columns
+    ):
         raise ValueError("Column 'date, outcome, p/l_by_percentage, p/l_by_rr' not found in DataFrame")
 
     df_copy = df.copy()
@@ -64,7 +73,16 @@ def overall_stats(df):
     print(f"Worst trade: {worst_trade:.2f}%")
     print(f"Max Drawdown: {max_dd_percent:.2f}%")
     # df["drawdown"] = df["drawdown"].map("{:.4f}".format)  # for clean columns
-    return winrate, max_dd_percent, avg_win_percentage, avg_loss_percentage, total_trades, best_trade, worst_trade, pl_numeric
+    return (
+        winrate,
+        max_dd_percent,
+        avg_win_percentage,
+        avg_loss_percentage,
+        total_trades,
+        best_trade,
+        worst_trade,
+        pl_numeric,
+    )
 
 
 def day_of_week_stats(df, position=1):
@@ -150,16 +168,32 @@ def hour_of_day_stats(df):
     h12 = pd.to_timedelta("12:00:00")
 
     # Wins per hour (use df_copy for entry_time_td)
-    hour_08_wins = len(df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09) & (df_copy["outcome"] == "WIN")])
-    hour_09_wins = len(df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10) & (df_copy["outcome"] == "WIN")])
-    hour_10_wins = len(df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11) & (df_copy["outcome"] == "WIN")])
-    hour_11_wins = len(df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12) & (df_copy["outcome"] == "WIN")])
+    hour_08_wins = len(
+        df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09) & (df_copy["outcome"] == "WIN")]
+    )
+    hour_09_wins = len(
+        df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10) & (df_copy["outcome"] == "WIN")]
+    )
+    hour_10_wins = len(
+        df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11) & (df_copy["outcome"] == "WIN")]
+    )
+    hour_11_wins = len(
+        df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12) & (df_copy["outcome"] == "WIN")]
+    )
 
     # Losses per hour
-    hour_08_losses = len(df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09) & (df_copy["outcome"] == "LOSS")])
-    hour_09_losses = len(df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10) & (df_copy["outcome"] == "LOSS")])
-    hour_10_losses = len(df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11) & (df_copy["outcome"] == "LOSS")])
-    hour_11_losses = len(df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12) & (df_copy["outcome"] == "LOSS")])
+    hour_08_losses = len(
+        df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09) & (df_copy["outcome"] == "LOSS")]
+    )
+    hour_09_losses = len(
+        df_copy[(df_copy["entry_time_td"] >= h09) & (df_copy["entry_time_td"] < h10) & (df_copy["outcome"] == "LOSS")]
+    )
+    hour_10_losses = len(
+        df_copy[(df_copy["entry_time_td"] >= h10) & (df_copy["entry_time_td"] < h11) & (df_copy["outcome"] == "LOSS")]
+    )
+    hour_11_losses = len(
+        df_copy[(df_copy["entry_time_td"] >= h11) & (df_copy["entry_time_td"] < h12) & (df_copy["outcome"] == "LOSS")]
+    )
 
     # Best profit/loss by hour
     # max_08 = df_copy[(df_copy["entry_time_td"] >= h08) & (df_copy["entry_time_td"] < h09)]["p/l_by_percentage"].max()
@@ -312,30 +346,31 @@ def risk_vs_reward_scatter(df):
     plt.show()
 
 
-# def pl_by_time_heatmap(df):
-#     """
-#     visualizations about day of week and houres of day.
-#     """
-#     df_copy = df.copy()
-#     if "date" not in df.columns or "p/l_by_percentage" not in df.columns:
-#         raise ValueError("Column 'date' or 'p/l_by_percentage' not found in DataFrame")
-#
-#     x = df_copy["risk_by_percentage"].str.replace("%", "").astype(float)
-#     y = df_copy["p/l_by_percentage"].str.replace("%", "").astype(float)
-#
-#     # Plot setup
-#     plt.style.use("dark_background")
-#     plt.figure(figsize=(10, 6))
-#     sns.heatmap()
-#     plt.title("Risk vs Rewards")
-#     plt.xlabel("Risk by Percentage")
-#     plt.ylabel("P/L by Percentage")
-#     # plt.axvline(1.5, color='gray', linestyle='--', label='1.5% Threshold')
-#     plt.legend()
-#     # plt.grid(True, linestyle="--", alpha=0.7)
-#     plt.tight_layout()
-#     plt.savefig("./exported_data/risk_vs_reward.png")
-#     # plt.show()
+def heatmap_rr(df):
+    """
+    A heatmap shows the Cumulative sum of R/R over Day of week & Hour of day
+    """
+    # Convert entry_time to time and extract hours (without adding to df)
+    hours = pd.to_datetime(df["entry_time"], format="%H:%M", errors="coerce").dt.time.apply(
+        lambda x: x.hour if pd.notna(x) else None
+    )
+    # Create pivot table: hours as index, DoW as columns, p/l_by_rr as values
+    matrix = df.pivot_table(values="p/l_by_rr", index=hours, columns="DoW", aggfunc="sum")  # aggfunc="sum", "mean"
+    print(matrix)
+
+    # Plot heatmap
+    plt.style.use("dark_background")
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(matrix, annot=True, cmap="RdBu_r")
+    plt.title("Sum of R/R by Days vs Hours")
+    plt.xlabel("")
+    plt.ylabel("Hour of Entry")
+    plt.yticks(rotation=0)  # Adjust rotation for readability
+    plt.tight_layout()
+    plt.savefig("./exported_data/days_vs_hours_rr.png")
+    plt.show()
+
+
 
 
 if __name__ == "__main__":
@@ -352,11 +387,12 @@ if __name__ == "__main__":
     overall_stats(df)
     df = day_of_week_stats(df)  # Assign the returned df_copy back to df
     hour_of_day_stats(df)
-    # pl_percentage_plot(df)
-    # pl_by_symbol_rr(df)
-    # pl_hist(df)
-    # risk_vs_reward_scatter(df)
+    pl_percentage_plot(df)
+    pl_by_symbol_rr(df)
+    pl_hist(df)
+    risk_vs_reward_scatter(df)
     boxplot_DoW(df)
-    #
+    heatmap_rr(df)
+
     df.to_csv("./exported_data/output_data.csv", index=False)
     print("--DataFrame saved to 'output_data.csv--'")

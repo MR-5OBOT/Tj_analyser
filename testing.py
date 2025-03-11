@@ -62,14 +62,33 @@ def pairplot(df):
     plt.show()
 
 
-def heatmap(df):
-    sns.heatmap(df["pl_by_rr"], annot=True)
+def heatmap_avg_rr(df):
+    """
+    A heatmap shows the Cumulative sum of R/R over Day of week & Hour of day
+    """
+    # Convert entry_time to time and extract hours (without adding to df)
+    hours = pd.to_datetime(df["entry_time"], format="%H:%M", errors="coerce").dt.time.apply(
+        lambda x: x.hour if pd.notna(x) else None
+    )
+    # Create pivot table: hours as index, DoW as columns, p/l_by_rr as values
+    matrix = df.pivot_table(values="p/l_by_rr", index=hours, columns="DoW", aggfunc="sum")  # aggfunc="sum", "mean"
+    print(matrix)
+
+    # Plot heatmap
+    plt.style.use("dark_background")
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(matrix, annot=True, cmap="RdBu_r")
+    plt.title("Sum of R/R by Days vs Hours")
+    plt.xlabel("")
+    plt.ylabel("Hour of Entry")
+    plt.yticks(rotation=0)  # Adjust rotation for readability
+    plt.tight_layout()
+    plt.savefig("./exported_data/days_vs_hours_rr.png")
     plt.show()
 
 
 if __name__ == "__main__":
     df = pd.read_csv("./exported_data/output_data.csv")
-    print(df.head())
     # risk_vs_profit(df)
     # hist_risks(df)
     # bar_plot(df)
@@ -77,4 +96,5 @@ if __name__ == "__main__":
     # stripplot(df)
     # jointplot_risk_vs_reward(df)
     # pairplot(df)
-    heatmap(df)
+    heatmap_avg_rr(df)
+    df.to_csv("./exported_data/output_data.csv", index=False)
