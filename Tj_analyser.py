@@ -67,12 +67,12 @@ def calc_stats(df):
 def plot_gains_curve(df, pl):
     x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
     plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Equity")
+    sns.lineplot(x=x, y=pl, label="Percentage Gains")
     plt.title("Equity Curve")
-    plt.xlabel("", fontsize=8)
+    plt.xlabel("")
     plt.ylabel("Cumulative P/L (%)")
     plt.legend()
-    plt.xticks(rotation=70)
+    plt.xticks(rotation=70, fontsize=8)
     plt.tight_layout()
     plt.savefig("./exported_data/equity_curve.png")  # Save PNG, don’t close
 

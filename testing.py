@@ -64,14 +64,15 @@ def calc_stats(df):
 
 
 def plot_gains_curve(df, pl):
-    x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
+    # x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
+    x = range(len(df))
     plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Equity")
+    sns.lineplot(x=x, y=pl, label="Gains %")
     plt.title("Equity Curve")
-    plt.xlabel("", fontsize=8)
+    plt.xlabel("Trades")
     plt.ylabel("Cumulative P/L (%)")
     plt.legend()
-    plt.xticks(rotation=70)
+    plt.xticks(rotation=70, fontsize=8)
     plt.tight_layout()
     plt.savefig("./exported_data/equity_curve.png")  # Save PNG, don’t close
 
@@ -80,7 +81,7 @@ def plot_outcome_by_day(df):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="YlGnBu")
+    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1)
     plt.title("Wins and Losses by Day")
     plt.xlabel("")
     plt.ylabel("Count")
@@ -100,7 +101,7 @@ def pl_distribution(pl_raw):
 def boxplot_DoW(df, pl_raw):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
-    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu")
+    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="Paired")
     plt.title("Boxplot of P/L by Day")
     plt.xlabel("")
     plt.ylabel("P/L (%)")
@@ -114,7 +115,7 @@ def risk_vs_reward_scatter(df, pl_raw):
     else:
         risk = df["risk_by_percentage"] * 100
     plt.style.use("dark_background")
-    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="coolwarm")
+    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="Paired")
     plt.title("Risk vs Reward")
     plt.xlabel("Risk (%)")
     plt.ylabel("P/L (%)")
