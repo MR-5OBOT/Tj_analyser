@@ -3,15 +3,16 @@ import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox
 from tkinter import ttk as ttk
-from PIL import Image, ImageTk
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from PIL import Image, ImageTk
 
 # Define required columns for validation
 REQUIRED_COLUMNS = ["date", "symbol", "entry_time", "entry_exit", "risk_by_percentage", "outcome", "p/l_by_rr"]
+
 
 # Directory check function
 def check_directory(directory="./exported_data"):
@@ -46,7 +47,12 @@ def check_directory(directory="./exported_data"):
 
 
 def overall_stats(df):
-    if "date" not in df.columns or "p/l_by_percentage" not in df.columns or "p/l_by_rr" not in df.columns or "outcome" not in df.columns:
+    if (
+        "date" not in df.columns
+        or "p/l_by_percentage" not in df.columns
+        or "p/l_by_rr" not in df.columns
+        or "outcome" not in df.columns
+    ):
         raise ValueError("Column 'date, outcome, p/l_by_percentage, p/l_by_rr' not found in DataFrame")
 
     df_copy = df.copy()
@@ -292,6 +298,7 @@ def heatmap_rr(df):
     """
     A heatmap showing the cumulative sum of R/R over Day of Week & Hour of Day.
     """
+
     # Function to parse time flexibly
     def parse_time(time_str):
         try:
@@ -327,8 +334,7 @@ def heatmap_rr(df):
 
 # GUI functions
 def open_link():
-    webbrowser.open(
-            "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing")
+    webbrowser.open("https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing")
 
 
 def validate_file(df, required_columns=REQUIRED_COLUMNS):
@@ -427,9 +433,11 @@ root_frame.grid_rowconfigure(1, weight=1)
 root_frame.grid_rowconfigure(2, weight=1)
 root_frame.grid_rowconfigure(3, weight=1)
 
+
 # Update status function
 def update_status(message, color="green"):
     status_label.config(text=message, foreground=color)
+
 
 # Example integration with on_upload (modify your original on_upload)
 def on_upload():
@@ -443,18 +451,16 @@ def on_upload():
     else:
         update_status("Upload failed", "red")
 
+
 # Title label
 title_label = ttk.Label(root_frame, text="Trading Journal Analyser", style="TLabel")
 title_label.grid(column=0, row=0, columnspan=2, pady=(0, 10), sticky="n")
 
 # Buttons
-cfds_tpl = ttk.Button(root_frame, text="CFDs Template", command=open_link)
-cfds_tpl.grid(column=0, row=1, pady=5, padx=5, sticky="ew")
+cfds_tpl = ttk.Button(root_frame, text="Journal Template", command=open_link)
+cfds_tpl.grid(column=0, row=1, columnspan=2, pady=5, padx=5, sticky="ew")
 
-Futures_tpl = ttk.Button(root_frame, text="Futures Template", command=open_link)
-Futures_tpl.grid(column=1, row=1, pady=5, padx=5, sticky="ew")
-
-import_data = ttk.Button(root_frame, text="Import Data", command=on_upload)
+import_data = ttk.Button(root_frame, text="Import Data File", command=on_upload)
 import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=5, sticky="ew")
 
 # Status label
@@ -466,4 +472,3 @@ root.protocol("WM_DELETE_WINDOW", root.quit)
 
 if __name__ == "__main__":
     root.mainloop()
-
