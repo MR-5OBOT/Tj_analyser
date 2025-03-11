@@ -2,7 +2,5 @@ matplotlib
 seaborn
 numpy
 pandas
-# streamlit
 openpyxl
-xlsx2csv
-# plotly
+# pyinstaller

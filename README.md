@@ -35,5 +35,5 @@ A Python-based GUI application for analyzing trading journals, providing statist
 3. **Run the application**
 
    ```bash
-   python tj_analyser.py
+   python Tj_analyser.py
    ```
