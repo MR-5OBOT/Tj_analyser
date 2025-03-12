@@ -48,19 +48,22 @@ def calc_stats(df):
     df["drawdown"] = (df["peak"] - pl_raw) / df["peak"]
     max_dd = df["drawdown"].max() or 0
 
-    overall = {
-        "Total Trades": total_trades,
-        "Win Rate": f"{winrate:.2f}%",
-        "Total P/L": f"{total_pl:.2f}%",
-        "Avg Win": f"{avg_win:.2f}%",
-        "Avg Loss": f"{avg_loss:.2f}%",
-        "Avg Risk": f"{avg_risk:.2f}%",
-        "Avg R/R": f"{avg_rr:.2f}",
-        "Best Trade": f"{best_trade:.2f}%",
-        "Worst Trade": f"{worst_trade:.2f}%",
-        "Max DD": f"{max_dd:.2f}%",
-    }
-    return overall, pl, pl_raw
+    print(
+        f"""
+    Overall Statistics:
+    {'Total Trades:':<16} {total_trades:>6}
+    {'Win Rate:':<16} {winrate:>6.2f}%
+    {'Total P/L:':<16} {total_pl:>6.2f}%
+    {'Avg Win:':<16} {avg_win:>6.2f}%
+    {'Avg Loss:':<16} {avg_loss:>6.2f}%
+    {'Avg Risk:':<16} {avg_risk:>6.2f}%
+    {'Avg R/R:':<16} {avg_rr:>6.2f}
+    {'Best Trade:':<16} {best_trade:>6.2f}%
+    {'Worst Trade:':<16} {worst_trade:>6.2f}%
+    {'Max DD:':<16} {max_dd:>6.2f}%
+    """
+    )
+    return pl, pl_raw
 
 
 def plot_gains_curve(df, pl):
@@ -200,7 +203,7 @@ def upload_file():
 
 def process_data(df):
     check_directory()
-    overall, pl, pl_raw = calc_stats(df)
+    pl, pl_raw = calc_stats(df)
     plot_gains_curve(df, pl)
     plot_outcome_by_day(df)
     pl_distribution(pl_raw)
@@ -209,7 +212,7 @@ def process_data(df):
     risk_vs_reward_scatter(df, pl_raw)
     pdf_path = export_to_pdf(df, pl, pl_raw)
     # df.to_csv("./exported_data/trade_data.csv", index=False)
-    return overall, pdf_path
+    return pdf_path
 
 
 # GUI Setup
