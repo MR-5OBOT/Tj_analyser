@@ -60,8 +60,7 @@ def calc_stats(df):
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
     }
-    stats = {"Overall": overall}
-    return stats, pl, pl_raw
+    return overall, pl, pl_raw
 
 
 def plot_gains_curve(df, pl):
@@ -186,8 +185,8 @@ def export_to_pdf(df, pl, pl_raw):
 
 
 # GUI and Processing
-def upload_file(root_frame):
-    file_path = filedialog.askopenfilename(filetypes=[], parent=root_frame)
+def upload_file():
+    file_path = filedialog.askopenfilename(filetypes=[])
     if not file_path:
         return None
     df = pd.read_csv(file_path) if file_path.endswith(".csv") else pd.read_excel(file_path)
@@ -200,7 +199,7 @@ def upload_file(root_frame):
 
 def process_data(df):
     check_directory()
-    stats, pl, pl_raw = calc_stats(df)
+    overall, pl, pl_raw = calc_stats(df)
     plot_gains_curve(df, pl)
     plot_outcome_by_day(df)
     pl_distribution(pl_raw)
@@ -209,7 +208,7 @@ def process_data(df):
     heatmap_rr(df)
     pdf_path = export_to_pdf(df, pl, pl_raw)
     # df.to_csv("./exported_data/trade_data.csv", index=False)
-    return stats, pdf_path
+    return overall, pdf_path
 
 
 # GUI Setup
@@ -235,16 +234,15 @@ root.grid_rowconfigure(3, weight=1)
 def open_link():
     webbrowser.open("https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing")
 
-
 def update_status(message, color="green"):
     status_label.config(text=message, foreground=color)
 
 
 def on_upload():
     update_status("Uploading file...", "violet")
-    df_storage = upload_file(root)
+    df_storage = upload_file()
     if df_storage is not None:
-        stats, pdf_path = process_data(df_storage)
+        process_data(df_storage)
         update_status("Data processed successfully", "violet")
     else:
         update_status("Upload failed", "red")
