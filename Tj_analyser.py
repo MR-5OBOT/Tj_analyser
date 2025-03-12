@@ -60,30 +60,29 @@ def calc_stats(df):
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
     }
-    stats = {"Overall": overall}
-    return stats, pl, pl_raw
+    return overall, pl, pl_raw
 
 
 def plot_gains_curve(df, pl):
-    # x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
     x = range(len(df))
     plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Gains %")
-    plt.title("Equity Curve")
+    sns.lineplot(x=x, y=pl, label="Gains (%)")
+    plt.title("Gains Curve")
     plt.xlabel("Trades")
-    plt.ylabel("Cumulative P/L (%)")
+    plt.ylabel("P/L (%)")
     plt.legend()
     plt.xticks(rotation=70, fontsize=8)
     plt.tight_layout()
-    plt.savefig("./exported_data/equity_curve.png")  # Save PNG, don’t close
+    plt.savefig("./exported_data/equity_curve.png")
 
 
 def plot_outcome_by_day(df):
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
     sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1)
-    plt.title("Wins and Losses by Day")
+    plt.title("Wins vs Losses by Day")
     plt.xlabel("")
     plt.ylabel("Count")
     plt.tight_layout()
@@ -93,7 +92,7 @@ def plot_outcome_by_day(df):
 def pl_distribution(pl_raw):
     plt.style.use("dark_background")
     sns.histplot(pl_raw, bins=10, kde=True)
-    plt.title("Distribution of P/L by %")
+    plt.title("P/L Distribution")
     plt.xlabel("P/L (%)")
     plt.tight_layout()
     plt.savefig("./exported_data/pl_distribution.png")
@@ -103,7 +102,7 @@ def boxplot_DoW(df, pl_raw):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
     sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu")
-    plt.title("Boxplot of P/L by Day")
+    plt.title("P/L by Day")
     plt.xlabel("")
     plt.ylabel("P/L (%)")
     plt.tight_layout()
@@ -140,9 +139,9 @@ def heatmap_rr(df):
     matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
     plt.style.use("dark_background")
     sns.heatmap(matrix, annot=True, cmap="RdBu_r")
-    plt.title("Cumulative P/L by Days vs Hours")
+    plt.title("P/L by Day & Hour")
     plt.xlabel("")
-    plt.ylabel("Hour of Entry")
+    plt.ylabel("Entry Hour")
     plt.yticks(rotation=0)
     plt.tight_layout()
     plt.savefig("./exported_data/days_vs_hours_pl.png")
@@ -169,6 +168,11 @@ def export_to_pdf(df, pl, pl_raw):
         plt.close()
 
         plt.figure(figsize=(8, 6))
+        heatmap_rr(df)
+        pdf.savefig()
+        plt.close()
+
+        plt.figure(figsize=(8, 6))
         boxplot_DoW(df, pl_raw)
         pdf.savefig()
         plt.close()
@@ -178,16 +182,12 @@ def export_to_pdf(df, pl, pl_raw):
         pdf.savefig()
         plt.close()
 
-        plt.figure(figsize=(8, 6))
-        heatmap_rr(df)
-        pdf.savefig()
-        plt.close()
     return pdf_path
 
 
 # GUI and Processing
-def upload_file(root_frame):
-    file_path = filedialog.askopenfilename(filetypes=[], parent=root_frame)
+def upload_file():
+    file_path = filedialog.askopenfilename(filetypes=[])
     if not file_path:
         return None
     df = pd.read_csv(file_path) if file_path.endswith(".csv") else pd.read_excel(file_path)
@@ -200,16 +200,16 @@ def upload_file(root_frame):
 
 def process_data(df):
     check_directory()
-    stats, pl, pl_raw = calc_stats(df)
+    overall, pl, pl_raw = calc_stats(df)
     plot_gains_curve(df, pl)
     plot_outcome_by_day(df)
     pl_distribution(pl_raw)
+    heatmap_rr(df)
     boxplot_DoW(df, pl_raw)
     risk_vs_reward_scatter(df, pl_raw)
-    heatmap_rr(df)
     pdf_path = export_to_pdf(df, pl, pl_raw)
     # df.to_csv("./exported_data/trade_data.csv", index=False)
-    return stats, pdf_path
+    return overall, pdf_path
 
 
 # GUI Setup
@@ -240,14 +240,26 @@ def update_status(message, color="green"):
     status_label.config(text=message, foreground=color)
 
 
+# live csv data from google spreadsheets
 def on_upload():
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjNWLWW8HOdyvFQCYNeHbxXsKFUCO0Y-6EHQPvO_Of6qInMOVT3IdFjjmIVbpjUrtjcb9pTzJINflh/pub?gid=0&single=true&output=csv"
+    df = pd.read_csv(url)
     update_status("Uploading file...", "violet")
-    df_storage = upload_file(root)
-    if df_storage is not None:
-        stats, pdf_path = process_data(df_storage)
+    if df is not None:
+        process_data(df)
         update_status("Data processed successfully", "violet")
     else:
         update_status("Upload failed", "red")
+
+
+# def on_upload():
+#     update_status("Uploading file...", "violet")
+#     df_storage = upload_file()
+#     if df_storage is not None:
+#         process_data(df_storage)
+#         update_status("Data processed successfully", "violet")
+#     else:
+#         update_status("Upload failed", "red")
 
 
 title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
