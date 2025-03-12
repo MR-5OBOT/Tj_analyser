@@ -65,11 +65,12 @@ def calc_stats(df):
 
 
 def plot_gains_curve(df, pl):
-    x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
+    # x = pd.to_datetime(df["date"]).dt.strftime("%d-%m-%y")
+    x = range(len(df))
     plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Percentage Gains")
+    sns.lineplot(x=x, y=pl, label="Gains %")
     plt.title("Equity Curve")
-    plt.xlabel("")
+    plt.xlabel("Trades")
     plt.ylabel("Cumulative P/L (%)")
     plt.legend()
     plt.xticks(rotation=70, fontsize=8)
@@ -81,7 +82,7 @@ def plot_outcome_by_day(df):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="YlGnBu")
+    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1)
     plt.title("Wins and Losses by Day")
     plt.xlabel("")
     plt.ylabel("Count")
@@ -214,22 +215,21 @@ def process_data(df):
 # GUI Setup
 root = tk.Tk()
 root.title("Tj_Analyser")
-root.geometry("400x250")
+root.geometry("300x250")
 root.resizable(True, True)
 
 style = ttk.Style(root)
-style.configure("TButton", font=("Helvetica", 10), padding=5)
-style.configure("TLabel", font=("Helvetica", 12))
+root.tk.call("source", "./Forest-ttk-theme/forest-dark.tcl")  # Load custom theme
+style.theme_use("forest-dark")  # Set custom theme
 
-root_frame = ttk.Frame(root, padding=(10, 10), borderwidth=2, relief="raised")
-root_frame.pack(fill="both", expand=True)
+style.configure("TButton", font=("Helvetica", 12), padding=5)
 
-root_frame.grid_columnconfigure(0, weight=1)
-root_frame.grid_columnconfigure(1, weight=1)
-root_frame.grid_rowconfigure(0, weight=1)
-root_frame.grid_rowconfigure(1, weight=1)
-root_frame.grid_rowconfigure(2, weight=1)
-root_frame.grid_rowconfigure(3, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_rowconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=1)
+root.grid_rowconfigure(2, weight=1)
+root.grid_rowconfigure(3, weight=1)
 
 
 def open_link():
@@ -241,29 +241,26 @@ def update_status(message, color="green"):
 
 
 def on_upload():
-    global df_storage
-    update_status("Uploading file...", "blue")
-    df_storage = upload_file(root_frame)
+    update_status("Uploading file...", "violet")
+    df_storage = upload_file(root)
     if df_storage is not None:
-        update_status("Processing data...", "blue")
         stats, pdf_path = process_data(df_storage)
-        update_status("Data processed successfully", "green")
-        # messagebox.showinfo("Success", f"Stats: {stats['Overall']}\nPDF saved: {pdf_path}\nCheck exported_data/")
+        update_status("Data processed successfully", "violet")
     else:
         update_status("Upload failed", "red")
 
 
-title_label = ttk.Label(root_frame, text="Trading Journal Analyser", style="TLabel")
-title_label.grid(column=0, row=0, columnspan=2, pady=(0, 10), sticky="n")
+title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
+title_label.grid(column=0, row=0, columnspan=2, pady=10, padx=10, sticky="n")
 
-cfds_tpl = ttk.Button(root_frame, text="Journal Template", command=open_link)
-cfds_tpl.grid(column=0, row=1, columnspan=2, pady=5, padx=5, sticky="ew")
+cfds_tpl = ttk.Button(root, text="Journal Template", command=open_link)
+cfds_tpl.grid(column=0, row=1, columnspan=2, pady=10, padx=15, sticky="ew")
 
-import_data = ttk.Button(root_frame, text="Import Data File", command=on_upload)
-import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=5, sticky="ew")
+import_data = ttk.Button(root, text="Import Data File", command=on_upload)
+import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=15, sticky="ew")
 
-status_label = ttk.Label(root_frame, text="Ready", foreground="green")
-status_label.grid(column=0, row=3, columnspan=2, pady=5, sticky="s")
+status_label = ttk.Label(root, text="Ready", foreground="green", font=("Helvetica", 12))
+status_label.grid(column=0, row=3, columnspan=2, pady=10, sticky="s")
 
 root.protocol("WM_DELETE_WINDOW", root.quit)
 

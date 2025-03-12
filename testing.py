@@ -29,14 +29,15 @@ def calc_stats(df):
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
-        else df["pl_by_percentage"] * 100)
+        else df["pl_by_percentage"] * 100
+    )
     pl = pl_raw.cumsum()
     total_pl = pl_raw.sum()
     avg_win = pl_raw[pl_raw > 0].mean() or 0
     avg_loss = pl_raw[pl_raw < 0].mean() or 0
     risk_converted = (
         df["risk_by_percentage"].str.replace("%", "").astype(float)
-        if df["risk_by_percentage"].dtype == 'object'
+        if df["risk_by_percentage"].dtype == "object"
         else df["risk_by_percentage"] * 100
     )
     avg_risk = risk_converted.mean() or 0
@@ -101,7 +102,7 @@ def pl_distribution(pl_raw):
 def boxplot_DoW(df, pl_raw):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
-    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="Paired")
+    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu")
     plt.title("Boxplot of P/L by Day")
     plt.xlabel("")
     plt.ylabel("P/L (%)")
@@ -115,7 +116,7 @@ def risk_vs_reward_scatter(df, pl_raw):
     else:
         risk = df["risk_by_percentage"] * 100
     plt.style.use("dark_background")
-    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="Paired")
+    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="coolwarm")
     plt.title("Risk vs Reward")
     plt.xlabel("Risk (%)")
     plt.ylabel("P/L (%)")
@@ -214,22 +215,21 @@ def process_data(df):
 # GUI Setup
 root = tk.Tk()
 root.title("Tj_Analyser")
-root.geometry("400x250")
+root.geometry("300x250")
 root.resizable(True, True)
 
 style = ttk.Style(root)
-style.configure("TButton", font=("Helvetica", 10), padding=5)
-style.configure("TLabel", font=("Helvetica", 12))
+root.tk.call("source", "./Forest-ttk-theme/forest-dark.tcl")  # Load custom theme
+style.theme_use("forest-dark")  # Set custom theme
 
-root_frame = ttk.Frame(root, padding=(10, 10), borderwidth=2, relief="raised")
-root_frame.pack(fill="both", expand=True)
+style.configure("TButton", font=("Helvetica", 12), padding=5)
 
-root_frame.grid_columnconfigure(0, weight=1)
-root_frame.grid_columnconfigure(1, weight=1)
-root_frame.grid_rowconfigure(0, weight=1)
-root_frame.grid_rowconfigure(1, weight=1)
-root_frame.grid_rowconfigure(2, weight=1)
-root_frame.grid_rowconfigure(3, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_rowconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=1)
+root.grid_rowconfigure(2, weight=1)
+root.grid_rowconfigure(3, weight=1)
 
 
 def open_link():
@@ -241,29 +241,26 @@ def update_status(message, color="green"):
 
 
 def on_upload():
-    global df_storage
-    update_status("Uploading file...", "blue")
-    df_storage = upload_file(root_frame)
+    update_status("Uploading file...", "violet")
+    df_storage = upload_file(root)
     if df_storage is not None:
-        update_status("Processing data...", "blue")
         stats, pdf_path = process_data(df_storage)
-        update_status("Data processed successfully", "green")
-        # messagebox.showinfo("Success", f"Stats: {stats['Overall']}\nPDF saved: {pdf_path}\nCheck exported_data/")
+        update_status("Data processed successfully", "violet")
     else:
         update_status("Upload failed", "red")
 
 
-title_label = ttk.Label(root_frame, text="Trading Journal Analyser", style="TLabel")
-title_label.grid(column=0, row=0, columnspan=2, pady=(0, 10), sticky="n")
+title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
+title_label.grid(column=0, row=0, columnspan=2, pady=10, padx=10, sticky="n")
 
-cfds_tpl = ttk.Button(root_frame, text="Journal Template", command=open_link)
-cfds_tpl.grid(column=0, row=1, columnspan=2, pady=5, padx=5, sticky="ew")
+cfds_tpl = ttk.Button(root, text="Journal Template", command=open_link)
+cfds_tpl.grid(column=0, row=1, columnspan=2, pady=10, padx=15, sticky="ew")
 
-import_data = ttk.Button(root_frame, text="Import Data File", command=on_upload)
-import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=5, sticky="ew")
+import_data = ttk.Button(root, text="Import Data File", command=on_upload)
+import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=15, sticky="ew")
 
-status_label = ttk.Label(root_frame, text="Ready", foreground="green")
-status_label.grid(column=0, row=3, columnspan=2, pady=5, sticky="s")
+status_label = ttk.Label(root, text="Ready", foreground="green", font=("Helvetica", 12))
+status_label.grid(column=0, row=3, columnspan=2, pady=10, sticky="s")
 
 root.protocol("WM_DELETE_WINDOW", root.quit)
 
