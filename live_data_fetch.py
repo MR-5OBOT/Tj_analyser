@@ -239,14 +239,27 @@ def open_link():
 def update_status(message, color="green"):
     status_label.config(text=message, foreground=color)
 
+
+# live csv data from google spreadsheets
 def on_upload():
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjNWLWW8HOdyvFQCYNeHbxXsKFUCO0Y-6EHQPvO_Of6qInMOVT3IdFjjmIVbpjUrtjcb9pTzJINflh/pub?gid=0&single=true&output=csv"
+    df = pd.read_csv(url)
     update_status("Uploading file...", "violet")
-    df_storage = upload_file()
-    if df_storage is not None:
-        process_data(df_storage)
+    if df is not None:
+        process_data(df)
         update_status("Data processed successfully", "violet")
     else:
         update_status("Upload failed", "red")
+
+
+# def on_upload():
+#     update_status("Uploading file...", "violet")
+#     df_storage = upload_file()
+#     if df_storage is not None:
+#         process_data(df_storage)
+#         update_status("Data processed successfully", "violet")
+#     else:
+#         update_status("Upload failed", "red")
 
 
 title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
