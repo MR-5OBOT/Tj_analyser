@@ -4,4 +4,6 @@ numpy
 pandas
 openpyxl
 # pyinstaller
-pysimplegui 5.0.9
+kivy
+buildozer
+pyjnius
