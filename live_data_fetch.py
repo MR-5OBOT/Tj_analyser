@@ -1,19 +1,11 @@
-import os
-import tkinter as tk
-import webbrowser
-from tkinter import filedialog, messagebox, ttk
-
-import matplotlib.pyplot as plt
+import datetime
 import pandas as pd
-import seaborn as sns
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
-
-# Core functions
-def check_directory(directory="./exported_data"):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    return True
+from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
+                         plot_gains_curve, plot_outcome_by_day,
+                         risk_vs_reward_scatter)
+from modules.statsTable import create_stats_table
 
 
 def calc_stats(df):
@@ -48,112 +40,87 @@ def calc_stats(df):
     df["drawdown"] = (df["peak"] - pl_raw) / df["peak"]
     max_dd = df["drawdown"].max() or 0
 
-    print(
-        f"""
-    Overall Statistics:
-    {'Total Trades:':<16} {total_trades:>6}
-    {'Win Rate:':<16} {winrate:>6.2f}%
-    {'Total P/L:':<16} {total_pl:>6.2f}%
-    {'Avg Win:':<16} {avg_win:>6.2f}%
-    {'Avg Loss:':<16} {avg_loss:>6.2f}%
-    {'Avg Risk:':<16} {avg_risk:>6.2f}%
-    {'Avg R/R:':<16} {avg_rr:>6.2f}
-    {'Best Trade:':<16} {best_trade:>6.2f}%
-    {'Worst Trade:':<16} {worst_trade:>6.2f}%
-    {'Max DD:':<16} {max_dd:>6.2f}%
-    """
-    )
-    return pl, pl_raw
+    stats = {
+        "Total Trades": total_trades,
+        "Win Rate": f"{winrate:.2f}%",
+        "Total P/L": f"{total_pl:.2f}%",
+        "Avg Win": f"{avg_win:.2f}%",
+        "Avg Loss": f"{avg_loss:.2f}%",
+        "Avg Risk": f"{avg_risk:.2f}%",
+        "Avg R/R": f"{avg_rr:.2f}",
+        "Best Trade": f"{best_trade:.2f}%",
+        "Worst Trade": f"{worst_trade:.2f}%",
+        "Max DD": f"{max_dd:.2f}%",
+    }
+    return pl, pl_raw, stats
 
 
-def plot_gains_curve(df, pl):
-    x = range(len(df))
-    plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Gains (%)")
-    plt.title("Gains Curve")
-    plt.xlabel("Trades")
-    plt.ylabel("P/L (%)")
-    plt.legend()
-    plt.xticks(rotation=70, fontsize=8)
-    plt.tight_layout()
-    plt.savefig("./exported_data/equity_curve.png")
+def pacman_progress(current, total):
+    """Displays a Pacman-style progress bar in the console"""
+    print()
+    bar_length = 30
+    filled = int(round(bar_length * current / float(total)))
+    bar = ">" * filled + "-" * (bar_length - filled)
+    print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
 
 
-def plot_outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["DoW"] = df["date"].dt.day_name().str.lower()
-    plt.style.use("dark_background")
-    data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1)
-    plt.title("Wins vs Losses by Day")
-    plt.xlabel("")
-    plt.ylabel("Count")
-    plt.tight_layout()
-    plt.savefig("./exported_data/outcome_by_day.png")
-
-
-def pl_distribution(pl_raw):
-    plt.style.use("dark_background")
-    sns.histplot(pl_raw, bins=10, kde=True)
-    plt.title("P/L Distribution")
-    plt.xlabel("P/L (%)")
-    plt.tight_layout()
-    plt.savefig("./exported_data/pl_distribution.png")
-
-
-def boxplot_DoW(df, pl_raw):
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    plt.style.use("dark_background")
-    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu")
-    plt.title("P/L by Day")
-    plt.xlabel("")
-    plt.ylabel("P/L (%)")
-    plt.tight_layout()
-    plt.savefig("./exported_data/boxplot_DoW_vs_PL.png")
-
-
-def risk_vs_reward_scatter(df, pl_raw):
-    if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
-        risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    else:
-        risk = df["risk_by_percentage"] * 100
-    plt.style.use("dark_background")
-    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="coolwarm")
-    plt.title("Risk vs Reward")
-    plt.xlabel("Risk (%)")
-    plt.ylabel("P/L (%)")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("./exported_data/risk_vs_reward.png")
-
-
-def heatmap_rr(df):
-    def parse_time(time_str):
-        try:
-            return pd.to_datetime(time_str, format="%H:%M:%S").time()
-        except ValueError:
-            try:
-                return pd.to_datetime(time_str + ":00", format="%H:%M:%S").time()
-            except:
-                return pd.to_datetime("00:00", format="%H:%M").time()
-
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
-    matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
-    plt.style.use("dark_background")
-    sns.heatmap(matrix, annot=True, cmap="RdBu_r")
-    plt.title("P/L by Day & Hour")
-    plt.xlabel("")
-    plt.ylabel("Entry Hour")
-    plt.yticks(rotation=0)
-    plt.tight_layout()
-    plt.savefig("./exported_data/days_vs_hours_pl.png")
+def fetch_and_process():
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjNWLWW8HOdyvFQCYNeHbxXsKFUCO0Y-6EHQPvO_Of6qInMOVT3IdFjjmIVbpjUrtjcb9pTzJINflh/pub?gid=0&single=true&output=csv"
+    
+    print("Fetching data from Google Sheets...")
+    pacman_progress(1, 10)
+    df = pd.read_csv(url)
+    
+    # Check required columns
+    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
+    if not all(col in df.columns for col in required_cols):
+        print("\nError: Missing required columns in the data")
+        return
+    
+    pacman_progress(2, 10)
+    pl, pl_raw, stats = calc_stats(df)
+    # Create plots with progress updates
+    pacman_progress(3, 10)
+    plot_gains_curve(df, pl)
+    
+    pacman_progress(4, 10)
+    plot_outcome_by_day(df)
+    
+    pacman_progress(5, 10)
+    pl_distribution(pl_raw)
+    
+    pacman_progress(6, 10)
+    heatmap_rr(df)
+    
+    pacman_progress(7, 10)
+    boxplot_DoW(df, pl_raw)
+    
+    pacman_progress(8, 10)
+    risk_vs_reward_scatter(df, pl_raw)
+    
+    # Generate PDF
+    pacman_progress(9, 10)
+    pdf_path = export_to_pdf(df, pl, pl_raw)
+    
+    pacman_progress(10, 10)
+    print(f"\n\nReport successfully generated: {pdf_path}")
 
 
 # PDF Export
 def export_to_pdf(df, pl, pl_raw):
-    pdf_path = "./exported_data/trading_report.pdf"
+    # Get current date in YYYY-MM-DD format
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    # Create filename with date
+    pdf_filename = f"trading_report_{current_date}.pdf"
+    pdf_path = f"./exported_data/{pdf_filename}"
+
+    _, _, stats = calc_stats(df)  # Get the stats dictionary
+
     with PdfPages(pdf_path) as pdf:
+        # Add stats page first
+        stats_fig = create_stats_table(stats)
+        pdf.savefig(stats_fig)
+        plt.close(stats_fig)
 
         plt.figure(figsize=(8, 6))
         plot_gains_curve(df, pl)
@@ -187,97 +154,5 @@ def export_to_pdf(df, pl, pl_raw):
 
     return pdf_path
 
-
-# GUI and Processing
-def upload_file():
-    file_path = filedialog.askopenfilename(filetypes=[])
-    if not file_path:
-        return None
-    df = pd.read_csv(file_path) if file_path.endswith(".csv") else pd.read_excel(file_path)
-    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
-    if not all(col in df.columns for col in required_cols):
-        messagebox.showerror("Error", f"Missing required columns: {', '.join(required_cols)}")
-        return None
-    return df
-
-
-def process_data(df):
-    check_directory()
-    pl, pl_raw = calc_stats(df)
-    plot_gains_curve(df, pl)
-    plot_outcome_by_day(df)
-    pl_distribution(pl_raw)
-    heatmap_rr(df)
-    boxplot_DoW(df, pl_raw)
-    risk_vs_reward_scatter(df, pl_raw)
-    pdf_path = export_to_pdf(df, pl, pl_raw)
-    # df.to_csv("./exported_data/trade_data.csv", index=False)
-    return pdf_path
-
-
-# GUI Setup
-root = tk.Tk()
-root.title("Tj_Analyser")
-root.geometry("300x250")
-root.resizable(True, True)
-
-style = ttk.Style(root)
-root.tk.call("source", "./Forest-ttk-theme/forest-dark.tcl")  # Load custom theme
-style.theme_use("forest-dark")  # Set custom theme
-
-style.configure("TButton", font=("Helvetica", 12), padding=5)
-
-root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
-root.grid_rowconfigure(0, weight=1)
-root.grid_rowconfigure(1, weight=1)
-root.grid_rowconfigure(2, weight=1)
-root.grid_rowconfigure(3, weight=1)
-
-
-def open_link():
-    webbrowser.open("https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing")
-
-
-def update_status(message, color="green"):
-    status_label.config(text=message, foreground=color)
-
-
-# live csv data from google spreadsheets
-def on_upload():
-    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjNWLWW8HOdyvFQCYNeHbxXsKFUCO0Y-6EHQPvO_Of6qInMOVT3IdFjjmIVbpjUrtjcb9pTzJINflh/pub?gid=0&single=true&output=csv"
-    df = pd.read_csv(url)
-    update_status("Uploading file...", "violet")
-    if df is not None:
-        process_data(df)
-        update_status("Data processed successfully", "violet")
-    else:
-        update_status("Upload failed", "red")
-
-
-# def on_upload():
-#     update_status("Uploading file...", "violet")
-#     df_storage = upload_file()
-#     if df_storage is not None:
-#         process_data(df_storage)
-#         update_status("Data processed successfully", "violet")
-#     else:
-#         update_status("Upload failed", "red")
-
-
-title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
-title_label.grid(column=0, row=0, columnspan=2, pady=10, padx=10, sticky="n")
-
-cfds_tpl = ttk.Button(root, text="Journal Template", command=open_link)
-cfds_tpl.grid(column=0, row=1, columnspan=2, pady=10, padx=15, sticky="ew")
-
-import_data = ttk.Button(root, text="Import Data File", command=on_upload)
-import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=15, sticky="ew")
-
-status_label = ttk.Label(root, text="Ready", foreground="green", font=("Helvetica", 12))
-status_label.grid(column=0, row=3, columnspan=2, pady=10, sticky="s")
-
-root.protocol("WM_DELETE_WINDOW", root.quit)
-
 if __name__ == "__main__":
-    root.mainloop()
+    fetch_and_process()

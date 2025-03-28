@@ -1,25 +1,24 @@
+import datetime
 import io
 import os
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
 
+from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
+                           plot_gains_curve, plot_outcome_by_day,
+                           risk_vs_reward_scatter)
+from modules.statsTable import create_stats_table
 
-from plots import (
-    plot_gains_curve,
-    plot_outcome_by_day,
-    pl_distribution,
-    boxplot_DoW,
-    risk_vs_reward_scatter,
-    heatmap_rr
-)
 
 # Ensure export directory exists
 def check_directory(directory="./exported_data"):
     if not os.path.exists(directory):
         os.makedirs(directory)
     return True
+
 
 # Load data
 def load_data(file):
@@ -30,6 +29,7 @@ def load_data(file):
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["DoW"] = df["date"].dt.day_name().str.lower()
     return df
+
 
 # Calculate statistics
 @st.cache_data
@@ -75,7 +75,7 @@ def calc_stats(df):
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade": f"{best_trade:.2f}%",
         "Worst Trade": f"{worst_trade:.2f}%",
-        "Max DD": f"{max_dd:.2f}%"
+        "Max DD": f"{max_dd:.2f}%",
     }
     return pl, pl_raw, stats
 
@@ -88,13 +88,13 @@ uploaded_file = st.file_uploader("Upload your trades data (CSV or Excel)", type=
 if uploaded_file:
     df = load_data(uploaded_file)
     pl, pl_raw, stats = calc_stats(df)
-    st.write("Stats:", stats)
+    # st.write("Stats:", stats)
 
     check_directory()
-
     # Display plots and cache figures
     st.subheader("Visualizations")
     plot_functions = [
+        (create_stats_table, (stats,)),
         (plot_gains_curve, (df, pl)),
         (plot_outcome_by_day, (df,)),
         (pl_distribution, (pl_raw,)),
@@ -123,12 +123,7 @@ if uploaded_file:
                     pdf_progress.progress((i + 1) / total_plots)
                 # No need to close figures here since they’re reused
             pdf_data = buffer.getvalue()
-            st.download_button(
-                label="Download PDF",
-                data=pdf_data,
-                file_name="trading_report.pdf",
-                mime="application/pdf"
-            )
+            st.download_button(label="Download PDF", data=pdf_data, file_name="trading_report.pdf", mime="application/pdf")
 
     # Clean up cached figures after everything is done
     for fig in cached_figures:

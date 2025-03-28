@@ -1,3 +1,4 @@
+import datetime
 import os
 import tkinter as tk
 import webbrowser
@@ -7,6 +8,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
+
+from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
+                           plot_gains_curve, plot_outcome_by_day,
+                           risk_vs_reward_scatter)
+from modules.statsTable import create_stats_table
 
 
 # Core functions
@@ -64,94 +70,20 @@ def calc_stats(df):
     return pl, pl_raw, stats
 
 
-def plot_gains_curve(df, pl):
-    x = range(len(df))
-    plt.style.use("dark_background")
-    sns.lineplot(x=x, y=pl, label="Gains (%)")
-    plt.title("Gains Curve")
-    plt.xlabel("Trades")
-    plt.ylabel("P/L (%)")
-    plt.legend()
-    plt.xticks(rotation=70, fontsize=8)
-    plt.tight_layout()
-    plt.savefig("./exported_data/equity_curve.png")
-
-
-def plot_outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["DoW"] = df["date"].dt.day_name().str.lower()
-    plt.style.use("dark_background")
-    data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1)
-    plt.title("Wins vs Losses by Day")
-    plt.xlabel("")
-    plt.ylabel("Count")
-    plt.tight_layout()
-    plt.savefig("./exported_data/outcome_by_day.png")
-
-
-def pl_distribution(pl_raw):
-    plt.style.use("dark_background")
-    sns.histplot(pl_raw, bins=10, kde=True)
-    plt.title("P/L Distribution")
-    plt.xlabel("P/L (%)")
-    plt.tight_layout()
-    plt.savefig("./exported_data/pl_distribution.png")
-
-
-def boxplot_DoW(df, pl_raw):
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    plt.style.use("dark_background")
-    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu")
-    plt.title("P/L by Day")
-    plt.xlabel("")
-    plt.ylabel("P/L (%)")
-    plt.tight_layout()
-    plt.savefig("./exported_data/boxplot_DoW_vs_PL.png")
-
-
-def risk_vs_reward_scatter(df, pl_raw):
-    if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
-        risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    else:
-        risk = df["risk_by_percentage"] * 100
-    plt.style.use("dark_background")
-    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="coolwarm")
-    plt.title("Risk vs Reward")
-    plt.xlabel("Risk (%)")
-    plt.ylabel("P/L (%)")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("./exported_data/risk_vs_reward.png")
-
-
-def heatmap_rr(df):
-    def parse_time(time_str):
-        try:
-            return pd.to_datetime(time_str, format="%H:%M:%S").time()
-        except ValueError:
-            try:
-                return pd.to_datetime(time_str + ":00", format="%H:%M:%S").time()
-            except:
-                return pd.to_datetime("00:00", format="%H:%M").time()
-
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
-    matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
-    plt.style.use("dark_background")
-    sns.heatmap(matrix, annot=True, cmap="RdBu_r")
-    plt.title("P/L by Day & Hour")
-    plt.xlabel("")
-    plt.ylabel("Entry Hour")
-    plt.yticks(rotation=0)
-    plt.tight_layout()
-    plt.savefig("./exported_data/days_vs_hours_pl.png")
-
-
 # PDF Export
 def export_to_pdf(df, pl, pl_raw):
-    pdf_path = "./exported_data/trading_report.pdf"
+    # Get current date in YYYY-MM-DD format
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    # Create filename with date
+    pdf_filename = f"trading_report_{current_date}.pdf"
+    pdf_path = f"./exported_data/{pdf_filename}"
+    _, _, stats = calc_stats(df)  # Get the stats dictionary
+
     with PdfPages(pdf_path) as pdf:
+        # Add stats page first
+        stats_fig = create_stats_table(stats)
+        pdf.savefig(stats_fig)
+        plt.close(stats_fig)
 
         plt.figure(figsize=(8, 6))
         plot_gains_curve(df, pl)
@@ -199,22 +131,37 @@ def upload_file():
     return df
 
 
+def update_progress(progress):
+    progress_bar["value"] = progress
+    root.update_idletasks()  # Force UI update
+
+
 def process_data(df):
     check_directory()
+    # Initialize progress
+    update_progress(0)
     pl, pl_raw, stats = calc_stats(df)
-    print(stats)
+    update_progress(10)
     plot_gains_curve(df, pl)
+    update_progress(20)
     plot_outcome_by_day(df)
+    update_progress(30)
     pl_distribution(pl_raw)
+    update_progress(40)
     heatmap_rr(df)
+    update_progress(50)
     boxplot_DoW(df, pl_raw)
+    update_progress(60)
     risk_vs_reward_scatter(df, pl_raw)
+    update_progress(70)
+
     pdf_path = export_to_pdf(df, pl, pl_raw)
-    # df.to_csv("./exported_data/trade_data.csv", index=False)
+    update_progress(100)
+
     return pdf_path
 
 
-# GUI Setup
+# # GUI Setup
 root = tk.Tk()
 root.title("Tj_Analyser")
 root.geometry("300x250")
@@ -245,11 +192,30 @@ def update_status(message, color="green"):
 def on_upload():
     update_status("Uploading file...", "violet")
     df_storage = upload_file()
+
     if df_storage is not None:
-        process_data(df_storage)
-        update_status("Data processed successfully", "violet")
+        # Reset progress bar
+        progress_bar["value"] = 0
+        root.update_idletasks()
+
+        try:
+            # Process data with progress updates
+            pdf_path = process_data(df_storage)
+            update_status("Data processed successfully", "violet")
+
+            # Show completion message
+            messagebox.showinfo("Success", f"Report generated:\n{pdf_path}")
+
+        except Exception as e:
+            update_status("Error during processing", "red")
+            messagebox.showerror("Error", f"An error occurred:\n{str(e)}")
+
+        finally:
+            # Reset progress bar
+            progress_bar["value"] = 0
     else:
         update_status("Upload failed", "red")
+        progress_bar["value"] = 0
 
 
 title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
@@ -262,7 +228,10 @@ import_data = ttk.Button(root, text="Import Data File", command=on_upload)
 import_data.grid(column=0, row=2, columnspan=2, pady=10, padx=15, sticky="ew")
 
 status_label = ttk.Label(root, text="Ready", foreground="green", font=("Helvetica", 12))
-status_label.grid(column=0, row=3, columnspan=2, pady=10, sticky="s")
+status_label.grid(column=0, row=4, columnspan=2, pady=10, sticky="s")
+
+progress_bar = ttk.Progressbar(root, orient="horizontal", length=200, mode="determinate")
+progress_bar.grid(column=0, row=3, columnspan=2, pady=10, sticky="ew")
 
 root.protocol("WM_DELETE_WINDOW", root.quit)
 
