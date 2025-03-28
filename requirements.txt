@@ -3,7 +3,5 @@ seaborn
 numpy
 pandas
 openpyxl
-# pyinstaller
-kivy
-buildozer
-pyjnius
+streamlit
+tabulate
