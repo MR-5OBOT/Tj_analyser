@@ -6,7 +6,6 @@ from tkinter import filedialog, messagebox, ttk
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 
 from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
@@ -161,27 +160,7 @@ def process_data(df):
     return pdf_path
 
 
-# # GUI Setup
-root = tk.Tk()
-root.title("Tj_Analyser")
-root.geometry("300x250")
-root.resizable(True, True)
-
-style = ttk.Style(root)
-root.tk.call("source", "./Forest-ttk-theme/forest-dark.tcl")  # Load custom theme
-style.theme_use("forest-dark")  # Set custom theme
-
-style.configure("TButton", font=("Helvetica", 12), padding=5)
-
-root.grid_columnconfigure(0, weight=1)
-root.grid_columnconfigure(1, weight=1)
-root.grid_rowconfigure(0, weight=1)
-root.grid_rowconfigure(1, weight=1)
-root.grid_rowconfigure(2, weight=1)
-root.grid_rowconfigure(3, weight=1)
-
-
-def open_link():
+def tpl():
     webbrowser.open("https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing")
 
 
@@ -218,10 +197,30 @@ def on_upload():
         progress_bar["value"] = 0
 
 
+# # GUI Setup
+root = tk.Tk()
+root.title("Tj_Analyser")
+root.geometry("300x250")
+root.resizable(True, True)
+
+style = ttk.Style(root)
+root.tk.call("source", "./Forest-ttk-theme/forest-dark.tcl")  # Load custom theme
+style.theme_use("forest-dark")  # Set custom theme
+
+style.configure("TButton", font=("Helvetica", 12), padding=5)
+
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_rowconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=1)
+root.grid_rowconfigure(2, weight=1)
+root.grid_rowconfigure(3, weight=1)
+
+
 title_label = ttk.Label(root, text="Trading Journal Analyser", style="TLabel", font=("Helvetica", 16))
 title_label.grid(column=0, row=0, columnspan=2, pady=10, padx=10, sticky="n")
 
-cfds_tpl = ttk.Button(root, text="Journal Template", command=open_link)
+cfds_tpl = ttk.Button(root, text="Journal Template", command=tpl)
 cfds_tpl.grid(column=0, row=1, columnspan=2, pady=10, padx=15, sticky="ew")
 
 import_data = ttk.Button(root, text="Import Data File", command=on_upload)

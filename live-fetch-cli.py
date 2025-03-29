@@ -17,7 +17,6 @@ def calc_stats(df):
     wins = df["outcome"].value_counts().get("WIN", 0)
     losses = df["outcome"].value_counts().get("LOSS", 0)
     winrate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0.0
-    total_trades = len(df)
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
@@ -41,7 +40,7 @@ def calc_stats(df):
     max_dd = df["drawdown"].max() or 0
 
     stats = {
-        "Total Trades": total_trades,
+        "Total Trades": len(df),
         "Win Rate": f"{winrate:.2f}%",
         "Total P/L": f"{total_pl:.2f}%",
         "Avg Win": f"{avg_win:.2f}%",
@@ -55,57 +54,6 @@ def calc_stats(df):
     return pl, pl_raw, stats
 
 
-def pacman_progress(current, total):
-    """Displays a Pacman-style progress bar in the console"""
-    print()
-    bar_length = 30
-    filled = int(round(bar_length * current / float(total)))
-    bar = ">" * filled + "-" * (bar_length - filled)
-    print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
-
-
-def fetch_and_process():
-    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRjNWLWW8HOdyvFQCYNeHbxXsKFUCO0Y-6EHQPvO_Of6qInMOVT3IdFjjmIVbpjUrtjcb9pTzJINflh/pub?gid=0&single=true&output=csv"
-    
-    print("Fetching data from Google Sheets...")
-    pacman_progress(1, 10)
-    df = pd.read_csv(url)
-    
-    # Check required columns
-    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
-    if not all(col in df.columns for col in required_cols):
-        print("\nError: Missing required columns in the data")
-        return
-    
-    pacman_progress(2, 10)
-    pl, pl_raw, stats = calc_stats(df)
-    # Create plots with progress updates
-    pacman_progress(3, 10)
-    plot_gains_curve(df, pl)
-    
-    pacman_progress(4, 10)
-    plot_outcome_by_day(df)
-    
-    pacman_progress(5, 10)
-    pl_distribution(pl_raw)
-    
-    pacman_progress(6, 10)
-    heatmap_rr(df)
-    
-    pacman_progress(7, 10)
-    boxplot_DoW(df, pl_raw)
-    
-    pacman_progress(8, 10)
-    risk_vs_reward_scatter(df, pl_raw)
-    
-    # Generate PDF
-    pacman_progress(9, 10)
-    pdf_path = export_to_pdf(df, pl, pl_raw)
-    
-    pacman_progress(10, 10)
-    print(f"\n\nReport successfully generated: {pdf_path}")
-
-
 # PDF Export
 def export_to_pdf(df, pl, pl_raw):
     # Get current date in YYYY-MM-DD format
@@ -115,6 +63,9 @@ def export_to_pdf(df, pl, pl_raw):
     pdf_path = f"./exported_data/{pdf_filename}"
 
     _, _, stats = calc_stats(df)  # Get the stats dictionary
+    # print()
+    # print(len(df))
+    # print()
 
     with PdfPages(pdf_path) as pdf:
         # Add stats page first
@@ -142,17 +93,66 @@ def export_to_pdf(df, pl, pl_raw):
         pdf.savefig()
         plt.close()
 
-        plt.figure(figsize=(8, 6))
-        boxplot_DoW(df, pl_raw)
-        pdf.savefig()
-        plt.close()
+        # plt.figure(figsize=(8, 6))
+        # boxplot_DoW(df, pl_raw)
+        # pdf.savefig()
+        # plt.close()
 
-        plt.figure(figsize=(8, 6))
-        risk_vs_reward_scatter(df, pl_raw)
-        pdf.savefig()
-        plt.close()
-
+        # plt.figure(figsize=(8, 6))
+        # risk_vs_reward_scatter(df, pl_raw)
+        # pdf.savefig()
+        # plt.close()
+        
     return pdf_path
+
+
+def pacman_progress(current, total):
+    """Displays a Pacman-style progress bar in the console"""
+    print()
+    bar_length = 30
+    filled = int(round(bar_length * current / float(total)))
+    bar = ">" * filled + "-" * (bar_length - filled)
+    print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
+
+
+def fetch_and_process():
+    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
+    
+    print("Fetching data from Google Sheets...")
+    
+    df = pd.read_csv(url)
+    pl, pl_raw, stats = calc_stats(df)
+
+    # Check required columns
+    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
+    if not all(col in df.columns for col in required_cols):
+        print("\nError: Missing required columns in the data")
+        return
+
+    # List of functions to execute
+    steps = [
+        lambda: calc_stats(df),
+        lambda: plot_gains_curve(df, pl),
+        lambda: plot_outcome_by_day(df),
+        lambda: pl_distribution(pl_raw),
+        lambda: heatmap_rr(df),
+        # lambda: risk_vs_reward_scatter(df, pl_raw),
+        # lambda: boxplot_DoW(df, pl_raw),
+        lambda: export_to_pdf(df, pl, pl_raw),
+    ]
+
+    # Run each function with progress tracking
+    for i, step in enumerate(steps, start=1):
+        pacman_progress(i, len(steps))  # Auto progress
+        result = step()  # Execute function
+
+    # Generate PDF
+    pacman_progress(9, 10)
+    pdf_path = export_to_pdf(df, pl, pl_raw)
+    
+    pacman_progress(10, 10)
+    print(f"\n\nReport successfully generated: {pdf_path}")
+
 
 if __name__ == "__main__":
     fetch_and_process()

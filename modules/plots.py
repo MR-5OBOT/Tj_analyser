@@ -18,7 +18,8 @@ def plot_gains_curve(df, pl):
 
 
 def plot_outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    # df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=True)
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -82,10 +83,11 @@ def heatmap_rr(df):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
     matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
+
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.heatmap(matrix, annot=True, cmap="RdBu_r", ax=ax)
-    ax.set_title("P/L by Day & Hour")
+    ax.set_title("Total R/R by Day & Hour")
     ax.set_xlabel("")
     ax.set_ylabel("Entry Hour")
     ax.tick_params(axis="y", rotation=0)
