@@ -1,10 +1,12 @@
 import datetime
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
+
 from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
-                         plot_gains_curve, plot_outcome_by_day,
-                         risk_vs_reward_scatter)
+                           pl_curve, outcome_by_day,
+                           risk_vs_reward_scatter)
 from modules.statsTable import create_stats_table
 
 
@@ -63,9 +65,6 @@ def export_to_pdf(df, pl, pl_raw):
     pdf_path = f"./exported_data/{pdf_filename}"
 
     _, _, stats = calc_stats(df)  # Get the stats dictionary
-    # print()
-    # print(len(df))
-    # print()
 
     with PdfPages(pdf_path) as pdf:
         # Add stats page first
@@ -74,12 +73,12 @@ def export_to_pdf(df, pl, pl_raw):
         plt.close(stats_fig)
 
         plt.figure(figsize=(8, 6))
-        plot_gains_curve(df, pl)
+        pl_curve(df, pl)
         pdf.savefig()
         plt.close()
 
         plt.figure(figsize=(8, 6))
-        plot_outcome_by_day(df)
+        outcome_by_day(df)
         pdf.savefig()
         plt.close()
 
@@ -102,7 +101,6 @@ def export_to_pdf(df, pl, pl_raw):
         # risk_vs_reward_scatter(df, pl_raw)
         # pdf.savefig()
         # plt.close()
-        
     return pdf_path
 
 
@@ -117,9 +115,8 @@ def pacman_progress(current, total):
 
 def fetch_and_process():
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-    
     print("Fetching data from Google Sheets...")
-    
+
     df = pd.read_csv(url)
     pl, pl_raw, stats = calc_stats(df)
 
@@ -129,11 +126,11 @@ def fetch_and_process():
         print("\nError: Missing required columns in the data")
         return
 
-    # List of functions to execute
+    # Stor a list List of functions to execute
     steps = [
         lambda: calc_stats(df),
-        lambda: plot_gains_curve(df, pl),
-        lambda: plot_outcome_by_day(df),
+        lambda: pl_curve(df, pl),
+        lambda: outcome_by_day(df),
         lambda: pl_distribution(pl_raw),
         lambda: heatmap_rr(df),
         # lambda: risk_vs_reward_scatter(df, pl_raw),
@@ -149,7 +146,6 @@ def fetch_and_process():
     # Generate PDF
     pacman_progress(9, 10)
     pdf_path = export_to_pdf(df, pl, pl_raw)
-    
     pacman_progress(10, 10)
     print(f"\n\nReport successfully generated: {pdf_path}")
 

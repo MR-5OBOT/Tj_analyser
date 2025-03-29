@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 
 
-def plot_gains_curve(df, pl):
+def pl_curve(df, pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     x = range(len(df))
@@ -17,7 +17,7 @@ def plot_gains_curve(df, pl):
     return fig
 
 
-def plot_outcome_by_day(df):
+def outcome_by_day(df):
     # df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=True)
     df["DoW"] = df["date"].dt.day_name().str.lower()
