@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
-from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
-                           plot_gains_curve, plot_outcome_by_day,
-                           risk_vs_reward_scatter)
+from modules.plots import (boxplot_DoW, heatmap_rr, outcome_by_day, pl_curve,
+                           pl_distribution, risk_vs_reward_scatter)
 from modules.statsTable import create_stats_table
 
 
@@ -85,12 +84,12 @@ def export_to_pdf(df, pl, pl_raw):
         plt.close(stats_fig)
 
         plt.figure(figsize=(8, 6))
-        plot_gains_curve(df, pl)
+        pl_curve(df, pl)
         pdf.savefig()
         plt.close()
 
         plt.figure(figsize=(8, 6))
-        plot_outcome_by_day(df)
+        outcome_by_day(df)
         pdf.savefig()
         plt.close()
 
@@ -141,9 +140,9 @@ def process_data(df):
     update_progress(0)
     pl, pl_raw, stats = calc_stats(df)
     update_progress(10)
-    plot_gains_curve(df, pl)
+    pl_curve(df, pl)
     update_progress(20)
-    plot_outcome_by_day(df)
+    outcome_by_day(df)
     update_progress(30)
     pl_distribution(pl_raw)
     update_progress(40)

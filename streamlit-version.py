@@ -7,9 +7,8 @@ import pandas as pd
 import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
-from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
-                           plot_gains_curve, plot_outcome_by_day,
-                           risk_vs_reward_scatter)
+from modules.plots import (boxplot_DoW, heatmap_rr, outcome_by_day, pl_curve,
+                           pl_distribution, risk_vs_reward_scatter)
 from modules.statsTable import create_stats_table
 
 
@@ -95,8 +94,8 @@ if uploaded_file:
     st.subheader("Visualizations")
     plot_functions = [
         (create_stats_table, (stats,)),
-        (plot_gains_curve, (df, pl)),
-        (plot_outcome_by_day, (df,)),
+        (pl_curve, (df, pl)),
+        (outcome_by_day, (df,)),
         (pl_distribution, (pl_raw,)),
         (heatmap_rr, (df,)),
         (boxplot_DoW, (df, pl_raw)),

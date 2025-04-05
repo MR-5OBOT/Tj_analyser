@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
-from modules.plots import (boxplot_DoW, heatmap_rr, pl_distribution,
-                           pl_curve, outcome_by_day,
-                           risk_vs_reward_scatter)
+from modules.plots import (boxplot_DoW, heatmap_rr, outcome_by_day, pl_curve,
+                           pl_distribution, risk_vs_reward_scatter)
 from modules.statsTable import create_stats_table
 
 
@@ -37,9 +36,10 @@ def calc_stats(df):
     avg_rr = df["pl_by_rr"].mean() or 0
     best_trade = pl_raw.max() or 0
     worst_trade = pl_raw.min() or 0
-    df["peak"] = pl_raw.cummax()
-    df["drawdown"] = (df["peak"] - pl_raw) / df["peak"]
-    max_dd = df["drawdown"].max() or 0
+    df_copy = df.copy()
+    df_copy["peak"] = pl_raw.cummax()
+    df_copy["drawdown"] = (df_copy["peak"] - pl_raw) / df_copy["peak"]
+    max_dd = df_copy["drawdown"].max() or 0
 
     stats = {
         "Total Trades": len(df),
@@ -53,56 +53,16 @@ def calc_stats(df):
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
     }
+
     return pl, pl_raw, stats
 
-
-# PDF Export
-def export_to_pdf(df, pl, pl_raw):
-    # Get current date in YYYY-MM-DD format
-    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-    # Create filename with date
-    pdf_filename = f"trading_report_{current_date}.pdf"
-    pdf_path = f"./exported_data/{pdf_filename}"
-
-    _, _, stats = calc_stats(df)  # Get the stats dictionary
-
-    with PdfPages(pdf_path) as pdf:
-        # Add stats page first
-        stats_fig = create_stats_table(stats)
-        pdf.savefig(stats_fig)
-        plt.close(stats_fig)
-
-        plt.figure(figsize=(8, 6))
-        pl_curve(df, pl)
-        pdf.savefig()
-        plt.close()
-
-        plt.figure(figsize=(8, 6))
-        outcome_by_day(df)
-        pdf.savefig()
-        plt.close()
-
-        plt.figure(figsize=(8, 6))
-        pl_distribution(pl_raw)
-        pdf.savefig()
-        plt.close()
-
-        plt.figure(figsize=(8, 6))
-        heatmap_rr(df)
-        pdf.savefig()
-        plt.close()
-
-        # plt.figure(figsize=(8, 6))
-        # boxplot_DoW(df, pl_raw)
-        # pdf.savefig()
-        # plt.close()
-
-        # plt.figure(figsize=(8, 6))
-        # risk_vs_reward_scatter(df, pl_raw)
-        # pdf.savefig()
-        # plt.close()
-    return pdf_path
-
+def term_stats(df):
+    if df is None or df.empty:
+        print("No data to process.")
+        return
+    stats = calc_stats(df)[2]
+    for key, value in stats.items():
+        print(f"{key}: {value}")
 
 def pacman_progress(current, total):
     """Displays a Pacman-style progress bar in the console"""
@@ -111,6 +71,27 @@ def pacman_progress(current, total):
     filled = int(round(bar_length * current / float(total)))
     bar = ">" * filled + "-" * (bar_length - filled)
     print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
+
+
+def generate_plots(df, pl, pl_raw):
+    return [
+        (create_stats_table, (calc_stats(df)[2],)),  # Inline calculation
+        (pl_curve, (df, pl)),
+        (outcome_by_day, (df,)),
+        (pl_distribution, (pl_raw,)),
+        (heatmap_rr, (df,)),
+        # (risk_vs_reward_scatter, (df, pl_raw)),
+        # (boxplot_DoW, (df, pl_raw)),
+    ]
+
+
+def export_to_pdf(df, pl, pl_raw):
+    pdf_path = f"./exported_data/trading_report_{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
+    with PdfPages(pdf_path) as pdf:
+        for func, args in generate_plots(df, pl, pl_raw):
+            pdf.savefig(func(*args))
+            plt.close()
+    return pdf_path
 
 
 def fetch_and_process():
@@ -126,7 +107,7 @@ def fetch_and_process():
         print("\nError: Missing required columns in the data")
         return
 
-    # Stor a list List of functions to execute
+    # Store a list List of functions to execute
     steps = [
         lambda: calc_stats(df),
         lambda: pl_curve(df, pl),
@@ -137,7 +118,6 @@ def fetch_and_process():
         # lambda: boxplot_DoW(df, pl_raw),
         lambda: export_to_pdf(df, pl, pl_raw),
     ]
-
     # Run each function with progress tracking
     for i, step in enumerate(steps, start=1):
         pacman_progress(i, len(steps))  # Auto progress
@@ -149,6 +129,10 @@ def fetch_and_process():
     pacman_progress(10, 10)
     print(f"\n\nReport successfully generated: {pdf_path}")
 
+    return df
+
 
 if __name__ == "__main__":
-    fetch_and_process()
+    df = fetch_and_process()
+    print()
+    term_stats(df)
