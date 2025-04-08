@@ -10,7 +10,7 @@ from modules.statsTable import create_stats_table
 
 
 def calc_stats(df):
-    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
+    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
     if not all(col in df.columns for col in required_cols):
         raise ValueError(f"Missing required columns: {', '.join(required_cols)}")
 
@@ -52,9 +52,32 @@ def calc_stats(df):
         "Best Trade": f"{best_trade:.2f}%",
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
+        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f}",
+        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f}",
     }
-
     return pl, pl_raw, stats
+
+
+# advanced time based stats
+def advanced_time_stats(df):
+    df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S")
+    df["exit_time"] = pd.to_datetime(df["exit_time"], format="%H:%M:%S")
+
+    df["duration_minutes"] = (df["exit_time"] - df["entry_time"]).dt.total_seconds() / 60
+    
+    # Filter only the rows where 'outcome' is "WIN" and 'duration_minutes' > 0
+    only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")]["duration_minutes"]
+    min_duration = only_wins.min()
+    max_duration = df['duration_minutes'].max()
+    
+    # print(only_wins)
+
+    # Get the minimum and maximum trade durations for only wins
+    # print(f"Min trade duration: {min_duration:.0f} Minutes")
+    # print(f"Max trade duration: {max_duration:.0f} Minutes")
+    
+    return only_wins, min_duration, max_duration
+
 
 def term_stats(df):
     if df is None or df.empty:
@@ -101,34 +124,37 @@ def fetch_and_process():
     df = pd.read_csv(url)
     pl, pl_raw, stats = calc_stats(df)
 
+
     # Check required columns
-    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
+    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
     if not all(col in df.columns for col in required_cols):
         print("\nError: Missing required columns in the data")
         return
+    
+    # advanced_time_stats(df)
 
-    # Store a list List of functions to execute
-    steps = [
-        lambda: calc_stats(df),
-        lambda: pl_curve(df, pl),
-        lambda: outcome_by_day(df),
-        lambda: pl_distribution(pl_raw),
-        lambda: heatmap_rr(df),
-        # lambda: risk_vs_reward_scatter(df, pl_raw),
-        # lambda: boxplot_DoW(df, pl_raw),
-        lambda: export_to_pdf(df, pl, pl_raw),
-    ]
-    # Run each function with progress tracking
-    for i, step in enumerate(steps, start=1):
-        pacman_progress(i, len(steps))  # Auto progress
-        result = step()  # Execute function
-
-    # Generate PDF
-    pacman_progress(9, 10)
-    pdf_path = export_to_pdf(df, pl, pl_raw)
-    pacman_progress(10, 10)
-    print(f"\n\nReport successfully generated: {pdf_path}")
-
+    # # Store a list List of functions to execute
+    # steps = [
+    #     lambda: calc_stats(df),
+    #     lambda: pl_curve(df, pl),
+    #     lambda: outcome_by_day(df),
+    #     lambda: pl_distribution(pl_raw),
+    #     lambda: heatmap_rr(df),
+    #     # lambda: risk_vs_reward_scatter(df, pl_raw),
+    #     # lambda: boxplot_DoW(df, pl_raw),
+    #     lambda: export_to_pdf(df, pl, pl_raw),
+    # ]
+    # # Run each function with progress tracking
+    # for i, step in enumerate(steps, start=1):
+    #     pacman_progress(i, len(steps))  # Auto progress
+    #     result = step()  # Execute function
+    #
+    # # Generate PDF
+    # pacman_progress(9, 10)
+    # pdf_path = export_to_pdf(df, pl, pl_raw)
+    # pacman_progress(10, 10)
+    # print(f"\n\nReport successfully generated: {pdf_path}")
+    
     return df
 
 
