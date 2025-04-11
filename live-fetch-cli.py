@@ -52,8 +52,8 @@ def calc_stats(df):
         "Best Trade": f"{best_trade:.2f}%",
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
-        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f}",
-        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f}",
+        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
+        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
     }
     return pl, pl_raw, stats
 
@@ -64,18 +64,18 @@ def advanced_time_stats(df):
     df["exit_time"] = pd.to_datetime(df["exit_time"], format="%H:%M:%S")
 
     df["duration_minutes"] = (df["exit_time"] - df["entry_time"]).dt.total_seconds() / 60
-    
+
     # Filter only the rows where 'outcome' is "WIN" and 'duration_minutes' > 0
     only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")]["duration_minutes"]
     min_duration = only_wins.min()
-    max_duration = df['duration_minutes'].max()
-    
+    max_duration = df["duration_minutes"].max()
+
     # print(only_wins)
 
     # Get the minimum and maximum trade durations for only wins
     # print(f"Min trade duration: {min_duration:.0f} Minutes")
     # print(f"Max trade duration: {max_duration:.0f} Minutes")
-    
+
     return only_wins, min_duration, max_duration
 
 
@@ -86,6 +86,7 @@ def term_stats(df):
     stats = calc_stats(df)[2]
     for key, value in stats.items():
         print(f"{key}: {value}")
+
 
 def pacman_progress(current, total):
     """Displays a Pacman-style progress bar in the console"""
@@ -124,13 +125,12 @@ def fetch_and_process():
     df = pd.read_csv(url)
     pl, pl_raw, stats = calc_stats(df)
 
-
     # Check required columns
     required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
     if not all(col in df.columns for col in required_cols):
         print("\nError: Missing required columns in the data")
         return
-    
+
     # advanced_time_stats(df)
 
     # # Store a list List of functions to execute
@@ -154,7 +154,7 @@ def fetch_and_process():
     # pdf_path = export_to_pdf(df, pl, pl_raw)
     # pacman_progress(10, 10)
     # print(f"\n\nReport successfully generated: {pdf_path}")
-    
+
     return df
 
 
