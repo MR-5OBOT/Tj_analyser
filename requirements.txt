@@ -6,3 +6,5 @@ openpyxl
 streamlit
 tabulate
 reportlab
+fpdf
+python-telegram-bot

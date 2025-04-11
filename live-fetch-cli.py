@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
-from modules.plots import (boxplot_DoW, heatmap_rr, outcome_by_day, pl_curve,
-                           pl_distribution, risk_vs_reward_scatter)
-from modules.statsTable import create_stats_table
+from modules.plots import (boxplot_DoW, create_stats_table, heatmap_rr,
+                           outcome_by_day, pl_curve, pl_distribution,
+                           risk_vs_reward_scatter)
 
 
 def calc_stats(df):
@@ -69,13 +69,6 @@ def advanced_time_stats(df):
     only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")]["duration_minutes"]
     min_duration = only_wins.min()
     max_duration = df["duration_minutes"].max()
-
-    # print(only_wins)
-
-    # Get the minimum and maximum trade durations for only wins
-    # print(f"Min trade duration: {min_duration:.0f} Minutes")
-    # print(f"Max trade duration: {max_duration:.0f} Minutes")
-
     return only_wins, min_duration, max_duration
 
 
@@ -131,30 +124,27 @@ def fetch_and_process():
         print("\nError: Missing required columns in the data")
         return
 
-    # advanced_time_stats(df)
+    # Store a list List of functions to execute
+    steps = [
+        lambda: calc_stats(df),
+        lambda: pl_curve(df, pl),
+        lambda: outcome_by_day(df),
+        lambda: pl_distribution(pl_raw),
+        lambda: heatmap_rr(df),
+        # lambda: risk_vs_reward_scatter(df, pl_raw),
+        # lambda: boxplot_DoW(df, pl_raw),
+        lambda: export_to_pdf(df, pl, pl_raw),
+    ]
+    # Run each function with progress tracking
+    for i, step in enumerate(steps, start=1):
+        pacman_progress(i, len(steps))  # Auto progress
+        result = step()  # Execute function
 
-    # # Store a list List of functions to execute
-    # steps = [
-    #     lambda: calc_stats(df),
-    #     lambda: pl_curve(df, pl),
-    #     lambda: outcome_by_day(df),
-    #     lambda: pl_distribution(pl_raw),
-    #     lambda: heatmap_rr(df),
-    #     # lambda: risk_vs_reward_scatter(df, pl_raw),
-    #     # lambda: boxplot_DoW(df, pl_raw),
-    #     lambda: export_to_pdf(df, pl, pl_raw),
-    # ]
-    # # Run each function with progress tracking
-    # for i, step in enumerate(steps, start=1):
-    #     pacman_progress(i, len(steps))  # Auto progress
-    #     result = step()  # Execute function
-    #
-    # # Generate PDF
-    # pacman_progress(9, 10)
-    # pdf_path = export_to_pdf(df, pl, pl_raw)
-    # pacman_progress(10, 10)
-    # print(f"\n\nReport successfully generated: {pdf_path}")
-
+    # Generate PDF
+    pacman_progress(9, 10)
+    pdf_path = export_to_pdf(df, pl, pl_raw)
+    pacman_progress(10, 10)
+    print(f"\n\nReport successfully generated: {pdf_path}")
     return df
 
 
