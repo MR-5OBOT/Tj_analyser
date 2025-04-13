@@ -76,29 +76,36 @@ def avg_win(df: pd.DataFrame) -> float:
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    wins = clean_pl[clean_pl < 0]
+    wins = clean_pl[clean_pl > 0]
     avg_win_value = wins.mean()
 
     return 0.0 if pd.isna(avg_win_value) else avg_win_value
 
-def avg_loss(df: pd.DataFrame) -> float:
+def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df is None or df.empty or df["pl_by_percentage"].empty:
-        return 0.0
+        return 0.0, 0.0
     clean_pl = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    losses = clean_pl[clean_pl < 0]
-    avg_loss_value = losses.mean()
+    avg_win = clean_pl[clean_pl > 0].mean()
+    avg_loss = clean_pl[clean_pl < 0].mean()
+    # Handle NaNs safely
+    avg_win = 0.0 if pd.isna(avg_win) else avg_win
+    avg_loss = 0.0 if pd.isna(avg_loss) else avg_loss
 
-    return 0.0 if pd.isna(avg_loss_value) else avg_loss_value
+    print(f"Average Win: {avg_win:.2f}%")
+    print(f"Average Loss: {avg_loss:.2f}%")
+    return avg_win, avg_loss
 
 
 def breakevenRate(df: pd.DataFrame) -> float:
-    if df is None or df.empty:
+    if df is None or df.empty or df["outcome"].empty:
         return 0.0
     count = df["outcome"].value_counts().get("BE", 0)
+    if len(df) == 0:
+        return 0.0
     be = count / df.shape[0] * 100
     return be
 
