@@ -7,9 +7,9 @@ import pandas as pd
 import streamlit as st
 from matplotlib.backends.backend_pdf import PdfPages
 
-from modules.plots import (boxplot_DoW, heatmap_rr, outcome_by_day, pl_curve,
-                           pl_distribution, risk_vs_reward_scatter)
-from modules.statsTable import create_stats_table
+from modules.plots import (boxplot_DoW, create_stats_table, heatmap_rr,
+                           outcome_by_day, pl_curve, pl_distribution,
+                           risk_vs_reward_scatter, advanced_time_stats)
 
 
 # Ensure export directory exists
@@ -33,7 +33,7 @@ def load_data(file):
 # Calculate statistics
 @st.cache_data
 def calc_stats(df):
-    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "pl_by_rr"]
+    required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
     if not all(col in df.columns for col in required_cols):
         raise ValueError(f"Missing required columns: {', '.join(required_cols)}")
 
@@ -41,7 +41,6 @@ def calc_stats(df):
     wins = df["outcome"].value_counts().get("WIN", 0)
     losses = df["outcome"].value_counts().get("LOSS", 0)
     winrate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0.0
-    total_trades = len(df)
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
@@ -60,12 +59,13 @@ def calc_stats(df):
     avg_rr = df["pl_by_rr"].mean() or 0
     best_trade = pl_raw.max() or 0
     worst_trade = pl_raw.min() or 0
-    df["peak"] = pl_raw.cummax()
-    df["drawdown"] = (df["peak"] - pl_raw) / df["peak"]
-    max_dd = df["drawdown"].max() or 0
+    df_copy = df.copy()
+    df_copy["peak"] = pl_raw.cummax()
+    df_copy["drawdown"] = (df_copy["peak"] - pl_raw) / df_copy["peak"]
+    max_dd = df_copy["drawdown"].max() or 0
 
     stats = {
-        "Total Trades": total_trades,
+        "Total Trades": len(df),
         "Win Rate": f"{winrate:.2f}%",
         "Total P/L": f"{total_pl:.2f}%",
         "Avg Win": f"{avg_win:.2f}%",
@@ -75,9 +75,10 @@ def calc_stats(df):
         "Best Trade": f"{best_trade:.2f}%",
         "Worst Trade": f"{worst_trade:.2f}%",
         "Max DD": f"{max_dd:.2f}%",
+        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
+        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
     }
     return pl, pl_raw, stats
-
 
 # Main app
 st.title("Trading Journal Analyser")

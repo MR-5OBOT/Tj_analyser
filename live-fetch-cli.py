@@ -72,13 +72,13 @@ def advanced_time_stats(df):
     return only_wins, min_duration, max_duration
 
 
-def term_stats(df):
+def term_stats(df: pd.DataFrame) -> dict:
     if df is None or df.empty:
         print("No data to process.")
-        return
     stats = calc_stats(df)[2]
     for key, value in stats.items():
         print(f"{key}: {value}")
+    return stats
 
 
 def pacman_progress(current, total):
@@ -111,7 +111,7 @@ def export_to_pdf(df, pl, pl_raw):
     return pdf_path
 
 
-def fetch_and_process():
+def fetch_and_process() -> pd.DataFrame:
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
     print("Fetching data from Google Sheets...")
 
@@ -122,7 +122,6 @@ def fetch_and_process():
     required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
     if not all(col in df.columns for col in required_cols):
         print("\nError: Missing required columns in the data")
-        return
 
     # Store a list List of functions to execute
     steps = [

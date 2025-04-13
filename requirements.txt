@@ -8,3 +8,4 @@ tabulate
 reportlab
 fpdf
 python-telegram-bot
+tkinter
