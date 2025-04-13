@@ -4,19 +4,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
-from helpers.plots import (boxplot_DoW, create_stats_table, heatmap_rr,
-                           outcome_by_day, pl_curve, pl_distribution,
-                           risk_vs_reward_scatter)
-from helpers.stats import calc_stats
-
-
-def term_stats(df: pd.DataFrame) -> dict:
-    if df is None or df.empty:
-        print("No data to process.")
-    stats = calc_stats(df)[2]
-    for key, value in stats.items():
-        print(f"{key}: {value}")
-    return stats
+from helpers.plots import *
+from helpers.stats import *
 
 
 def pacman_progress(current, total):
@@ -30,7 +19,7 @@ def pacman_progress(current, total):
 
 def generate_plots(df, pl, pl_raw):
     return [
-        (create_stats_table, (calc_stats(df)[2],)),  # Inline calculation
+        (create_stats_table, (term_stats(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (pl_distribution, (pl_raw,)),
@@ -58,7 +47,7 @@ def fetch_and_process() -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
     df = pd.read_csv(url())
-    pl, pl_raw, stats = calc_stats(df)
+    pl, pl_raw = calc_stats(df)
 
     # Check required columns
     required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]

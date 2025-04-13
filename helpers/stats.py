@@ -11,18 +11,18 @@ def calc_stats(df):
         raise ValueError(f"Missing required columns: {', '.join(required_cols)}")
 
     # Overall Stats
-    wins = df["outcome"].value_counts().get("WIN", 0)
-    losses = df["outcome"].value_counts().get("LOSS", 0)
-    winrate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0.0
+    # wins = df["outcome"].value_counts().get("WIN", 0)
+    # losses = df["outcome"].value_counts().get("LOSS", 0)
+    # winrate = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0.0
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
     pl = pl_raw.cumsum()
-    total_pl = pl_raw.sum()
-    avg_win = pl_raw[pl_raw > 0].mean() or 0
-    avg_loss = pl_raw[pl_raw < 0].mean() or 0
+    # total_pl = pl_raw.sum()
+    # avg_win = pl_raw[pl_raw > 0].mean() or 0
+    # avg_loss = pl_raw[pl_raw < 0].mean() or 0
     risk_converted = (
         df["risk_by_percentage"].str.replace("%", "").astype(float)
         if df["risk_by_percentage"].dtype == "object"
@@ -37,21 +37,7 @@ def calc_stats(df):
     df_copy["drawdown"] = (df_copy["peak"] - pl_raw) / df_copy["peak"]
     max_dd = df_copy["drawdown"].max() or 0
 
-    stats = {
-        "Total Trades": len(df),
-        "Win Rate": f"{winrate:.2f}%",
-        "Total P/L": f"{total_pl:.2f}%",
-        "Avg Win": f"{avg_win:.2f}%",
-        "Avg Loss": f"{avg_loss:.2f}%",
-        "Avg Risk": f"{avg_risk:.2f}%",
-        "Avg R/R": f"{avg_rr:.2f}",
-        "Best Trade": f"{best_trade:.2f}%",
-        "Worst Trade": f"{worst_trade:.2f}%",
-        "Max DD": f"{max_dd:.2f}%",
-        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
-        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
-    }
-    return pl, pl_raw, stats
+    return pl, pl_raw
 
 
 # advanced time based stats
@@ -68,18 +54,22 @@ def advanced_time_stats(df):
     return only_wins, min_duration, max_duration
 
 
-def avg_win(df: pd.DataFrame) -> float:
-    if df is None or df.empty or df["pl_by_percentage"].empty:
-        return 0.0
+def total_pl(df: pd.DataFrame) -> float:
     clean_pl = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    wins = clean_pl[clean_pl > 0]
-    avg_win_value = wins.mean()
+    pl = clean_pl.sum()
+    return pl
 
-    return 0.0 if pd.isna(avg_win_value) else avg_win_value
+
+def winrate(df: pd.DataFrame) -> float:
+    wins = (df["outcome"] == "WIN").sum()
+    losses = (df["outcome"] == "LOSS").sum()
+    wr = (wins / (wins + losses)) * 100 if (wins + losses) > 0 else 0.0
+    return wr
+
 
 def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df is None or df.empty or df["pl_by_percentage"].empty:
@@ -95,19 +85,25 @@ def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     avg_win = 0.0 if pd.isna(avg_win) else avg_win
     avg_loss = 0.0 if pd.isna(avg_loss) else avg_loss
 
-    print(f"Average Win: {avg_win:.2f}%")
-    print(f"Average Loss: {avg_loss:.2f}%")
+    # print(f"Average Win: {avg_win:.2f}%")
+    # print(f"Average Loss: {avg_loss:.2f}%")
     return avg_win, avg_loss
 
+def avg_risk(df: pd.DataFrame) -> float:
+    if df is None or df.empty or df["pl_by_rr"].empty:
+        return 0.0
+    risk_converted = (
+        df["risk_by_percentage"].str.replace("%", "").astype(float)
+        if df["risk_by_percentage"].dtype == "object"
+        else df["risk_by_percentage"] * 100
+    )
+    avg_r = risk_converted.mean() or 0.0
+    return avg_r
 
-def breakevenRate(df: pd.DataFrame) -> float:
-    if df is None or df.empty or df["outcome"].empty:
+def avg_rr(df: pd.DataFrame) -> float:
+    if df is None or "pl_by_rr" not in df or df["pl_by_rr"].dropna().empty:
         return 0.0
-    count = df["outcome"].value_counts().get("BE", 0)
-    if len(df) == 0:
-        return 0.0
-    be = count / df.shape[0] * 100
-    return be
+    return df["pl_by_rr"].mean()
 
 
 def expectency(df: pd.DataFrame, expected_value: float) -> float:
@@ -119,3 +115,26 @@ def expectency(df: pd.DataFrame, expected_value: float) -> float:
     # Expectancy = (Win Rate × Avg Win) - (Loss Rate × Avg Loss)
 
     return expected_value
+
+
+def term_stats(df) -> dict:
+    if df is None or df.empty:
+        print("No data to process.")
+    stats = {
+            "Total Trades": len(df),
+            "Win Rate": f"{winrate(df):.2f}%",
+            "Total P/L": f"{total_pl(df):.2f}%",
+            "Avg Win": f"{avg_wl(df)[0]:.2f}%",
+            "Avg Loss": f"{avg_wl(df)[1]:.2f}%",
+            "Avg Risk": f"{avg_risk(df):.2f}%",
+            "Avg R/R": f"{avg_rr(df):.2f}",
+            "Best Trade": f"{best_trade(df):.2f}%",
+            # "Worst Trade": f"{worst_trade:.2f}%",
+            # "Max DD": f"{max_dd:.2f}%",
+            "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
+            "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
+            }
+    for key, value in stats.items():
+        print(f"{key}: {value}")
+    return stats
+
