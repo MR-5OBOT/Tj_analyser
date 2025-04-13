@@ -69,36 +69,30 @@ def advanced_time_stats(df):
 
 
 def avg_win(df: pd.DataFrame) -> float:
-    if df is None or df.empty:
+    if df is None or df.empty or df["pl_by_percentage"].empty:
         return 0.0
-
     clean_pl = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    filter_wins = clean_pl[df["outcome"] == "WIN"]
-    total_pl_wins = filter_wins.sum()
-    wins = df["outcome"].value_counts().get("WIN", 0)
-    avg_win_value = total_pl_wins / wins
-    # Average Win = Total Profit from Winning Trades / Number of Winning Trades
-    return avg_win_value
+    wins = clean_pl[clean_pl < 0]
+    avg_win_value = wins.mean()
+
+    return 0.0 if pd.isna(avg_win_value) else avg_win_value
 
 def avg_loss(df: pd.DataFrame) -> float:
-    if df is None or df.empty:
+    if df is None or df.empty or df["pl_by_percentage"].empty:
         return 0.0
-
     clean_pl = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    filter_losses = clean_pl[df["outcome"] == "LOSS"]
-    total_pl_losses = filter_losses.sum()
-    losses = df["outcome"].value_counts().get("LOSS", 0)
-    avg_loss_value = total_pl_losses / losses
-    # Average Win = Total Profit from Winning Trades / Number of Winning Trades
-    return avg_loss_value
+    losses = clean_pl[clean_pl < 0]
+    avg_loss_value = losses.mean()
+
+    return 0.0 if pd.isna(avg_loss_value) else avg_loss_value
 
 
 def breakevenRate(df: pd.DataFrame) -> float:
