@@ -84,11 +84,26 @@ def avg_win(df: pd.DataFrame) -> float:
     # Average Win = Total Profit from Winning Trades / Number of Winning Trades
     return avg_win_value
 
+def avg_loss(df: pd.DataFrame) -> float:
+    if df is None or df.empty:
+        return 0.0
+
+    clean_pl = (
+        df["pl_by_percentage"].str.replace("%", "").astype(float)
+        if df["pl_by_percentage"].dtype == "object"
+        else df["pl_by_percentage"] * 100
+    )
+    filter_losses = clean_pl[df["outcome"] == "LOSS"]
+    total_pl_losses = filter_losses.sum()
+    losses = df["outcome"].value_counts().get("LOSS", 0)
+    avg_loss_value = total_pl_losses / losses
+    # Average Win = Total Profit from Winning Trades / Number of Winning Trades
+    return avg_loss_value
+
 
 def breakevenRate(df: pd.DataFrame) -> float:
     if df is None or df.empty:
         return 0.0
-
     count = df["outcome"].value_counts().get("BE", 0)
     be = count / df.shape[0] * 100
     return be
