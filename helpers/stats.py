@@ -54,6 +54,15 @@ def advanced_time_stats(df):
     return only_wins, min_duration, max_duration
 
 
+def pl_raw_series(df) -> pd.Series:
+    pl_raw = (
+        df["pl_by_percentage"].str.replace("%", "").astype(float)
+        if df["pl_by_percentage"].dtype == "object"
+        else df["pl_by_percentage"] * 100
+    )
+    return pl_raw.cumsum()
+
+
 def total_pl(df: pd.DataFrame) -> float:
     clean_pl = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
@@ -140,8 +149,7 @@ def expectency(df: pd.DataFrame, expected_value: float) -> float:
 
     return expected_value
 
-
-def term_stats(df) -> dict:
+def stats_table(df: pd.DataFrame) -> dict:
     if df is None or df.empty:
         print("No data to process.")
     stats = {
@@ -158,7 +166,11 @@ def term_stats(df) -> dict:
             "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
             "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
             }
+    return stats
+
+
+def term_stats(stats: dict):
     for key, value in stats.items():
         print(f"{key}: {value}")
-    return stats
+    return
 
