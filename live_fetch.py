@@ -17,10 +17,10 @@ def pacman_progress(current, total):
     print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
 
 
-def generate_plots(df, pl, pl_raw):
+def generate_plots(df,cumulative_pl, pl_raw):
     return [
         (create_stats_table, (term_stats(df),)),
-        (pl_curve, (df, pl)),
+        (pl_curve, (df, cumulative_pl)),
         (outcome_by_day, (df,)),
         (pl_distribution, (pl_raw,)),
         (heatmap_rr, (df,)),
@@ -29,10 +29,10 @@ def generate_plots(df, pl, pl_raw):
     ]
 
 
-def export_to_pdf(df, pl, pl_raw):
+def export_to_pdf(df, cumulative_pl, pl_raw):
     pdf_path = f"./exported_data/trading_report_{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
     with PdfPages(pdf_path) as pdf:
-        for func, args in generate_plots(df, pl, pl_raw):
+        for func, args in generate_plots(df, cumulative_pl, pl_raw):
             pdf.savefig(func(*args))
             plt.close()
     return pdf_path
@@ -47,7 +47,8 @@ def fetch_and_process() -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
     df = pd.read_csv(url())
-    pl, pl_raw = calc_stats(df)
+    cumulative_pl = total_pl(df)
+    pl_raw = calc_stats(df)
 
     # Check required columns
     required_cols = ["date", "outcome", "pl_by_percentage", "risk_by_percentage", "entry_time", "exit_time", "pl_by_rr"]
@@ -57,13 +58,13 @@ def fetch_and_process() -> pd.DataFrame:
     # Store a list List of functions to execute
     steps = [
         lambda: calc_stats(df),
-        lambda: pl_curve(df, pl),
+        lambda: pl_curve(df, cumulative_pl),
         lambda: outcome_by_day(df),
         lambda: pl_distribution(pl_raw),
         lambda: heatmap_rr(df),
         # lambda: risk_vs_reward_scatter(df, pl_raw),
         # lambda: boxplot_DoW(df, pl_raw),
-        lambda: export_to_pdf(df, pl, pl_raw),
+        lambda: export_to_pdf(df, cumulative_pl, pl_raw),
     ]
     # Run each function with progress tracking
     for i, step in enumerate(steps, start=1):
@@ -72,7 +73,7 @@ def fetch_and_process() -> pd.DataFrame:
 
     # Generate PDF
     pacman_progress(9, 10)
-    pdf_path = export_to_pdf(df, pl, pl_raw)
+    pdf_path = export_to_pdf(df, cumulative_pl, pl_raw)
     pacman_progress(10, 10)
     print(f"\n\nReport successfully generated: {pdf_path}")
     return df

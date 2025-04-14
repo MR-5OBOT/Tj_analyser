@@ -3,11 +3,11 @@ import pandas as pd
 import seaborn as sns
 
 
-def pl_curve(df, pl):
+def pl_curve(df, cumulative_pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     x = range(len(df))
-    sns.lineplot(x=x, y=pl, label="Gains (%)", ax=ax)
+    sns.lineplot(x=x, y=cumulative_pl, label="Gains (%)", ax=ax)
     ax.set_title("Gains Curve")
     ax.set_xlabel("Trades")
     ax.set_ylabel("P/L (%)")

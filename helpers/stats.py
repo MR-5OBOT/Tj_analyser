@@ -28,10 +28,10 @@ def calc_stats(df):
         if df["risk_by_percentage"].dtype == "object"
         else df["risk_by_percentage"] * 100
     )
-    avg_risk = risk_converted.mean() or 0
-    avg_rr = df["pl_by_rr"].mean() or 0
-    best_trade = pl_raw.max() or 0
-    worst_trade = pl_raw.min() or 0
+    # avg_risk = risk_converted.mean() or 0
+    # avg_rr = df["pl_by_rr"].mean() or 0
+    # best_trade = pl_raw.max() or 0
+    # worst_trade = pl_raw.min() or 0
     df_copy = df.copy()
     df_copy["peak"] = pl_raw.cummax()
     df_copy["drawdown"] = (df_copy["peak"] - pl_raw) / df_copy["peak"]
@@ -106,6 +106,30 @@ def avg_rr(df: pd.DataFrame) -> float:
     return df["pl_by_rr"].mean()
 
 
+def best_trade(df: pd.DataFrame) -> float:
+    if df is None or "pl_by_percentage" not in df or df["pl_by_percentage"].dropna().empty:
+        return 0.0
+    clean_pl = (
+    df["pl_by_percentage"].str.replace("%", "").astype(float)
+    if df["pl_by_percentage"].dtype == "object"
+    else df["pl_by_percentage"] * 100
+    )
+    best_trade_value = clean_pl.max() or 0.0
+    return best_trade_value
+
+def worst_trade(df: pd.DataFrame) -> float:
+    if df is None or "pl_by_percentage" not in df or df["pl_by_percentage"].dropna().empty:
+        return 0.0
+    clean_pl = (
+    df["pl_by_percentage"].str.replace("%", "").astype(float)
+    if df["pl_by_percentage"].dtype == "object"
+    else df["pl_by_percentage"] * 100
+    )
+    best_trade_value = clean_pl.min() or 0.0
+    return best_trade_value
+
+
+
 def expectency(df: pd.DataFrame, expected_value: float) -> float:
     wins = df["outcome"].value_counts().get("WIN", 0)
     losses = df["outcome"].value_counts().get("LOSS", 0)
@@ -129,7 +153,7 @@ def term_stats(df) -> dict:
             "Avg Risk": f"{avg_risk(df):.2f}%",
             "Avg R/R": f"{avg_rr(df):.2f}",
             "Best Trade": f"{best_trade(df):.2f}%",
-            # "Worst Trade": f"{worst_trade:.2f}%",
+            "Worst Trade": f"{worst_trade(df):.2f}%",
             # "Max DD": f"{max_dd:.2f}%",
             "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
             "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
