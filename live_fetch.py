@@ -55,7 +55,6 @@ def fetch_and_process() -> pd.DataFrame:
     cumulative_pl = pl_raw_series(df)
     pl_raw = pl_raw_series(df)
 
-
     # Store a list List of functions to execute
     steps = [
         lambda: create_stats_table(stats),
