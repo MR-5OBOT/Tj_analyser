@@ -71,9 +71,12 @@ def avg_risk(df: pd.DataFrame) -> float:
     return avg_r
 
 def avg_rr(df: pd.DataFrame) -> float:
-    if df is None or "pl_by_rr" not in df or df["pl_by_rr"].dropna().empty:
+    if df is None or "pl_by_rr" not in df:
         return 0.0
-    return df["pl_by_rr"].mean()
+    valid_data = df["pl_by_rr"].dropna()
+    if valid_data.empty:
+        return 0.0
+    return valid_data.mean()
 
 
 def best_trade(df: pd.DataFrame) -> float:
