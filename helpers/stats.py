@@ -138,6 +138,19 @@ def worst_trade(df: pd.DataFrame) -> float:
     return best_trade_value
 
 
+def max_drawdown(df: pd.DataFrame) -> float:
+    clean_pl = (
+    df["pl_by_percentage"].str.replace("%", "").astype(float)
+    if df["pl_by_percentage"].dtype == "object"
+    else df["pl_by_percentage"] * 100
+    )
+    peak = clean_pl.cummax()
+    dd = (peak - clean_pl) / peak
+    max_dd = dd.max() or 0.0
+    return max_dd
+
+
+
 
 def expectency(df: pd.DataFrame, expected_value: float) -> float:
     wins = df["outcome"].value_counts().get("WIN", 0)
