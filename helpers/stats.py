@@ -138,7 +138,7 @@ def stats_table(df: pd.DataFrame) -> dict:
             "Avg R/R": f"{avg_rr(df):.2f}",
             "Best Trade": f"{best_trade(df):.2f}%",
             "Worst Trade": f"{worst_trade(df):.2f}%",
-            "Max DD": f"{max_drawdown(df):.2f}%",
+            "Max Drawdown": f"{max_drawdown(df):.2f}%",
             "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
             "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
             }
