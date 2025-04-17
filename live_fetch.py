@@ -17,7 +17,7 @@ def pacman_progress(current, total):
     print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
 
 
-def generate_plots(df,cumulative_pl, pl_raw):
+def generate_plots(df, cumulative_pl, pl_raw):
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, cumulative_pl)),
@@ -46,6 +46,7 @@ def export_to_pdf(df, cumulative_pl, pl_raw):
 def url() -> str:
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
     return url
+
 
 def fetch_and_process() -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
@@ -86,6 +87,7 @@ def df_check(df: pd.DataFrame) -> None:
     missing = [col for col in cols if col not in df.columns]
     if missing:
         raise ValueError(f"Missing columns: {', '.join(missing)}")
+
 
 if __name__ == "__main__":
     try:
