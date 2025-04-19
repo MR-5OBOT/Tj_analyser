@@ -36,16 +36,10 @@ I can help you analyze your trading performance and generate reports.
 - A CSV or Excel file
 - A direct Google Sheets CSV link
 
-🧾 *Your file must include these columns:*
-- `date`
-- `outcome`
-- `pl_by_percentage`
-- `risk_by_percentage`
-- `entry_time`
-- `exit_time`
-- `pl_by_rr`
+🧾 *Your dat must be from:*
+- `Template Command`
 
-Type or upload your data to begin! 📊
+upload your data to begin! 📊
 """
 
 
