@@ -19,7 +19,7 @@ def pl_curve(df, pl):
 
 def outcome_by_day(df):
     # df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=False) # True ?!
+    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=False)  # True ?!
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -77,7 +77,7 @@ def heatmap_rr(df):
         except ValueError:
             try:
                 return pd.to_datetime(time_str + ":00", format="%H:%M:%S").time()
-            except:
+            except ValueError:
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
@@ -106,7 +106,11 @@ def create_stats_table(stats):
 
     # Create the table
     table = ax.table(
-        cellText=table_data, colLabels=["Statistic", "Value"], loc="center", cellLoc="center", colColours=["#111111", "#111111"]
+        cellText=table_data,
+        colLabels=["Statistic", "Value"],
+        loc="center",
+        cellLoc="center",
+        colColours=["#111111", "#111111"],
     )
 
     # Style the table
