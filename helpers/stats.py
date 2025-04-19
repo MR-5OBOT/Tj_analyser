@@ -17,7 +17,7 @@ def advanced_time_stats(df):
     return only_wins, min_duration, max_duration
 
 
-def pl_raw_series(df) -> pd.Series:
+def pl_series(df) -> pd.Series:
     pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
@@ -28,12 +28,12 @@ def pl_raw_series(df) -> pd.Series:
 
 
 def total_pl(df: pd.DataFrame) -> float:
-    clean_pl = (
+    pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    pl = clean_pl.sum()
+    pl = pl_raw.sum()
     return pl
 
 
@@ -48,13 +48,13 @@ def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df is None or df.empty or df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    clean_pl = (
+    pl_raw = (
         df["pl_by_percentage"].str.replace("%", "").astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    avg_win = clean_pl[clean_pl > 0].mean()
-    avg_loss = abs(clean_pl[clean_pl < 0].mean())  # <-- Make loss positive here
+    avg_win = pl_raw[pl_raw > 0].mean()
+    avg_loss = abs(pl_raw[pl_raw < 0].mean())  # <-- Make loss positive here
 
     avg_win = 0.0 if pd.isna(avg_win) else avg_win
     avg_loss = 0.0 if pd.isna(avg_loss) else avg_loss
@@ -108,13 +108,13 @@ def worst_trade(df: pd.DataFrame) -> float:
 
 
 def max_drawdown(df: pd.DataFrame) -> float:
-    clean_pl = (
+    pl_raw = (
         df["pl_by_percentage"].str.replace("%", "", regex=False).astype(float)
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    peak = clean_pl.cummax()
-    dd = (peak - clean_pl) / peak
+    peak = pl_raw.cummax()
+    dd = (peak - pl_raw) / peak
     max_dd = dd.max() if not dd.empty else 0.0
     return max_dd
 
