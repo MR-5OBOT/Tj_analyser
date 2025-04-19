@@ -20,12 +20,12 @@ def pacman_progress(current, total):
 def generate_plots(df, pl):
     return [
         (create_stats_table, (stats_table(df),)),
-        (pl_curve, (df, pl_series)),
+        (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (pl_distribution, (pl,)),
         (heatmap_rr, (df,)),
-        # (risk_vs_reward_scatter, (df, pl_series(df)),
-        # (boxplot_DoW, (df, pl_series(df))),
+        # (risk_vs_reward_scatter, (df, pl(df)),
+        # (boxplot_DoW, (df, pl(df))),
     ]
 
 
@@ -53,7 +53,7 @@ def fetch_and_process() -> pd.DataFrame:
 
     df = pd.read_csv(url())
     stats = stats_table(df)
-    pl = pl_series(df)
+    pl = pl_series(df).cumsum
 
     # Store a list List of functions to execute
     steps = [
