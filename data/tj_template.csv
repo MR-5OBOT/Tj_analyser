@@ -1,4 +1,4 @@
-date,symbol,entry_time,entry_exit,outcome,risk_by_percentage,pl_by_rr,pl_by_percentage
+date,symbol,entry_time,exit_time,outcome,risk_by_percentage,pl_by_rr,pl_by_percentage
 01-24-2024,MNQ,9:20:00,9:20:00,LOSS,1.00%,-1.00,-1.00%
 11-12-2024,MNQ,9:12:00,10:12:00,WIN,1.00%,1.60,1.60%
 11-18-2024,MNQ,9:23:00,10:23:00,LOSS,1.00%,-1.00,-1.00%
