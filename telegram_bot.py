@@ -13,9 +13,9 @@ from telegram.ext import (
     filters,
 )
 
-from helpers.df_check import df_check
-from helpers.stats import pl_series, stats_table
-from live_fetch import export_to_pdf, generate_plots
+from live_fetch import generate_plots
+from helpers.utils import *
+from helpers.stats import *
 
 # Load environment variables
 load_dotenv()
@@ -127,7 +127,7 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         pl = pl_series(df)
 
         # Generate and save PDF report
-        pdf_path = export_to_pdf(df, pl)
+        pdf_path = export_figure_to_pdf(generate_plots(df, pl))
 
         await message.edit_text("📤 Sending your report...")
 
