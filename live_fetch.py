@@ -49,9 +49,9 @@ def fetch_and_process() -> pd.DataFrame:
         result = step()  # Execute function
 
     # Generate PDF
-    pacman_progress(8, 10)
+    # pacman_progress(8, 10)
     pdf_path = export_figure_to_pdf(generate_plots(df, pl))
-    pacman_progress(10, 10)
+    # pacman_progress(10, 10)
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 
