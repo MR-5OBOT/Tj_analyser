@@ -17,22 +17,22 @@ def pacman_progress(current, total):
     print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
 
 
-def generate_plots(df, cumulative_pl, pl_raw):
+def generate_plots(df, pl):
     return [
         (create_stats_table, (stats_table(df),)),
-        (pl_curve, (df, cumulative_pl)),
+        (pl_curve, (df, pl_series)),
         (outcome_by_day, (df,)),
-        (pl_distribution, (pl_raw,)),
+        (pl_distribution, (pl,)),
         (heatmap_rr, (df,)),
-        # (risk_vs_reward_scatter, (df, pl_raw_series(df)),
-        # (boxplot_DoW, (df, pl_raw_series(df))),
+        # (risk_vs_reward_scatter, (df, pl_series(df)),
+        # (boxplot_DoW, (df, pl_series(df))),
     ]
 
 
-def export_to_pdf(df, cumulative_pl, pl_raw):
+def export_to_pdf(df, pl):
     pdf_path = f"exported_data/trading_report_{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
     with PdfPages(pdf_path) as pdf:
-        plots = generate_plots(df, cumulative_pl, pl_raw)
+        plots = generate_plots(df, pl)
         # print(plots)  # Debug: Check what is being returned
         for func, args in plots:
             fig = func(*args)
@@ -53,19 +53,18 @@ def fetch_and_process() -> pd.DataFrame:
 
     df = pd.read_csv(url())
     stats = stats_table(df)
-    cumulative_pl = pl_raw_series(df)
-    pl_raw = pl_raw_series(df)
+    pl = pl_series(df)
 
     # Store a list List of functions to execute
     steps = [
         lambda: create_stats_table(stats),
-        lambda: pl_curve(df, cumulative_pl),
+        lambda: pl_curve(df, pl),
         lambda: outcome_by_day(df),
-        lambda: pl_distribution(pl_raw),
+        lambda: pl_distribution(pl),
         lambda: heatmap_rr(df),
-        # lambda: risk_vs_reward_scatter(df, pl_raw),
-        # lambda: boxplot_DoW(df, pl_raw),
-        lambda: export_to_pdf(df, cumulative_pl, pl_raw),
+        # lambda: risk_vs_reward_scatter(df, pl),
+        # lambda: boxplot_DoW(df, pl),
+        lambda: export_to_pdf(df, pl),
     ]
     # Run each function with progress tracking
     for i, step in enumerate(steps, start=1):
@@ -74,7 +73,7 @@ def fetch_and_process() -> pd.DataFrame:
 
     # Generate PDF
     pacman_progress(8, 10)
-    pdf_path = export_to_pdf(df, cumulative_pl, pl_raw)
+    pdf_path = export_to_pdf(df, pl)
     pacman_progress(10, 10)
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
