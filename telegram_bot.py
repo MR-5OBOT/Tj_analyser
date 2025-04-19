@@ -3,7 +3,6 @@ import os
 from io import BytesIO
 
 import pandas as pd
-import pytz
 from dotenv import load_dotenv
 from telegram import Update, constants
 from telegram.ext import (
@@ -15,10 +14,7 @@ from telegram.ext import (
 )
 
 from helpers.df_check import df_check
-from helpers.stats import (  # Adjust if df_check is in live_fetch
-    pl_raw_series,
-    stats_table,
-)
+from helpers.stats import pl_series, stats_table
 from live_fetch import export_to_pdf, generate_plots
 
 # Load environment variables
@@ -49,8 +45,6 @@ I can help you analyze your trading performance and generate reports.
 - `exit_time`
 - `pl_by_rr`
 
-📥 *Template:* [Click here to download]({TEMPLATE_URL})
-
 Type or upload your data to begin! 📊
 """
 
@@ -58,6 +52,32 @@ Type or upload your data to begin! 📊
 # Command: /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN)
+
+
+# Command: /help
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    help_text = """
+📚 *Help - Trading Analysis Bot*
+
+Available commands:
+- `/start`: Show the welcome message and instructions.
+- `/help`: Display this help message.
+- `/template`: Get the Google Sheets template link.
+
+📤 *Upload a file or link*:
+Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
+
+For support, contact the bot admin.
+"""
+    await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
+
+
+# Command: /template
+async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        f"📥 Download the template here: [Google Sheets Template]({TEMPLATE_URL})",
+        parse_mode=constants.ParseMode.MARKDOWN,
+    )
 
 
 # Main handler for file or URL
@@ -110,11 +130,10 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.edit_text("📊 Generating your analysis report...")
 
         # Perform calculations
-        cumulative_pl = pl_raw_series(df)
-        pl_raw = pl_raw_series(df)
+        pl = pl_series(df)
 
         # Generate and save PDF report
-        pdf_path = export_to_pdf(df, cumulative_pl, pl_raw)
+        pdf_path = export_to_pdf(df, pl)
 
         await message.edit_text("📤 Sending your report...")
 
@@ -145,6 +164,8 @@ def main() -> None:
 
     # Register handlers
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("template", template_command))
     application.add_handler(MessageHandler(filters.Document.ALL | filters.Regex(r"^https?://"), process_file))
 
     # Start the bot

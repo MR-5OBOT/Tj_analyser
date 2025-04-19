@@ -12,3 +12,4 @@ requests
 pytz
 dotenv
 apscheduler
+flask
