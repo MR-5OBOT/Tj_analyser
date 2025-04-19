@@ -3,11 +3,11 @@ import pandas as pd
 import seaborn as sns
 
 
-def pl_curve(df, cumulative_pl):
+def pl_curve(df, pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     x = range(len(df))
-    sns.lineplot(x=x, y=cumulative_pl, label="Gains (%)", ax=ax)
+    sns.lineplot(x=x, y=pl.cumsum(), label="Gains (%)", ax=ax)
     ax.set_title("Gains Curve")
     ax.set_xlabel("Trades")
     ax.set_ylabel("P/L (%)")
@@ -32,21 +32,21 @@ def outcome_by_day(df):
     return fig
 
 
-def pl_distribution(pl_raw):
+def pl_distribution(pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.histplot(pl_raw, bins=10, kde=True, ax=ax)
+    sns.histplot(pl, bins=10, kde=True, ax=ax)
     ax.set_title("P/L Distribution")
     ax.set_xlabel("P/L (%)")
     fig.tight_layout()
     return fig
 
 
-def boxplot_DoW(df, pl_raw):
+def boxplot_DoW(df, pl):
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.boxplot(x=df["DoW"], y=pl_raw, hue=df["outcome"], palette="YlGnBu", ax=ax)
+    sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"], palette="YlGnBu", ax=ax)
     ax.set_title("P/L by Day")
     ax.set_xlabel("")
     ax.set_ylabel("P/L (%)")
@@ -54,14 +54,14 @@ def boxplot_DoW(df, pl_raw):
     return fig
 
 
-def risk_vs_reward_scatter(df, pl_raw):
+def risk_vs_reward_scatter(df, pl):
     if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
         risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
     else:
         risk = df["risk_by_percentage"] * 100
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.scatterplot(x=risk, y=pl_raw, hue=df["outcome"], palette="coolwarm", ax=ax)
+    sns.scatterplot(x=risk, y=pl, hue=df["outcome"], palette="coolwarm", ax=ax)
     ax.set_title("Risk vs Reward")
     ax.set_xlabel("Risk (%)")
     ax.set_ylabel("P/L (%)")
