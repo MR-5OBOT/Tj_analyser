@@ -53,7 +53,7 @@ def fetch_and_process() -> pd.DataFrame:
 
     df = pd.read_csv(url())
     stats = stats_table(df)
-    pl = pl_series(df).cumsum
+    pl = pl_series(df)
 
     # Store a list List of functions to execute
     steps = [
