@@ -25,7 +25,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Replace this with your actual Google Sheets template link
-TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/YOUR_TEMPLATE_URL/edit#gid=0"
+TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
 
 WELCOME_MESSAGE = f"""
 👋 *Welcome to the Trading Analysis Bot!*
