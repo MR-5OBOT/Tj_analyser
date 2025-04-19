@@ -1,5 +1,5 @@
 env
 .ipynb_checkpoints
 .venv
-# exported_data
 __pycache__
+.env

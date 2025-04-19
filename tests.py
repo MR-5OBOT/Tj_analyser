@@ -31,7 +31,3 @@ def main() -> None:
 
     # Start the bot
     application.run_polling()
-
-
-if __name__ == "__main__":
-    main()

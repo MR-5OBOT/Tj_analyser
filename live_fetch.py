@@ -30,7 +30,7 @@ def generate_plots(df, pl):
 
 
 def export_to_pdf(df, pl):
-    pdf_path = f"exported_data/trading_report_{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
+    pdf_path = f"{datetime.datetime.now().strftime('%Y-%m-%d')}.pdf"
     with PdfPages(pdf_path) as pdf:
         plots = generate_plots(df, pl)
         # print(plots)  # Debug: Check what is being returned
