@@ -23,7 +23,8 @@ def pl_raw_series(df) -> pd.Series:
         if df["pl_by_percentage"].dtype == "object"
         else df["pl_by_percentage"] * 100
     )
-    return pl_raw.cumsum()
+    # return clean_pl.cumsum()
+    return pl_raw
 
 
 def total_pl(df: pd.DataFrame) -> float:
