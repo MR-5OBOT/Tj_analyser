@@ -1,17 +1,20 @@
-import datetime
-
-import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.backends.backend_pdf import PdfPages
 
-from helpers.utils import *
-from helpers.plots import *
-from helpers.stats import *
+from helpers.plots import (
+    create_stats_table,
+    heatmap_rr,
+    outcome_by_day,
+    pl_curve,
+    pl_distribution,
+)
+from helpers.stats import pl_series, stats_table, term_stats
+from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
 
 
 def url() -> str:
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
     return url
+
 
 def generate_plots(df, pl):
     return [
@@ -46,7 +49,7 @@ def fetch_and_process() -> pd.DataFrame:
     # Run each function with progress tracking
     for i, step in enumerate(steps, start=1):
         pacman_progress(i, len(steps))  # Auto progress
-        result = step()  # Execute function
+        step()  # Execute function
 
     # Generate PDF
     # pacman_progress(8, 10)
