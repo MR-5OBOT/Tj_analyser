@@ -3,8 +3,7 @@ import pandas as pd
 ### this only works with teh right csv template ###
 
 
-# advanced time based stats
-def advanced_time_stats(df):
+def durations(df):
     df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S")
     df["exit_time"] = pd.to_datetime(df["exit_time"], format="%H:%M:%S")
 
@@ -37,11 +36,27 @@ def total_pl(df: pd.DataFrame) -> float:
     return pl
 
 
-def winrate(df: pd.DataFrame) -> float:
+def winrate(df: pd.DataFrame) -> tuple:
     wins = (df["outcome"] == "WIN").sum()
     losses = (df["outcome"] == "LOSS").sum()
     wr = (wins / (wins + losses)) if (wins + losses) > 0 else 0.0
-    return wr
+    wr_with_be = (wins / (len(df["outcome"]))) if (wins + losses) > 0 else 0.0
+    return wr, wr_with_be
+
+
+def wining_trades(df: pd.DataFrame) -> float:
+    wins = (df["outcome"] == "WIN").sum() or 0.0
+    return wins
+
+
+def breakevens_trades(df: pd.DataFrame) -> float:
+    be = (df["outcome"] == "BE").sum() or 0.0
+    return be
+
+
+def lossing_trades(df: pd.DataFrame) -> float:
+    losses = (df["outcome"] == "LOSS").sum() or 0.0
+    return losses
 
 
 def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
@@ -120,7 +135,9 @@ def max_drawdown(df: pd.DataFrame) -> float:
 
 
 def expectency(df: pd.DataFrame) -> float:
-    wr = winrate(df)
+    wins = (df["outcome"] == "WIN").sum()
+    losses = (df["outcome"] == "LOSS").sum()
+    wr = (wins / (wins + losses)) if (wins + losses) > 0 else 0.0
     lr = 1 - wr
     avg_w = avg_wl(df)[0]
     avg_l = avg_wl(df)[1]
@@ -134,9 +151,13 @@ def stats_table(df: pd.DataFrame) -> dict:
         print("No data to process.")
     stats = {
         "Total Trades": len(df),
-        "Win Rate": f"{(winrate(df) * 100):.2f}%",
-        "Expectency": f"{expectency(df):.2f}%",
         "Total P/L": f"{total_pl(df):.2f}%",
+        "Win-Rate (No BE)": f"{(winrate(df)[0] * 100):.2f}%",
+        "Win-Rate (With BE)": f"{(winrate(df)[1] * 100):.2f}%",
+        "Wining Trades": f"{wining_trades(df):.0f}",
+        "Lossing Trades": f"{lossing_trades(df):.0f}",
+        "Breakeven Trades": f"{breakevens_trades(df):.0f}",
+        "Expectency": f"{expectency(df):.2f}%",
         "Avg Win": f"{avg_wl(df)[0]:.2f}%",
         "Avg Loss": f"{avg_wl(df)[1]:.2f}%",
         "Avg Risk": f"{avg_risk(df):.2f}%",
@@ -144,8 +165,8 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Best Trade": f"{best_trade(df):.2f}%",
         "Worst Trade": f"{worst_trade(df):.2f}%",
         "Max Drawdown": f"{max_drawdown(df):.2f}%",
-        "Min Trade duration": f"{advanced_time_stats(df)[1]:.0f} Minutes",
-        "Max Trade duration": f"{advanced_time_stats(df)[2]:.0f} Minutes",
+        "Min Trade duration": f"{durations(df)[1]:.0f} Minutes",
+        "Max Trade duration": f"{durations(df)[2]:.0f} Minutes",
     }
     return stats
 

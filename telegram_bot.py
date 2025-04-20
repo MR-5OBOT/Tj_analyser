@@ -13,9 +13,9 @@ from telegram.ext import (
     filters,
 )
 
-from live_fetch import generate_plots
-from helpers.utils import *
 from helpers.stats import *
+from helpers.utils import *
+from live_fetch import generate_plots
 
 # Load environment variables
 load_dotenv()
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Replace this with your actual Google Sheets template link
 TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
 
-WELCOME_MESSAGE = f"""
+WELCOME_MESSAGE = """
 👋 *Welcome to the Trading Analysis Bot!*
 
 I can help you analyze your trading performance and generate reports.
