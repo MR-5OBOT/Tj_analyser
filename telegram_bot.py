@@ -24,10 +24,13 @@ load_dotenv()
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Replace this with your actual Google Sheets template link
+# Google Sheets template link
 TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
 
-WELCOME_MESSAGE = """
+
+# Command: /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    WELCOME_MESSAGE = """
 👋 *Welcome to the Trading Analysis Bot!*
 
 I can help you analyze your trading performance and generate reports.
@@ -41,10 +44,6 @@ I can help you analyze your trading performance and generate reports.
 
 upload your data to begin! 📊
 """
-
-
-# Command: /start
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN)
 
 
