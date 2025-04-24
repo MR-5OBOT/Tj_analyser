@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -10,7 +11,7 @@ def pl_curve(df, pl):
     sns.lineplot(x=x, y=pl.cumsum(), label="Gains (%)", ax=ax)
     ax.set_title("Gains Curve")
     ax.set_xlabel("Trades")
-    ax.set_ylabel("P/L (%)")
+    ax.set_ylabel("Profit/Loss (%)")
     ax.legend()
     ax.tick_params(axis="x", rotation=70, labelsize=8)
     fig.tight_layout()
@@ -37,7 +38,7 @@ def pl_distribution(pl):
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.histplot(pl, bins=10, kde=True, ax=ax)
     ax.set_title("P/L Distribution")
-    ax.set_xlabel("P/L (%)")
+    ax.set_xlabel("Profit/Loss (%)")
     fig.tight_layout()
     return fig
 
@@ -49,22 +50,36 @@ def boxplot_DoW(df, pl):
     sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"], palette="YlGnBu", ax=ax)
     ax.set_title("P/L by Day")
     ax.set_xlabel("")
-    ax.set_ylabel("P/L (%)")
+    ax.set_ylabel("Profit/Loss (%)")
     fig.tight_layout()
     return fig
 
 
 def risk_vs_reward_scatter(df, pl):
-    if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
-        risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    else:
-        risk = df["risk_by_percentage"] * 100
+    # if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
+    #     risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
+    # else:
+    #     risk = df["risk_by_percentage"]
+
+    def safe_convert(x):
+        """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
+        if pd.isna(x):
+            return np.nan
+        try:
+            if isinstance(x, str):
+                return float(x.rstrip("%")) / 100
+            return float(x)
+        except (ValueError, TypeError):
+            return np.nan
+
+    risk = df["risk_by_percentage"].apply(safe_convert)
+
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.scatterplot(x=risk, y=pl, hue=df["outcome"], palette="coolwarm", ax=ax)
     ax.set_title("Risk vs Reward")
     ax.set_xlabel("Risk (%)")
-    ax.set_ylabel("P/L (%)")
+    ax.set_ylabel("Profit/Loss (%)")
     ax.legend()
     fig.tight_layout()
     return fig

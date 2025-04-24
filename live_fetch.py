@@ -1,11 +1,13 @@
 import pandas as pd
 
 from helpers.plots import (
+    boxplot_DoW,
     create_stats_table,
     heatmap_rr,
     outcome_by_day,
     pl_curve,
     pl_distribution,
+    risk_vs_reward_scatter,
 )
 from helpers.stats import pl_raw, stats_table, term_stats
 from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
@@ -23,8 +25,8 @@ def generate_plots(df, pl):
         (outcome_by_day, (df,)),
         (pl_distribution, (pl,)),
         (heatmap_rr, (df,)),
-        # (risk_vs_reward_scatter, (df, pl(df)),
-        # (boxplot_DoW, (df, pl(df))),
+        # (risk_vs_reward_scatter, (df, pl)),
+        (boxplot_DoW, (df, pl)),
     ]
 
 
@@ -44,7 +46,7 @@ def fetch_and_process() -> pd.DataFrame:
         lambda: pl_distribution(pl),
         lambda: heatmap_rr(df),
         # lambda: risk_vs_reward_scatter(df, pl),
-        # lambda: boxplot_DoW(df, pl),
+        lambda: boxplot_DoW(df, pl),
         lambda: export_figure_to_pdf(generate_plots(df, pl)),
     ]
     # Run each function with progress tracking

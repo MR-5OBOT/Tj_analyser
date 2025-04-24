@@ -47,6 +47,17 @@ def pl_raw(df: pd.DataFrame) -> pd.Series:
     return pd.Series(pl_series, dtype=float)
 
 
+def risk_raw(df: pd.DataFrame) -> pd.Series:
+    """Converts risk percentages to a float Series, handling strings and numeric values."""
+
+    df_check(df, ["risk_by_percentage"])
+    if df["risk_by_percentage"].empty:
+        return pd.Series(dtype=float)
+
+    pl_series = df["risk_by_percentage"].apply(safe_convert)  # Use shared utility function
+    return pd.Series(pl_series, dtype=float)
+
+
 def winrate(df: pd.DataFrame) -> tuple[float, float]:
     df_check(df, ["outcome"])
     if df["outcome"].empty:
