@@ -1,13 +1,15 @@
 import datetime
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
 
-def df_check(df: pd.DataFrame) -> None:
-    required_columns = [
+def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
+    if df is None or df.empty:
+        raise ValueError("DataFrame is None or empty.")
+
+    default_columns = [
         "date",
         "outcome",
         "pl_by_percentage",
@@ -16,15 +18,11 @@ def df_check(df: pd.DataFrame) -> None:
         "exit_time",
         "pl_by_rr",
     ]
-    missing_columns = [col for col in required_columns if col not in df.columns]
+    columns_to_check = required_columns if required_columns is not None else default_columns
+    missing_columns = [col for col in columns_to_check if col not in df.columns]
+
     if missing_columns:
         raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
-
-    # Add additional checks (e.g., data types, non-empty dataframe)
-    if df.empty:
-        raise ValueError("The provided DataFrame is empty.")
-    # if not pd.api.types.is_datetime64_any_dtype(df["date"]):
-    #     raise ValueError("The 'date' column must be in a datetime format.")
 
 
 def pacman_progress(current, total):

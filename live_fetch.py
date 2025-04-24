@@ -7,7 +7,7 @@ from helpers.plots import (
     pl_curve,
     pl_distribution,
 )
-from helpers.stats import pl_series, stats_table, term_stats
+from helpers.stats import pl_raw, stats_table, term_stats
 from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
 
 
@@ -33,7 +33,8 @@ def fetch_and_process() -> pd.DataFrame:
 
     df = pd.read_csv(url())
     stats = stats_table(df)
-    pl = pl_series(df)
+    # pl = pl_series(df)
+    pl = pl_raw(df)
 
     # Store a list List of functions to execute
     steps = [
@@ -62,7 +63,7 @@ def fetch_and_process() -> pd.DataFrame:
 if __name__ == "__main__":
     try:
         df = fetch_and_process()
-        df_check(df)
+        df_check(df, [])
         stats = stats_table(df)
         term_stats(stats)
     except ValueError as e:
