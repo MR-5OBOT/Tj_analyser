@@ -23,7 +23,7 @@ def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
 
 
 ### Utility Function ###
-def convert_value(x):
+def safe_convert(x):
     """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
     if pd.isna(x):
         return np.nan
@@ -43,7 +43,7 @@ def pl_raw(df: pd.DataFrame) -> pd.Series:
     if df["pl_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    pl_series = df["pl_by_percentage"].apply(convert_value)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
     return pd.Series(pl_series, dtype=float)
 
 
@@ -94,7 +94,7 @@ def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(convert_value)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
     avg_win = pl_series[pl_series > 0].mean()
     avg_loss = abs(pl_series[pl_series < 0].mean())  # <-- Make loss positive here
 
@@ -108,7 +108,7 @@ def avg_risk(df: pd.DataFrame) -> float:
     df_check(df, ["risk_by_percentage"])
     if df["risk_by_percentage"].empty:
         return 0.0
-    pl_series = df["pl_by_percentage"].apply(convert_value)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
     avg_r = pl_series.mean() or 0.0
     return float(avg_r)
 
@@ -128,22 +128,30 @@ def best_worst_trade(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(convert_value)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
     best_trade_value = pl_series.max() or 0.0
     worst_trade_value = pl_series.min() or 0.0
     return float(best_trade_value), float(worst_trade_value)
 
 
 def max_drawdown(df: pd.DataFrame) -> float:
-    df_check(df, ["pl_by_percentage"])
-    if df["pl_by_percentage"].empty:
-        return 0.0
+    """
+    Calculate the maximum drawdown of a series of periodic returns.
 
-    pl_series = df["pl_by_percentage"].apply(convert_value)  # Use shared utility function
-    peak = pl_series.cummax()
-    dd = (peak - pl_series) / peak.where(peak != 0, np.nan)
-    max_dd = dd.max() if not dd.empty else 0.0
-    return max_dd
+    Parameters:
+    returns (pd.Series): Series of returns (e.g. 0.01 for +1%, -0.01 for -1%)
+
+    Returns:
+    float: The maximum drawdown (negative float, e.g. -0.05 for a 5% drawdown)
+    """
+    # 1) Build the wealth index
+    wealth_index = (1 + df["pl_by_percentage"]).cumprod()
+    # 2) Compute the running peak
+    running_max = wealth_index.cummax()
+    # 3) Compute drawdowns
+    drawdown = (wealth_index - running_max) / running_max
+    # 4) Return the worst (most negative) drawdown
+    return drawdown.min()
 
 
 def expectency(df: pd.DataFrame) -> float:
@@ -217,7 +225,7 @@ def stats_table(df: pd.DataFrame) -> dict:
     avg_rr_value = avg_rr(df)
     best_trade = best_worst_trade(df)[0]
     worst_trade = best_worst_trade(df)[1]
-    max_dd_value = max_drawdown(df)
+    max_dd_value = max_drawdown(df) * 100
     min_duration_val, max_duration_val = durations(df)
 
     stats = {
@@ -235,7 +243,7 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Avg R/R": f"{avg_rr_value:.2f}",
         "Best Trade": f"{best_trade * 100:.2f}%",
         "Worst Trade": f"{worst_trade * 100:.2f}%",
-        "Max Drawdown": f"{max_dd_value * 100:.2f}%",
+        "Max Drawdown": f"{max_dd_value:.2f}%",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
         "Max Trade duration": f"{max_duration_val:.0f} Minutes",
     }
