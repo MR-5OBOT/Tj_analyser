@@ -68,9 +68,7 @@ For support, contact the bot admin.
 # Command: /template
 async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        """📥 Download the template here: [Google Sheets Template]({TEMPLATE_URL})
-           Don't forget to read teh Template instructions.
-        """,
+        f"📥 Download the template here: [Google Sheets Template]({TEMPLATE_URL})",
         parse_mode=constants.ParseMode.MARKDOWN,
     )
 
