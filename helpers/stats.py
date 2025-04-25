@@ -209,7 +209,7 @@ def durations(df: pd.DataFrame) -> tuple[float, float]:
     # Filter only the rows where 'outcome' is "WIN" and 'duration_minutes' > 0
     only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")]["duration_minutes"]
     min_duration = only_wins.min() if not only_wins.empty else 0.0
-    max_duration = df["duration_minutes"].max() if not df["duration_minutes"].empty else 0.0
+    max_duration = only_wins.max() if not only_wins.empty else 0.0
 
     return float(min_duration), float(max_duration)
 
