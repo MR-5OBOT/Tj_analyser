@@ -214,6 +214,23 @@ def durations(df: pd.DataFrame) -> tuple[float, float]:
     return float(min_duration), float(max_duration)
 
 
+def consecutive_losses(df: pd.DataFrame) -> int:
+    df_check(df, ["outcome"])
+    if df["outcome"].empty:
+        return 0
+
+    current_streak = 0
+    max_streak = 0
+    for outcome in df["outcome"]:
+        if outcome == "LOSS":
+            current_streak += 1
+            max_streak = max(max_streak, current_streak)
+            print(max_streak)
+        else:
+            current_streak = 0
+    return max_streak
+
+
 def stats_table(df: pd.DataFrame) -> dict:
     """
     Returns a dictionary of statistics.
@@ -238,6 +255,7 @@ def stats_table(df: pd.DataFrame) -> dict:
     worst_trade = best_worst_trade(df)[1]
     max_dd_value = max_drawdown(df) * 100
     min_duration_val, max_duration_val = durations(df)
+    cons_losses = consecutive_losses(df)
 
     stats = {
         "Total Trades": total_trades,
@@ -247,6 +265,7 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Wining Trades": f"{wins_count:.0f}",
         "Lossing Trades": f"{losses_count:.0f}",
         "Breakeven Trades": f"{be_count:.0f}",
+        "Consecutive Losses": f"{cons_losses}",
         "Expectency": f"{expectancy_value * 100:.2f}%",
         "Avg Win": f"{avg_w * 100:.2f}%",
         "Avg Loss": f"{avg_l * 100:.2f}%",
