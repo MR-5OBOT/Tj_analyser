@@ -14,7 +14,7 @@ from telegram.ext import (
 )
 
 from helpers.stats import *
-from helpers.utils import *
+from helpers.utils import df_check
 from live_fetch import generate_plots
 
 # Load environment variables
@@ -43,8 +43,7 @@ I can help you analyze your trading performance and generate reports.
 - `Template Command`
 
 upload your data to begin! 📊
-
-For support, contact the bot admin @MR_5OBOT.
+For support, contact the bot admin `@MR_5OBOT`
 """
     await update.message.reply_text(WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN)
 
@@ -62,10 +61,10 @@ Available commands:
 📤 *Upload a file or link*:
 Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
 
-For support, contact the bot admin @MR_5OBOT.
+For support, contact the bot admin.
+For support, contact the bot admin `@MR_5OBOT`
 """
-    logger.info("Help command received")
-    await update.message.reply_text("works")
+    await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
 
 
 # Command: /template
