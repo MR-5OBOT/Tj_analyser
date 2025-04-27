@@ -43,6 +43,8 @@ I can help you analyze your trading performance and generate reports.
 - `Template Command`
 
 upload your data to begin! 📊
+
+For support, contact the bot admin @MR_5OBOT.
 """
     await update.message.reply_text(WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN)
 
@@ -62,7 +64,7 @@ Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
 
 For support, contact the bot admin @MR_5OBOT.
 """
-    await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
+    await update.message.reply_text("works")
 
 
 # Command: /template
