@@ -64,6 +64,7 @@ Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
 
 For support, contact the bot admin @MR_5OBOT.
 """
+    logger.info("Help command received")
     await update.message.reply_text("works")
 
 
