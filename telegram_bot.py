@@ -60,7 +60,7 @@ Available commands:
 📤 *Upload a file or link*:
 Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
 
-For support, contact the bot admin.
+For support, contact the bot admin @MR_5OBOT.
 """
     await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
 
