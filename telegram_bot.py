@@ -39,7 +39,7 @@ I can help you analyze your trading performance and generate reports.
 - A CSV or Excel file
 - A direct Google Sheets CSV link
 
-🧾 *Your dat must be from:*
+🧾 *Your data must be from:*
 - `Template Command`
 
 upload your data to begin! 📊
