@@ -39,8 +39,8 @@ I can help you analyze your trading performance and generate reports.
 - A CSV or Excel file
 - A direct Google Sheets CSV link
 
-🧾 *Your data must be from:*
-- `Template Command`
+🧾 *Your data must be:*
+- Check `/template` command
 
 upload your data to begin! 📊
 For support, contact the bot admin `@MR_5OBOT`
