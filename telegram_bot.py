@@ -138,7 +138,7 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await context.bot.send_document(
                 chat_id=update.effective_chat.id,
                 document=pdf,
-                filename=f"trading_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                filename=f"trading_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                 caption="📈 Here's your trading analysis report!",
             )
 
