@@ -14,8 +14,8 @@ from telegram.ext import (
 )
 
 from helpers.stats import *
-from helpers.utils import df_check
-from live_fetch import generate_plots
+from helpers.utils import *
+from live_fetch import *
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +23,7 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 # Google Sheets template link
 TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
@@ -117,7 +118,7 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Check DataFrame structure
         try:
-            df_check(df)
+            df_check(df, required_columns=[])
         except ValueError as e:
             await message.edit_text(f"❌ Data validation failed: `{e}`", parse_mode="Markdown")
             return
@@ -125,7 +126,7 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.edit_text("📊 Generating your analysis report...")
 
         # Perform calculations
-        pl = pl_series(df)
+        pl = pl_raw(df)
 
         # Generate and save PDF report
         pdf_path = export_figure_to_pdf(generate_plots(df, pl))
