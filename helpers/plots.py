@@ -21,8 +21,10 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
-    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    # df["parsed_date"] = safe_parse_mixed_dates(df, "date")  # fast but for consistent formats
+    # df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow
+    df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
@@ -93,11 +95,14 @@ def risk_vs_reward_scatter(df, pl):
 
 def heatmap_rr(df):
     def parse_time(time_str):
+        if pd.isna(time_str) or str(time_str).strip() == "":
+            return None  # or datetime.time(0, 0) if you prefer 00:00 as default
+
         try:
             return pd.to_datetime(time_str, format="%H:%M:%S").time()
         except ValueError:
             try:
-                return pd.to_datetime(time_str + ":00", format="%H:%M:%S").time()
+                return pd.to_datetime(str(time_str) + ":00", format="%H:%M:%S").time()
             except ValueError:
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
