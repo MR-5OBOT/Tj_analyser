@@ -19,12 +19,21 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1, ax=ax)
+    sns.barplot(
+        data=data,
+        x="DoW",
+        y="count",
+        hue="outcome",
+        palette="Paired",
+        edgecolor="black",
+        linewidth=1,
+        ax=ax,
+    )
     ax.set_title("Wins vs Losses by Day")
     ax.set_xlabel("")
     ax.set_ylabel("Count")
@@ -43,8 +52,8 @@ def pl_distribution(pl):
 
 
 def boxplot_DoW(df, pl):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
-    df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
+    df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"], palette="YlGnBu", ax=ax)
@@ -82,11 +91,14 @@ def risk_vs_reward_scatter(df, pl):
 
 def heatmap_rr(df):
     def parse_time(time_str):
+        if pd.isna(time_str) or str(time_str).strip() == "":
+            return None  # or datetime.time(0, 0) if you prefer 00:00 as default
+
         try:
             return pd.to_datetime(time_str, format="%H:%M:%S").time()
         except ValueError:
             try:
-                return pd.to_datetime(time_str + ":00", format="%H:%M:%S").time()
+                return pd.to_datetime(str(time_str) + ":00", format="%H:%M:%S").time()
             except ValueError:
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
