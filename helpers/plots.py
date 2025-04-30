@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from helpers.utils import safe_parse_mixed_dates
-
 
 def pl_curve(df, pl):
     plt.style.use("dark_background")
@@ -21,9 +19,6 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    # df["parsed_date"] = safe_parse_mixed_dates(df, "date")  # fast for consistent formats and not sure its perfect
-    # df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
-
     df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
@@ -57,8 +52,6 @@ def pl_distribution(pl):
 
 
 def boxplot_DoW(df, pl):
-    # df["parsed_date"] = safe_parse_mixed_dates(df, "date") # alt for parsing dates
-    # df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
     df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
