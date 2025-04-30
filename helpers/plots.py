@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+from helpers.utils import safe_parse_mixed_dates
+
 
 def pl_curve(df, pl):
     plt.style.use("dark_background")
@@ -19,13 +21,21 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    # df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=False)  # True ?!
-    df["DoW"] = df["date"].dt.day_name().str.lower()
+    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
+    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
-    sns.barplot(data=data, x="DoW", y="count", hue="outcome", palette="Paired", edgecolor="black", linewidth=1, ax=ax)
+    sns.barplot(
+        data=data,
+        x="DoW",
+        y="count",
+        hue="outcome",
+        palette="Paired",
+        edgecolor="black",
+        linewidth=1,
+        ax=ax,
+    )
     ax.set_title("Wins vs Losses by Day")
     ax.set_xlabel("")
     ax.set_ylabel("Count")
@@ -56,11 +66,6 @@ def boxplot_DoW(df, pl):
 
 
 def risk_vs_reward_scatter(df, pl):
-    # if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
-    #     risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    # else:
-    #     risk = df["risk_by_percentage"]
-
     def safe_convert(x):
         """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
         if pd.isna(x):
@@ -96,8 +101,14 @@ def heatmap_rr(df):
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
-    matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
+    hours = (
+        df["entry_time"]
+        .apply(parse_time)
+        .apply(lambda x: x.hour if pd.notna(x) else None)
+    )
+    matrix = pd.pivot_table(
+        df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum"
+    )
 
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
