@@ -23,7 +23,7 @@ def pl_curve(df, pl):
 def outcome_by_day(df):
     # df["parsed_date"] = safe_parse_mixed_dates(df, "date")  # fast but for consistent formats
     # df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -56,8 +56,10 @@ def pl_distribution(pl):
 
 
 def boxplot_DoW(df, pl):
-    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
-    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    # df["parsed_date"] = safe_parse_mixed_dates(df, "date") # alt for parsing dates
+    # df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
+    df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     sns.boxplot(x=df["DoW"], y=pl, hue=df["outcome"], palette="YlGnBu", ax=ax)
