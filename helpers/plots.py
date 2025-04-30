@@ -19,8 +19,7 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    # df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=True)
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -44,6 +43,7 @@ def pl_distribution(pl):
 
 
 def boxplot_DoW(df, pl):
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -56,11 +56,6 @@ def boxplot_DoW(df, pl):
 
 
 def risk_vs_reward_scatter(df, pl):
-    # if df["risk_by_percentage"].dropna().apply(lambda x: isinstance(x, str) and x.endswith("%")).all():
-    #     risk = df["risk_by_percentage"].str.replace("%", "").astype(float)
-    # else:
-    #     risk = df["risk_by_percentage"]
-
     def safe_convert(x):
         """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
         if pd.isna(x):
