@@ -68,6 +68,5 @@ if __name__ == "__main__":
         df_check(df, [])
         stats = stats_table(df)
         term_stats(stats)
-        print(df["date"])
     except ValueError as e:
         print(f"Error: {e}")
