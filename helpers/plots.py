@@ -102,14 +102,8 @@ def heatmap_rr(df):
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    hours = (
-        df["entry_time"]
-        .apply(parse_time)
-        .apply(lambda x: x.hour if pd.notna(x) else None)
-    )
-    matrix = pd.pivot_table(
-        df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum"
-    )
+    hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
+    matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
 
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))

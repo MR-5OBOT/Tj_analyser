@@ -1,27 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from helpers.utils import safe_parse_mixed_dates
+from helpers.utils import df_check
 
 ### this only works with the right csv template ###
-
-
-def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
-    if df is None or df.empty:
-        raise ValueError("DataFrame is None or empty.")
-    default_columns = [
-        "date",
-        "outcome",
-        "pl_by_percentage",
-        "risk_by_percentage",
-        "entry_time",
-        "exit_time",
-        "pl_by_rr",
-    ]
-    columns_to_check = required_columns if required_columns is not None else default_columns
-    missing_columns = [col for col in columns_to_check if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
 
 
 ### Utility Function ###
@@ -40,7 +22,6 @@ def safe_convert(x):
 # Handle all possible ways
 def pl_raw(df: pd.DataFrame) -> pd.Series:
     """Converts profit/loss percentages to a float Series, handling strings and numeric values."""
-
     df_check(df, ["pl_by_percentage"])
     if df["pl_by_percentage"].empty:
         return pd.Series(dtype=float)
