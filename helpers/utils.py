@@ -18,9 +18,7 @@ def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
         "exit_time",
         "pl_by_rr",
     ]
-    columns_to_check = (
-        required_columns if required_columns is not None else default_columns
-    )
+    columns_to_check = required_columns if required_columns is not None else default_columns
     missing_columns = [col for col in columns_to_check if col not in df.columns]
 
     if missing_columns:
@@ -75,28 +73,21 @@ def safe_parse_mixed_dates(df, column):
 
     # YYYY/MM/DD format: check before standardizing separators (uses /)
     yyyy_mm_dd_mask = original.str.match(r"^\d{4}/\d{2}/\d{2}$", na=False)
-    result[yyyy_mm_dd_mask] = pd.to_datetime(
-        original[yyyy_mm_dd_mask], format="%Y/%m/%d", errors="coerce"
-    )
+    result[yyyy_mm_dd_mask] = pd.to_datetime(original[yyyy_mm_dd_mask], format="%Y/%m/%d", errors="coerce")
 
     # Standardize separators (/, ., etc. -> -) for remaining formats
     standardized = original.str.replace(r"[/.]", "-", regex=True)
 
     # ISO format: YYYY-MM-DD (4 digits, 2 digits, 2 digits)
     iso_mask = standardized.str.match(r"^\d{4}-\d{2}-\d{2}$", na=False)
-    result[iso_mask] = pd.to_datetime(
-        standardized[iso_mask], format="%Y-%m-%d", errors="coerce"
-    )
+    result[iso_mask] = pd.to_datetime(standardized[iso_mask], format="%Y-%m-%d", errors="coerce")
 
     # U.S. format: MM-DD-YYYY (2 digits, 2 digits, 4 digits)
     us_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[us_mask] = pd.to_datetime(
-        standardized[us_mask], format="%m-%d-%Y", errors="coerce"
-    )
+    result[us_mask] = pd.to_datetime(standardized[us_mask], format="%m-%d-%Y", errors="coerce")
 
     # European format: DD-MM-YYYY (2 digits, 2 digits, 4 digits)
     eu_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[eu_mask] = pd.to_datetime(
-        standardized[eu_mask], format="%d-%m-%Y", errors="coerce"
-    )
+    result[eu_mask] = pd.to_datetime(standardized[eu_mask], format="%d-%m-%Y", errors="coerce")
+
     return result
