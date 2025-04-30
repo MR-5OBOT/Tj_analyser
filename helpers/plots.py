@@ -19,8 +19,8 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    # df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=False)  # True ?!
+    # df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=True)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
