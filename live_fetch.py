@@ -1,4 +1,5 @@
 import pandas as pd
+
 from helpers.plots import (
     boxplot_DoW,
     create_stats_table,
@@ -57,7 +58,7 @@ def fetch_and_process() -> pd.DataFrame:
     # pacman_progress(8, 10)
     pdf_path = export_figure_to_pdf(generate_plots(df, pl))
     # pacman_progress(10, 10)
-    print(f"\n\nReport Successfully Generated To jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj: {pdf_path}\n")
+    print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 
 
@@ -67,5 +68,6 @@ if __name__ == "__main__":
         df_check(df, [])
         stats = stats_table(df)
         term_stats(stats)
+        df["date"].to_csv("output.csv", index=False)
     except ValueError as e:
         print(f"Error: {e}")

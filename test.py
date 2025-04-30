@@ -1,4 +1,6 @@
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
 
 def safe_parse_mixed_dates(df, column):
@@ -28,32 +30,48 @@ def safe_parse_mixed_dates(df, column):
 
     # YYYY/MM/DD format: check before standardizing separators (uses /)
     yyyy_mm_dd_mask = original.str.match(r"^\d{4}/\d{2}/\d{2}$", na=False)
-    result[yyyy_mm_dd_mask] = pd.to_datetime(
-        original[yyyy_mm_dd_mask], format="%Y/%m/%d", errors="coerce"
-    )
+    result[yyyy_mm_dd_mask] = pd.to_datetime(original[yyyy_mm_dd_mask], format="%Y/%m/%d", errors="coerce")
 
     # Standardize separators (/, ., etc. -> -) for remaining formats
     standardized = original.str.replace(r"[/.]", "-", regex=True)
 
     # ISO format: YYYY-MM-DD (4 digits, 2 digits, 2 digits)
     iso_mask = standardized.str.match(r"^\d{4}-\d{2}-\d{2}$", na=False)
-    result[iso_mask] = pd.to_datetime(
-        standardized[iso_mask], format="%Y-%m-%d", errors="coerce"
-    )
+    result[iso_mask] = pd.to_datetime(standardized[iso_mask], format="%Y-%m-%d", errors="coerce")
 
     # U.S. format: MM-DD-YYYY (2 digits, 2 digits, 4 digits)
     us_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[us_mask] = pd.to_datetime(
-        standardized[us_mask], format="%m-%d-%Y", errors="coerce"
-    )
+    result[us_mask] = pd.to_datetime(standardized[us_mask], format="%m-%d-%Y", errors="coerce")
 
     # European format: DD-MM-YYYY (2 digits, 2 digits, 4 digits)
     eu_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[eu_mask] = pd.to_datetime(
-        standardized[eu_mask], format="%d-%m-%Y", errors="coerce"
-    )
+    result[eu_mask] = pd.to_datetime(standardized[eu_mask], format="%d-%m-%Y", errors="coerce")
 
     return result
+
+
+def outcome_by_day(df):
+    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
+    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    plt.style.use("dark_background")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
+    sns.barplot(
+        data=data,
+        x="DoW",
+        y="count",
+        hue="outcome",
+        palette="Paired",
+        edgecolor="black",
+        linewidth=1,
+        ax=ax,
+    )
+    ax.set_title("Wins vs Losses by Day")
+    ax.set_xlabel("")
+    ax.set_ylabel("Count")
+    fig.tight_layout()
+    plt.show()
+    return fig
 
 
 # Example usage
@@ -61,4 +79,7 @@ if __name__ == "__main__":
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
     df = pd.read_csv(url)
     df["parsed_date"] = safe_parse_mixed_dates(df, "date")
+    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
     print(df["parsed_date"])
+    print(df["DoW"])
+    outcome_by_day(df)
