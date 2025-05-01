@@ -108,7 +108,7 @@ def best_worst_trade(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)  # Use shared utility function
+    pl_series = pl_raw(df)
     best_trade_value = pl_series.max() or 0.0
     worst_trade_value = pl_series.min() or 0.0
     return float(best_trade_value), float(worst_trade_value)
