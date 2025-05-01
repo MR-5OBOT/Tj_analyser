@@ -89,8 +89,8 @@ def avg_risk(df: pd.DataFrame) -> float:
     if df["risk_by_percentage"].empty:
         return 0.0
     risk_series = risk_raw(df)
-    avg_r = risk_series.mean() or 0.0
-    return float(avg_r)
+    avg_risk = risk_series.mean() or 0.0
+    return float(avg_risk)
 
 
 def avg_rr(df: pd.DataFrame) -> float:
