@@ -53,7 +53,6 @@ def pl_distribution(pl):
     ax.set_title("P/L Distribution")
     ax.set_xlabel("Profit/Loss (%)")
     fig.tight_layout()
-    plt.show()
     return fig
 
 
