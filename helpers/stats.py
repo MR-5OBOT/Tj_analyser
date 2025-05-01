@@ -23,7 +23,7 @@ def risk_raw(df: pd.DataFrame) -> pd.Series:
     if df["risk_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    risk_series = risk_raw(df)
+    risk_series = df["risk_by_percentage"].apply(strict_percentage_convert)
     return pd.Series(risk_series, dtype=float)
 
 
@@ -42,7 +42,7 @@ def winrate(df: pd.DataFrame) -> tuple[float, float]:
     return wr, wr_with_be
 
 
-def wining_trades(df: pd.DataFrame) -> float:
+def winning_trades(df: pd.DataFrame) -> float:
     df_check(df, ["outcome"])
     if df["outcome"].empty:
         return 0.0
@@ -208,21 +208,20 @@ def stats_table(df: pd.DataFrame) -> dict:
         print("Warning: No data to process for statistics.")
 
     # Calculate metrics using the helper functions
-    total_trades = len(df)
+    total_trades = len(df) if df is not None else 0
     pl_values = pl_raw(df)
     total_pl = pl_values.sum()
 
     wr_no_be, wr_with_be = winrate(df)
-    wins_count = wining_trades(df)
+    wins_count = winning_trades(df)
     losses_count = lossing_trades(df)
     be_count = breakevens_trades(df)
     expectancy_value = expectency(df)
     avg_w, avg_l = avg_wl(df)
     avg_r = avg_risk(df)
     avg_rr_value = avg_rr(df)
-    best_trade = best_worst_trade(df)[0]
-    worst_trade = best_worst_trade(df)[1]
     max_dd_value = max_drawdown(df) * 100
+    best_trade, worst_trade = best_worst_trade(df)
     min_duration_val, max_duration_val = durations(df)
     cons_losses = consecutive_losses(df)
 
@@ -231,11 +230,11 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Total P/L": f"{total_pl * 100:.2f}%",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
-        "Wining Trades": f"{wins_count:.0f}",
+        "Winning Trades": f"{wins_count:.0f}",
         "Lossing Trades": f"{losses_count:.0f}",
         "Breakeven Trades": f"{be_count:.0f}",
         "Consecutive Losses": f"{cons_losses}",
-        "Expectency": f"{expectancy_value * 100:.2f}%",
+        "Expectancy": f"{expectancy_value * 100:.2f}%",
         "Avg Win": f"{avg_w * 100:.2f}%",
         "Avg Loss": f"{avg_l * 100:.2f}%",
         "Avg Risk": f"{avg_r * 100:.2f}%",
