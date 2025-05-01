@@ -124,8 +124,8 @@ def max_drawdown(df: pd.DataFrame) -> float:
     Returns:
     float: The maximum drawdown (negative float, e.g. -0.05 for a 5% drawdown)
     """
+    pl_series = pl_raw(df)
     # 1) Build the wealth index
-    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)
     wealth_index = (1 + pl_series).cumprod()
     # 2) Compute the running peak
     running_max = wealth_index.cummax()
