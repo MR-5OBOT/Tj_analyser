@@ -1,22 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from helpers.utils import df_check
+from helpers.utils import df_check, strict_percentage_convert
 
 ### this only works with the right csv template ###
-
-
-### Utility Function ###
-def safe_convert(x):
-    """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
-    if pd.isna(x):
-        return np.nan
-    try:
-        if isinstance(x, str):
-            return float(x.rstrip("%")) / 100
-        return float(x)
-    except (ValueError, TypeError):
-        return np.nan
 
 
 # Handle all possible ways
@@ -26,19 +13,18 @@ def pl_raw(df: pd.DataFrame) -> pd.Series:
     if df["pl_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)
     return pd.Series(pl_series, dtype=float)
 
 
 def risk_raw(df: pd.DataFrame) -> pd.Series:
     """Converts risk percentages to a float Series, handling strings and numeric values."""
-
     df_check(df, ["risk_by_percentage"])
     if df["risk_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    pl_series = df["risk_by_percentage"].apply(safe_convert)  # Use shared utility function
-    return pd.Series(pl_series, dtype=float)
+    risk_series = risk_raw(df)
+    return pd.Series(risk_series, dtype=float)
 
 
 def winrate(df: pd.DataFrame) -> tuple[float, float]:
@@ -88,7 +74,7 @@ def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = pl_raw(df)
     avg_win = pl_series[pl_series > 0].mean()
     avg_loss = abs(pl_series[pl_series < 0].mean())  # <-- Make loss positive here
 
@@ -102,8 +88,8 @@ def avg_risk(df: pd.DataFrame) -> float:
     df_check(df, ["risk_by_percentage"])
     if df["risk_by_percentage"].empty:
         return 0.0
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
-    avg_r = pl_series.mean() or 0.0
+    risk_series = risk_raw(df)
+    avg_r = risk_series.mean() or 0.0
     return float(avg_r)
 
 
@@ -122,7 +108,7 @@ def best_worst_trade(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)  # Use shared utility function
     best_trade_value = pl_series.max() or 0.0
     worst_trade_value = pl_series.min() or 0.0
     return float(best_trade_value), float(worst_trade_value)
@@ -139,7 +125,8 @@ def max_drawdown(df: pd.DataFrame) -> float:
     float: The maximum drawdown (negative float, e.g. -0.05 for a 5% drawdown)
     """
     # 1) Build the wealth index
-    wealth_index = (1 + df["pl_by_percentage"]).cumprod()
+    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)
+    wealth_index = (1 + pl_series).cumprod()
     # 2) Compute the running peak
     running_max = wealth_index.cummax()
     # 3) Compute drawdowns
