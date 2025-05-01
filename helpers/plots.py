@@ -29,9 +29,14 @@ def outcome_by_day(df):
         x="DoW",
         y="count",
         hue="outcome",
-        palette="Paired",
+        # palette="Paired",
+        palette={
+            "WIN": "#76B1A7",
+            "LOSS": "#333333",
+            "BE": "#607250",
+        },
         edgecolor="black",
-        linewidth=1,
+        linewidth=2,
         ax=ax,
     )
     ax.set_title("Wins vs Losses by Day")
@@ -44,10 +49,11 @@ def outcome_by_day(df):
 def pl_distribution(pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.histplot(pl, bins=10, kde=True, ax=ax)
+    sns.histplot(pl, bins=10, kde=True, ax=ax, edgecolor="black", linewidth=1.5)
     ax.set_title("P/L Distribution")
     ax.set_xlabel("Profit/Loss (%)")
     fig.tight_layout()
+    plt.show()
     return fig
 
 
