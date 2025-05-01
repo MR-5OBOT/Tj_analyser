@@ -23,10 +23,10 @@ def generate_plots(df, pl):
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
-        (pl_distribution, (pl,)),
         (heatmap_rr, (df,)),
+        (pl_distribution, (pl,)),
         # (risk_vs_reward_scatter, (df, pl)),
-        (boxplot_DoW, (df, pl)),
+        # (boxplot_DoW, (df, pl)),
     ]
 
 
@@ -43,10 +43,10 @@ def fetch_and_process() -> pd.DataFrame:
         lambda: create_stats_table(stats),
         lambda: pl_curve(df, pl),
         lambda: outcome_by_day(df),
-        lambda: pl_distribution(pl),
         lambda: heatmap_rr(df),
+        lambda: pl_distribution(pl),
         # lambda: risk_vs_reward_scatter(df, pl),
-        lambda: boxplot_DoW(df, pl),
+        # lambda: boxplot_DoW(df, pl),
         lambda: export_figure_to_pdf(generate_plots(df, pl)),
     ]
     # Run each function with progress tracking
