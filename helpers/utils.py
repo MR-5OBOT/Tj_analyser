@@ -1,6 +1,7 @@
 import datetime
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -44,3 +45,24 @@ def export_figure_to_pdf(plots_list):
                 pdf.savefig(fig)
             plt.close()
     return pdf_path
+
+
+def strict_percentage_convert(x, return_nan=False):
+    """
+    Convert:
+    - '1.2%' or '-1.2%' -> 0.012 or -0.012
+    - 0.01 or -0.01 (if abs(x) <= 1.0) -> keep as is
+    - Anything else (NaN, 'abc', 1, 1.3, etc.) -> 0.0 or np.nan
+    """
+    invalid = np.nan if return_nan else 0.0
+
+    if isinstance(x, str) and x.strip().endswith("%"):
+        try:
+            return float(x.rstrip("%")) / 100
+        except ValueError:
+            return invalid
+
+    if isinstance(x, float) and abs(x) <= 1.0:
+        return x
+
+    return invalid

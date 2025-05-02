@@ -1,58 +1,15 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 
-
-def safe_parse_mixed_dates(df, column):
-    """
-    Parse a DataFrame column with mixed date formats into datetime objects.
-
-    Handles:
-    - ISO format (YYYY-MM-DD)
-    - U.S. format (MM/DD/YYYY)
-    - European format (DD-MM-YYYY)
-    - YYYY/MM/DD format
-    - Mixed formats
-    - Invalid entries (strings, integers, malformed dates) as NaT
-
-    Args:
-        df (pd.DataFrame): Input DataFrame
-        column (str): Name of the column to parse
-
-    Returns:
-        pd.Series: Parsed datetime series, with invalid entries as NaT
-    """
-    # Convert to string
-    original = df[column].astype(str)
-
-    # Initialize result as NaT
-    result = pd.Series(pd.NaT, index=df.index)
-
-    # YYYY/MM/DD format: check before standardizing separators (uses /)
-    yyyy_mm_dd_mask = original.str.match(r"^\d{4}/\d{2}/\d{2}$", na=False)
-    result[yyyy_mm_dd_mask] = pd.to_datetime(original[yyyy_mm_dd_mask], format="%Y/%m/%d", errors="coerce")
-
-    # Standardize separators (/, ., etc. -> -) for remaining formats
-    standardized = original.str.replace(r"[/.]", "-", regex=True)
-
-    # ISO format: YYYY-MM-DD (4 digits, 2 digits, 2 digits)
-    iso_mask = standardized.str.match(r"^\d{4}-\d{2}-\d{2}$", na=False)
-    result[iso_mask] = pd.to_datetime(standardized[iso_mask], format="%Y-%m-%d", errors="coerce")
-
-    # U.S. format: MM-DD-YYYY (2 digits, 2 digits, 4 digits)
-    us_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[us_mask] = pd.to_datetime(standardized[us_mask], format="%m-%d-%Y", errors="coerce")
-
-    # European format: DD-MM-YYYY (2 digits, 2 digits, 4 digits)
-    eu_mask = standardized.str.match(r"^\d{2}-\d{2}-\d{4}$", na=False) & ~iso_mask
-    result[eu_mask] = pd.to_datetime(standardized[eu_mask], format="%d-%m-%Y", errors="coerce")
-
-    return result
+from helpers.stats import *
+from helpers.utils import *
 
 
 def outcome_by_day(df):
-    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
-    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
+    df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
     data = df.groupby(["DoW", "outcome"]).size().reset_index(name="count")
@@ -61,7 +18,12 @@ def outcome_by_day(df):
         x="DoW",
         y="count",
         hue="outcome",
-        palette="Paired",
+        # palette="Paired",
+        palette={
+            "WIN": "#425E02",  # Lighter green for win
+            "LOSS": "#300F1A",  # Lighter red for loss
+            "BE": "#333333",  # Dark grey for BE
+        },
         edgecolor="black",
         linewidth=1,
         ax=ax,
@@ -74,12 +36,48 @@ def outcome_by_day(df):
     return fig
 
 
+def pl_distribution(pl):
+    plt.style.use("dark_background")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.histplot(pl, bins=10, kde=True, ax=ax, edgecolor="black", linewidth=1.5)
+    ax.set_title("P/L Distribution")
+    ax.set_xlabel("Profit/Loss (%)")
+    fig.tight_layout()
+    plt.show()
+    return fig
+
+
+def risk_vs_reward_scatter(df, risk, pl):
+    plt.style.use("dark_background")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.scatterplot(
+        x=risk,
+        y=pl,
+        hue=df["outcome"],
+        # palette="coolwarm",
+        palette={
+            "WIN": "#395202",
+            "LOSS": "#C05478",
+            "BE": "#333333",
+        },
+        ax=ax,
+    )
+    ax.set_title("Risk vs Reward")
+    ax.set_xlabel("Risk (%)")
+    ax.set_ylabel("Profit/Loss (%)")
+    ax.legend()
+    fig.tight_layout()
+    plt.show()
+    return fig
+
+
 # Example usage
 if __name__ == "__main__":
     url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
     df = pd.read_csv(url)
-    df["parsed_date"] = safe_parse_mixed_dates(df, "date")
-    df["DoW"] = df["parsed_date"].dt.day_name().str.lower()
-    print(df["parsed_date"])
-    print(df["DoW"])
-    outcome_by_day(df)
+    # outcome_by_day(df)
+    # pl = pl_raw(df)
+    # risk = risk_raw(df)
+    pl = np.random.uniform(-1.1, 3.1, 60)
+    risk = np.random.uniform(0.5, 1.10, 60)
+    risk_vs_reward_scatter(df, risk, pl)

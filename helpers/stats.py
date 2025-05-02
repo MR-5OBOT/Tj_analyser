@@ -1,22 +1,9 @@
 import numpy as np
 import pandas as pd
 
-from helpers.utils import df_check
+from helpers.utils import df_check, strict_percentage_convert
 
 ### this only works with the right csv template ###
-
-
-### Utility Function ###
-def safe_convert(x):
-    """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
-    if pd.isna(x):
-        return np.nan
-    try:
-        if isinstance(x, str):
-            return float(x.rstrip("%")) / 100
-        return float(x)
-    except (ValueError, TypeError):
-        return np.nan
 
 
 # Handle all possible ways
@@ -26,19 +13,18 @@ def pl_raw(df: pd.DataFrame) -> pd.Series:
     if df["pl_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = df["pl_by_percentage"].apply(strict_percentage_convert)
     return pd.Series(pl_series, dtype=float)
 
 
 def risk_raw(df: pd.DataFrame) -> pd.Series:
     """Converts risk percentages to a float Series, handling strings and numeric values."""
-
     df_check(df, ["risk_by_percentage"])
     if df["risk_by_percentage"].empty:
         return pd.Series(dtype=float)
 
-    pl_series = df["risk_by_percentage"].apply(safe_convert)  # Use shared utility function
-    return pd.Series(pl_series, dtype=float)
+    risk_series = df["risk_by_percentage"].apply(strict_percentage_convert)
+    return pd.Series(risk_series, dtype=float)
 
 
 def winrate(df: pd.DataFrame) -> tuple[float, float]:
@@ -56,7 +42,7 @@ def winrate(df: pd.DataFrame) -> tuple[float, float]:
     return wr, wr_with_be
 
 
-def wining_trades(df: pd.DataFrame) -> float:
+def winning_trades(df: pd.DataFrame) -> float:
     df_check(df, ["outcome"])
     if df["outcome"].empty:
         return 0.0
@@ -88,7 +74,7 @@ def avg_wl(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = pl_raw(df)
     avg_win = pl_series[pl_series > 0].mean()
     avg_loss = abs(pl_series[pl_series < 0].mean())  # <-- Make loss positive here
 
@@ -102,9 +88,9 @@ def avg_risk(df: pd.DataFrame) -> float:
     df_check(df, ["risk_by_percentage"])
     if df["risk_by_percentage"].empty:
         return 0.0
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
-    avg_r = pl_series.mean() or 0.0
-    return float(avg_r)
+    risk_series = risk_raw(df)
+    avg_risk = risk_series.mean() or 0.0
+    return float(avg_risk)
 
 
 def avg_rr(df: pd.DataFrame) -> float:
@@ -122,7 +108,7 @@ def best_worst_trade(df: pd.DataFrame) -> tuple[float, float]:
     if df["pl_by_percentage"].empty:
         return 0.0, 0.0
 
-    pl_series = df["pl_by_percentage"].apply(safe_convert)  # Use shared utility function
+    pl_series = pl_raw(df)
     best_trade_value = pl_series.max() or 0.0
     worst_trade_value = pl_series.min() or 0.0
     return float(best_trade_value), float(worst_trade_value)
@@ -138,8 +124,9 @@ def max_drawdown(df: pd.DataFrame) -> float:
     Returns:
     float: The maximum drawdown (negative float, e.g. -0.05 for a 5% drawdown)
     """
+    pl_series = pl_raw(df)
     # 1) Build the wealth index
-    wealth_index = (1 + df["pl_by_percentage"]).cumprod()
+    wealth_index = (1 + pl_series).cumprod()
     # 2) Compute the running peak
     running_max = wealth_index.cummax()
     # 3) Compute drawdowns
@@ -221,21 +208,20 @@ def stats_table(df: pd.DataFrame) -> dict:
         print("Warning: No data to process for statistics.")
 
     # Calculate metrics using the helper functions
-    total_trades = len(df)
+    total_trades = len(df) if df is not None else 0
     pl_values = pl_raw(df)
     total_pl = pl_values.sum()
 
     wr_no_be, wr_with_be = winrate(df)
-    wins_count = wining_trades(df)
+    wins_count = winning_trades(df)
     losses_count = lossing_trades(df)
     be_count = breakevens_trades(df)
     expectancy_value = expectency(df)
     avg_w, avg_l = avg_wl(df)
     avg_r = avg_risk(df)
     avg_rr_value = avg_rr(df)
-    best_trade = best_worst_trade(df)[0]
-    worst_trade = best_worst_trade(df)[1]
     max_dd_value = max_drawdown(df) * 100
+    best_trade, worst_trade = best_worst_trade(df)
     min_duration_val, max_duration_val = durations(df)
     cons_losses = consecutive_losses(df)
 
@@ -244,11 +230,11 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Total P/L": f"{total_pl * 100:.2f}%",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
-        "Wining Trades": f"{wins_count:.0f}",
+        "Winning Trades": f"{wins_count:.0f}",
         "Lossing Trades": f"{losses_count:.0f}",
         "Breakeven Trades": f"{be_count:.0f}",
         "Consecutive Losses": f"{cons_losses}",
-        "Expectency": f"{expectancy_value * 100:.2f}%",
+        "Expectancy": f"{expectancy_value * 100:.2f}%",
         "Avg Win": f"{avg_w * 100:.2f}%",
         "Avg Loss": f"{avg_l * 100:.2f}%",
         "Avg Risk": f"{avg_r * 100:.2f}%",
