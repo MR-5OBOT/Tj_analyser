@@ -19,7 +19,7 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -57,7 +57,7 @@ def pl_distribution(pl):
 
 
 def boxplot_DoW(df, pl):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")  # slow ~2 sec for 100k row
+    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -69,23 +69,21 @@ def boxplot_DoW(df, pl):
     return fig
 
 
-def risk_vs_reward_scatter(df, pl):
-    def safe_convert(x):
-        """Converts a value to float, handling string percentages (e.g., '1%') and numeric values."""
-        if pd.isna(x):
-            return np.nan
-        try:
-            if isinstance(x, str):
-                return float(x.rstrip("%")) / 100
-            return float(x)
-        except (ValueError, TypeError):
-            return np.nan
-
-    risk = df["risk_by_percentage"].apply(safe_convert)
-
+def risk_vs_reward_scatter(df, risk, pl):
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.scatterplot(x=risk, y=pl, hue=df["outcome"], palette="coolwarm", ax=ax)
+    sns.scatterplot(
+        x=risk,
+        y=pl,
+        hue=df["outcome"],
+        # palette="coolwarm",
+        palette={
+            "WIN": "#395202",
+            "LOSS": "#C05478",
+            "BE": "#333333",
+        },
+        ax=ax,
+    )
     ax.set_title("Risk vs Reward")
     ax.set_xlabel("Risk (%)")
     ax.set_ylabel("Profit/Loss (%)")
