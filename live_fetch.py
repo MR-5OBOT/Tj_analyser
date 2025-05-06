@@ -18,7 +18,7 @@ def url() -> str:
     return url
 
 
-def generate_plots(df, risk, pl):
+def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
