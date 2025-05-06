@@ -25,7 +25,7 @@ def generate_plots(df, risk, pl):
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
         (pl_distribution, (pl,)),
-        (risk_vs_reward_scatter, (df, risk, pl)),
+        # (risk_vs_reward_scatter, (df, risk, pl)),
         # (boxplot_DoW, (df, pl)),
     ]
 
@@ -45,7 +45,7 @@ def fetch_and_process() -> pd.DataFrame:
         lambda: outcome_by_day(df),
         lambda: heatmap_rr(df),
         lambda: pl_distribution(pl),
-        lambda: risk_vs_reward_scatter(df, risk, pl),
+        # lambda: risk_vs_reward_scatter(df, risk, pl),
         # lambda: boxplot_DoW(df, pl),
         lambda: export_figure_to_pdf(generate_plots(df, risk, pl)),
     ]
