@@ -127,9 +127,10 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Perform calculations
         pl = pl_raw(df)
+        risk = risk_raw(df)
 
         # Generate and save PDF report
-        pdf_path = export_figure_to_pdf(generate_plots(df, pl))
+        pdf_path = export_figure_to_pdf(generate_plots(df, risk, pl))
 
         await message.edit_text("📤 Sending your report...")
 
