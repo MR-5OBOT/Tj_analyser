@@ -1,25 +1,20 @@
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 import streamlit as st
 
 from helpers.plots import (
-    boxplot_DoW,
-    create_stats_table,
     heatmap_rr,
     outcome_by_day,
     pl_curve,
     pl_distribution,
-    risk_vs_reward_scatter,
 )
-from helpers.stats import pl_raw, stats_table
+from helpers.stats import pl_raw
 from helpers.utils import df_check
 
 # Page config
 st.set_page_config(layout="wide", page_title="Trading Journal Dashboard")
 st.title("Trading Journal Dashboard")  # Add title as header in app
 
-# Input method
+
 input_method = st.radio("Choose input method", ["URL", "Upload"], horizontal=True)
 col1, col2 = st.columns(2, gap="small")
 
@@ -52,7 +47,7 @@ def run_process(df: pd.DataFrame):
     df_check(df, [])
     pl = pl_raw(df)
     visualizations(df, pl)
-    st.dataframe(df)
+    st.dataframe(df)  # display teh updated df
 
 
 # Load data
@@ -73,6 +68,5 @@ elif input_method == "Upload":
             run_process(df)
         except Exception as e:
             st.error(f"Error reading CSV: {e}")
-
 else:
     st.write("Please upload a CSV or enter a URL to visualize your trading journal.")
