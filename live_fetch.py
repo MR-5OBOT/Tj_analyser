@@ -1,13 +1,11 @@
 import pandas as pd
 
 from helpers.plots import (
-    boxplot_DoW,
     create_stats_table,
     heatmap_rr,
     outcome_by_day,
     pl_curve,
     pl_distribution,
-    risk_vs_reward_scatter,
 )
 from helpers.stats import pl_raw, risk_raw, stats_table, term_stats
 from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
@@ -30,13 +28,9 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     ]
 
 
-def fetch_and_process() -> pd.DataFrame:
+def fetch_and_process(df, risk, pl, stats) -> pd.DataFrame:
+    """start the process"""
     print("Fetching data from Google Sheets...")
-
-    df = pd.read_csv(url())
-    stats = stats_table(df)
-    risk = risk_raw(df)
-    pl = pl_raw(df)
 
     # Store a list List of functions to execute
     steps = [
@@ -64,9 +58,12 @@ def fetch_and_process() -> pd.DataFrame:
 
 if __name__ == "__main__":
     try:
-        df = fetch_and_process()
-        df_check(df, [])
+        df = pd.read_csv(url())
+        risk = risk_raw(df)
+        pl = pl_raw(df)
         stats = stats_table(df)
+        fetch_and_process(df, risk, pl, stats)
+        df_check(df, [])
         term_stats(stats)
     except ValueError as e:
         print(f"Error: {e}")
