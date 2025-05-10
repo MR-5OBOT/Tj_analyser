@@ -12,14 +12,15 @@ def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
 
     default_columns = [
         "date",
-        "outcome",
-        "pl_by_percentage",
-        "risk_by_percentage",
+        "symbol",
         "entry_time",
         "exit_time",
+        "outcome",
+        "risk_by_percentage",
         "pl_by_rr",
+        "pl_by_percentage",
     ]
-    columns_to_check = required_columns if required_columns is not None else default_columns
+    columns_to_check = default_columns if required_columns is None or len(required_columns) == 0 else required_columns
     missing_columns = [col for col in columns_to_check if col not in df.columns]
 
     if missing_columns:
