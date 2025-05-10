@@ -14,7 +14,6 @@ from helpers.utils import df_check
 st.set_page_config(layout="wide", page_title="Trading Journal Dashboard")
 st.title("Trading Journal Dashboard")  # Add title as header in app
 
-
 input_method = st.radio("Choose input method", ["URL", "Upload"], horizontal=True)
 col1, col2 = st.columns(2, gap="small")
 
@@ -70,3 +69,6 @@ elif input_method == "Upload":
             st.error(f"Error reading CSV: {e}")
 else:
     st.write("Please upload a CSV or enter a URL to visualize your trading journal.")
+
+
+#
