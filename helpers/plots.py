@@ -84,6 +84,8 @@ def risk_vs_reward_scatter(df, risk, pl):
         },
         ax=ax,
     )
+    # plt.xlim(-1, 4)  # Set the x-axis limits
+    # plt.ylim(-1, 4)  # Set the y-axis limits
     ax.set_title("Risk vs Reward")
     ax.set_xlabel("Risk (%)")
     ax.set_ylabel("Profit/Loss (%)")
