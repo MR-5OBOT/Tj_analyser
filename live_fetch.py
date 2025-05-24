@@ -1,14 +1,8 @@
 import pandas as pd
 
-from helpers.plots import (
-    create_stats_table,
-    heatmap_rr,
-    outcome_by_day,
-    pl_curve,
-    pl_distribution,
-)
-from helpers.stats import pl_raw, risk_raw, stats_table, term_stats
-from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
+from helpers.plots import *
+from helpers.stats import *
+from helpers.utils import *
 
 
 def url() -> str:
@@ -23,8 +17,8 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
         (pl_distribution, (pl,)),
-        # (risk_vs_reward_scatter, (df, risk, pl)),
-        # (boxplot_DoW, (df, pl)),
+        (boxplot_DoW, (df, pl)),
+        (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
 
@@ -39,19 +33,20 @@ def fetch_and_process(df, risk, pl, stats) -> pd.DataFrame:
         lambda: outcome_by_day(df),
         lambda: heatmap_rr(df),
         lambda: pl_distribution(pl),
-        # lambda: risk_vs_reward_scatter(df, risk, pl),
-        # lambda: boxplot_DoW(df, pl),
-        lambda: export_figure_to_pdf(generate_plots(df, risk, pl)),
+        lambda: boxplot_DoW(df, pl),
+        lambda: risk_vs_reward_scatter(df, risk, pl),
+        lambda: export_figure_to_pdf(generate_plots(df, risk, pl)),  # only call once
     ]
+
     # Run each function with progress tracking
     for i, step in enumerate(steps, start=1):
         pacman_progress(i, len(steps))  # Auto progress
         step()  # Execute function
 
-    # Generate PDF
-    # pacman_progress(8, 10)
-    pdf_path = export_figure_to_pdf(generate_plots(df, risk, pl))
-    # pacman_progress(10, 10)
+    # Generate PDF once at the end
+    pdf_path = export_figure_to_pdf(
+        generate_plots(df, risk, pl)
+    )  # PDF generation happens once
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 
@@ -65,5 +60,5 @@ if __name__ == "__main__":
         fetch_and_process(df, risk, pl, stats)
         df_check(df, [])
         term_stats(stats)
-    except ValueError as e:
+    except Exception as e:
         print(f"Error: {e}")
