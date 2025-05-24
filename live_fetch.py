@@ -1,52 +1,43 @@
 import pandas as pd
-
 from helpers.plots import *
 from helpers.stats import *
 from helpers.utils import *
 
 
 def url() -> str:
-    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-    return url
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
 
 
 def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
+    xlabel = "Profit/Loss (%)"
+    ylabel = "Risk by (%)"
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
-        (pl_distribution, (pl,)),
+        (plot_distribution, (pl, xlabel)),
+        (plot_distribution, (risk, xlabel)),
         (boxplot_DoW, (df, pl)),
         (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
 
-def fetch_and_process(df, risk, pl, stats) -> pd.DataFrame:
-    """start the process"""
+def fetch_and_process(
+    df: pd.DataFrame, risk: pd.Series, pl: pd.Series, stats
+) -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
-    # Store a list List of functions to execute
-    steps = [
-        lambda: create_stats_table(stats),
-        lambda: pl_curve(df, pl),
-        lambda: outcome_by_day(df),
-        lambda: heatmap_rr(df),
-        lambda: pl_distribution(pl),
-        lambda: boxplot_DoW(df, pl),
-        lambda: risk_vs_reward_scatter(df, risk, pl),
-        lambda: export_figure_to_pdf(generate_plots(df, risk, pl)),  # only call once
-    ]
+    # Use generate_plots directly for consistency
+    steps = generate_plots(df, risk, pl)
 
-    # Run each function with progress tracking
-    for i, step in enumerate(steps, start=1):
-        pacman_progress(i, len(steps))  # Auto progress
-        step()  # Execute function
+    # Execute each plotting step
+    for i, (func, args) in enumerate(steps, start=1):
+        pacman_progress(i, len(steps))
+        func(*args)
 
-    # Generate PDF once at the end
-    pdf_path = export_figure_to_pdf(
-        generate_plots(df, risk, pl)
-    )  # PDF generation happens once
+    # Generate PDF using the same steps
+    pdf_path = export_figure_to_pdf(steps)
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 

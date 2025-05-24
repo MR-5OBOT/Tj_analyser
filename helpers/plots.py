@@ -19,7 +19,9 @@ def pl_curve(df, pl):
 
 
 def outcome_by_day(df):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
+    df["date"] = pd.to_datetime(
+        df["date"], format="mixed", dayfirst=True, errors="coerce"
+    )
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -46,18 +48,41 @@ def outcome_by_day(df):
     return fig
 
 
-def pl_distribution(pl):
+def plot_distribution(
+    series: pd.Series,
+    title: str | None = "Distribution",
+    xlabel: str | None = "Value",
+    ylabel: str | None = "Frequency",
+):
+    """
+    Plots a histogram with KDE for a given Pandas Series.
+
+    Parameters:
+        series (pd.Series): Data to plot.
+        title (str): Plot title.
+        xlabel (str): Label for the x-axis.
+        ylabel (str): Label for the y-axis.
+
+    Returns:
+        matplotlib.figure.Figure: The generated plot figure.
+    """
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
-    sns.histplot(pl, bins=10, kde=True, ax=ax, edgecolor="black", linewidth=1.5)
-    ax.set_title("P/L Distribution")
-    ax.set_xlabel("Profit/Loss (%)")
+    sns.histplot(series, bins=10, kde=True, ax=ax, edgecolor="black", linewidth=1.5)
+    if title is not None:
+        ax.set_title(title)
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
     fig.tight_layout()
     return fig
 
 
 def boxplot_DoW(df, pl):
-    df["date"] = pd.to_datetime(df["date"], format="mixed", dayfirst=True, errors="coerce")
+    df["date"] = pd.to_datetime(
+        df["date"], format="mixed", dayfirst=True, errors="coerce"
+    )
     df["DoW"] = df["date"].dt.day_name().str.lower()
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -108,8 +133,14 @@ def heatmap_rr(df):
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
     df["DoW"] = pd.to_datetime(df["date"]).dt.day_name().str.lower()
-    hours = df["entry_time"].apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None)
-    matrix = pd.pivot_table(df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum")
+    hours = (
+        df["entry_time"]
+        .apply(parse_time)
+        .apply(lambda x: x.hour if pd.notna(x) else None)
+    )
+    matrix = pd.pivot_table(
+        df, values="pl_by_rr", index=hours, columns="DoW", aggfunc="sum"
+    )
 
     plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=(8, 6))
