@@ -9,23 +9,21 @@ def url() -> str:
 
 
 def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
-    xlabel = "Profit/Loss (%)"
-    ylabel = "Risk by (%)"
+    pl_label = "Profit/Loss (%)"
+    risk_label = "Risk by (%)"
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
-        (plot_distribution, (pl, xlabel)),
-        (plot_distribution, (risk, xlabel)),
+        (plot_distribution, (pl, pl_label)),
+        (plot_distribution, (risk, risk_label)),
         (boxplot_DoW, (df, pl)),
         (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
 
-def fetch_and_process(
-    df: pd.DataFrame, risk: pd.Series, pl: pd.Series, stats
-) -> pd.DataFrame:
+def fetch_and_process(df: pd.DataFrame, risk: pd.Series, pl: pd.Series) -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
     # Use generate_plots directly for consistency
@@ -48,7 +46,7 @@ if __name__ == "__main__":
         risk = risk_raw(df)
         pl = pl_raw(df)
         stats = stats_table(df)
-        fetch_and_process(df, risk, pl, stats)
+        fetch_and_process(df, risk, pl)
         df_check(df, [])
         term_stats(stats)
     except Exception as e:
