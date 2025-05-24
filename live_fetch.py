@@ -9,15 +9,17 @@ def url() -> str:
 
 
 def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
-    pl_label = "Profit/Loss (%)"
-    risk_label = "Risk by (%)"
+    pl_title = "Distribution of Profit/Loss"
+    risk_title = "Distribution of Risk"
+    pl_xlabel = "P/L by (%)"
+    risk_xlabel = "Risk by (%)"
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
-        (plot_distribution, (pl, pl_label)),
-        (plot_distribution, (risk, risk_label)),
+        (plot_distribution, (pl, pl_title, pl_xlabel)),
+        (plot_distribution, (risk, risk_title, risk_xlabel)),
         (boxplot_DoW, (df, pl)),
         (risk_vs_reward_scatter, (df, risk, pl)),
     ]

@@ -177,7 +177,7 @@ def create_stats_table(stats):
     table.scale(1.2, 1.5)
 
     # Set background colors
-    for (i, j), cell in table.get_celld().items():
+    for (i, _), cell in table.get_celld().items():
         if i == 0:  # Header row
             cell.set_facecolor("#111111")
             cell.set_text_props(color="white", weight="bold")
