@@ -1,57 +1,43 @@
 import pandas as pd
-
-from helpers.plots import (
-    create_stats_table,
-    heatmap_rr,
-    outcome_by_day,
-    pl_curve,
-    pl_distribution,
-)
-from helpers.stats import pl_raw, risk_raw, stats_table, term_stats
-from helpers.utils import df_check, export_figure_to_pdf, pacman_progress
+from helpers.plots import *
+from helpers.stats import *
+from helpers.utils import *
 
 
 def url() -> str:
-    url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-    return url
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
 
 
 def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
+    pl_title = "Distribution of Profit/Loss"
+    risk_title = "Distribution of Risk"
+    pl_xlabel = "P/L by (%)"
+    risk_xlabel = "Risk by (%)"
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
         (heatmap_rr, (df,)),
-        (pl_distribution, (pl,)),
-        # (risk_vs_reward_scatter, (df, risk, pl)),
-        # (boxplot_DoW, (df, pl)),
+        (plot_distribution, (pl, pl_title, pl_xlabel)),
+        (plot_distribution, (risk, risk_title, risk_xlabel)),
+        (boxplot_DoW, (df, pl)),
+        (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
 
-def fetch_and_process(df, risk, pl, stats) -> pd.DataFrame:
-    """start the process"""
+def fetch_and_process(df: pd.DataFrame, risk: pd.Series, pl: pd.Series) -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
-    # Store a list List of functions to execute
-    steps = [
-        lambda: create_stats_table(stats),
-        lambda: pl_curve(df, pl),
-        lambda: outcome_by_day(df),
-        lambda: heatmap_rr(df),
-        lambda: pl_distribution(pl),
-        # lambda: risk_vs_reward_scatter(df, risk, pl),
-        # lambda: boxplot_DoW(df, pl),
-        lambda: export_figure_to_pdf(generate_plots(df, risk, pl)),
-    ]
-    # Run each function with progress tracking
-    for i, step in enumerate(steps, start=1):
-        pacman_progress(i, len(steps))  # Auto progress
-        step()  # Execute function
+    # Use generate_plots directly for consistency
+    steps = generate_plots(df, risk, pl)
 
-    # Generate PDF
-    # pacman_progress(8, 10)
-    pdf_path = export_figure_to_pdf(generate_plots(df, risk, pl))
-    # pacman_progress(10, 10)
+    # Execute each plotting step
+    for i, (func, args) in enumerate(steps, start=1):
+        pacman_progress(i, len(steps))
+        func(*args)
+
+    # Generate PDF using the same steps
+    pdf_path = export_figure_to_pdf(steps)
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 
@@ -62,7 +48,7 @@ if __name__ == "__main__":
         risk = risk_raw(df)
         pl = pl_raw(df)
         stats = stats_table(df)
-        fetch_and_process(df, risk, pl, stats)
+        fetch_and_process(df, risk, pl)
         df_check(df, [])
         term_stats(stats)
         print(df["date"])

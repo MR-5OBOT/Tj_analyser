@@ -165,8 +165,12 @@ def durations(df: pd.DataFrame) -> tuple[float, float]:
 
     try:
         # Specify the expected format to avoid warnings
-        df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S", errors="coerce")
-        df["exit_time"] = pd.to_datetime(df["exit_time"], format="%H:%M:%S", errors="coerce")
+        df["entry_time"] = pd.to_datetime(
+            df["entry_time"], format="%H:%M:%S", errors="coerce"
+        )
+        df["exit_time"] = pd.to_datetime(
+            df["exit_time"], format="%H:%M:%S", errors="coerce"
+        )
     except ValueError:
         return 0.0, 0.0
 
@@ -174,10 +178,14 @@ def durations(df: pd.DataFrame) -> tuple[float, float]:
     if df["entry_time"].isna().all() or df["exit_time"].isna().all():
         return 0.0, 0.0
 
-    df["duration_minutes"] = (df["exit_time"] - df["entry_time"]).dt.total_seconds() / 60
+    df["duration_minutes"] = (
+        df["exit_time"] - df["entry_time"]
+    ).dt.total_seconds() / 60
 
     # Filter only the rows where 'outcome' is "WIN" and 'duration_minutes' > 0
-    only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")]["duration_minutes"]
+    only_wins = df[(df["duration_minutes"] > 0) & (df["outcome"] == "WIN")][
+        "duration_minutes"
+    ]
     min_duration = only_wins.min() if not only_wins.empty else 0.0
     max_duration = only_wins.max() if not only_wins.empty else 0.0
 
@@ -259,5 +267,4 @@ def term_stats(stats: dict) -> None:
     print("\n--- Trading Statistics ---")
     for key, value in stats.items():
         print(f"{key:<20}: {value}")  # Use f-string formatting for alignment
-    print("-------------------------\n")
     return
