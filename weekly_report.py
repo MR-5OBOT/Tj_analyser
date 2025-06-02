@@ -38,10 +38,8 @@ def fetch_and_process(df: pd.DataFrame) -> pd.DataFrame:
     ):
         func(*args)
 
-    stats = stats_table(df)
-    print_stats(stats)
-
     pdf_path = export_pdf_report(steps, type="Weekly-report")
+    print(f"\nReport successfully generated at: {pdf_path}\n")
     return df
 
 
@@ -94,7 +92,9 @@ def main() -> None:
             "symbol",
         ]
         df_check(df, expected_cols)
+        stats = stats_table(df)
         fetch_and_process(df)
+        print_stats(stats)
 
     except Exception as e:
         print(f"Error: {e}")

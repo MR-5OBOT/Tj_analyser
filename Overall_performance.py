@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
+from tqdm import tqdm
 
 from DA_helpers.data_cleaning import *
 from DA_helpers.data_preprocessing import *
@@ -15,24 +17,18 @@ def url() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
 
 
-def pacman_progress(current, total):
-    """Displays a Pacman-style progress bar in the console"""
-    print()
-    bar_length = 30
-    filled = int(round(bar_length * current / float(total)))
-    bar = ">" * filled + "-" * (bar_length - filled)
-    print(f"\r Progress: [{bar}] {current}/{total}", end="", flush=True)
-
-
 def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     pl_title = "Distribution of Profit/Loss"
     risk_title = "Distribution of Risk"
     pl_xlabel = "P/L by (%)"
     risk_xlabel = "Risk by (%)"
+    rr_series = clean_numeric_series(df["pl_by_rr"])
     return [
         (create_stats_table, (stats_table(df),)),
         (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
+        # (rr_barplot_months, (rr_series, df["date"])),
+        (rr_barplot, (rr_series, df["date"])),
         (heatmap_rr, (df,)),
         (plot_distribution, (pl, pl_title, pl_xlabel)),
         (plot_distribution, (risk, risk_title, risk_xlabel)),
@@ -48,8 +44,9 @@ def fetch_and_process(df: pd.DataFrame, risk: pd.Series, pl: pd.Series) -> pd.Da
     steps = generate_plots(df, risk, pl)
 
     # Execute each plotting step
-    for i, (func, args) in enumerate(steps, start=1):
-        pacman_progress(i, len(steps))
+    for i, (func, args) in enumerate(
+        tqdm(steps, desc="Progress", unit="step"), start=1
+    ):
         func(*args)
 
     # Generate PDF using the same steps
@@ -126,25 +123,25 @@ def term_stats(stats: dict) -> None:
 
 
 if __name__ == "__main__":
-    # try:
-    df = pd.read_csv(url())
-    df_check(
-        df,
-        [
-            "risk_by_percentage",
-            "pl_by_percentage",
-            "pl_by_rr",
-            "outcome",
-            "date",
-            "entry_time",
-            "exit_time",
-            "symbol",
-        ],
-    )
-    risk = clean_numeric_series(df["risk_by_percentage"])
-    pl = clean_numeric_series(df["pl_by_percentage"])
-    stats = stats_table(df)
-    fetch_and_process(df, risk, pl)
-    term_stats(stats)
-# except Exception as e:
-#     print(f"Error: {e}")
+    try:
+        df = pd.read_csv(url())
+        df_check(
+            df,
+            [
+                "risk_by_percentage",
+                "pl_by_percentage",
+                "pl_by_rr",
+                "outcome",
+                "date",
+                "entry_time",
+                "exit_time",
+                "symbol",
+            ],
+        )
+        risk = clean_numeric_series(df["risk_by_percentage"])
+        pl = clean_numeric_series(df["pl_by_percentage"])
+        stats = stats_table(df)
+        fetch_and_process(df, risk, pl)
+        # term_stats(stats)
+    except Exception as e:
+        print(f"Error: {e}")
