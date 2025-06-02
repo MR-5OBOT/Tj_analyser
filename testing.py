@@ -3,50 +3,76 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+from DA_helpers.visualizations import rr_barplot_months
 
-# from helpers.plots import *
-from helpers.stats import risk_raw, pl_raw
+from DA_helpers.data_cleaning import *
+from DA_helpers.visualizations import *
+#
 
 
-def risk_vs_reward_scatter(df, risk, pl):
+# url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
+# df = pd.read_csv(url)
+# data = {
+#     "pl": pd.Series([1, 3, -2, 0, -1]),
+#     "date": pd.Series(
+#         [
+#             "2025-05-01",
+#             "2025-05-02",
+#             "2025-05-03",
+#             "2025-05-04",
+#             "2025-05-05",
+#         ]
+#     ),
+# }
+#
+#
+# pl_series = clean_numeric_series(df["pl_by_rr"])
+# # rr_barplot(data["pl"], data["date"])
+# rr_barplot(pl_series, df["date"])
+# plt.show()
+#
+#
+def plot_trading_radar_dark(metrics: dict, title="Trading Performance Radar"):
+    """
+    Plot a dark-themed radar chart for trading performance metrics.
+
+    Parameters:
+    - metrics: dict of {label: value}, where value can be float/int
+    - title: title of the chart
+    """
+    # Extract labels and values
+    labels = list(metrics.keys())
+    values = list(metrics.values())
+    num_vars = len(labels)
+
+    # Create angle values
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    values += values[:1]
+    angles += angles[:1]
+    # Set dark style
     plt.style.use("dark_background")
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.scatterplot(
-        x=risk,
-        y=pl,
-        hue=df["outcome"],
-        # palette="coolwarm",
-        palette={
-            "WIN": "#395202",
-            "LOSS": "#C05478",
-            "BE": "#333333",
-        },
-        ax=ax,
-    )
-    # plt.xlim(-1, 3)  # Set the x-axis limits
-    # plt.ylim(-1, 3)  # Set the y-axis limits
-    ax.set_title("Risk vs Reward")
-    ax.set_xlabel("Risk (%)")
-    ax.set_ylabel("Profit/Loss (%)")
-    ax.legend()
-    fig.tight_layout()
+    # Plot
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, linewidth=2)
+    ax.fill(angles, values, alpha=0.3)
+
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, color="white", size=10)
+
+    ax.set_yticklabels([])  # Remove radial labels
+    ax.grid(color="gray", linestyle="dotted", alpha=0.4)
+
+    plt.title(title, size=14, color="gray", pad=20)
+    plt.tight_layout()
     plt.show()
     return fig
 
 
-# Create a Pandas Series for risk with values from -1 to 4
-# 100 random integers between -1 and 4 (inclusive)
-risk_series = pd.Series(np.random.randint(-1, 5, 100))
-risk_series.name = "Risk"  # Name the series 'Risk'
+metrics = {
+    "Win Rate": 0.65,
+    "Risk/Reward": 1.7,
+    "Drawdown": 0.25,
+    "Profit/Loss": 1.9,
+}
 
-# Create a Pandas Series for profits with values from -1 to 4
-# 100 random integers between -1 and 4 (inclusive)
-profit_series = pd.Series(np.random.randint(-1, 5, 100))
-profit_series.name = "Profit"  # Name the series 'Profit'
-
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-df = pd.read_csv(url)
-risk = risk_raw(df)
-pl = pl_raw(df)
-
-risk_vs_reward_scatter(df, risk, pl)
+plot_trading_radar_dark(metrics)
