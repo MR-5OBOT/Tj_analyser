@@ -1,16 +1,80 @@
-import seaborn as sns
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+# import pandas as pd
+# import numpy as np
+#
+# from DA_helpers.data_cleaning import clean_numeric_series
+# from DA_helpers.visualizations import *
+#
+#
+# url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
+# df = pd.read_csv(url)
+# data = {
+#     "pl": pd.Series([1, 3, -2, 0, -1]),
+#     "date": pd.Series(
+#         [
+#             "2025-05-01",
+#             "2025-05-02",
+#             "2025-05-03",
+#             "2025-05-04",
+#             "2025-05-05",
+#         ]
+#     ),
+# }
+#
+#
+#
+#
+# pl_series = clean_numeric_series(df["pl_by_rr"])
+# # rr_barplot(data["pl"], data["date"])
+# rr_barplot(pl_series, df["date"])
+# plt.show()
+
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
 
-from DA_helpers.data_cleaning import clean_numeric_series
-from DA_helpers.visualizations import *
+
+def plot_trading_radar_dark(metrics: dict, title="Trading Performance Radar"):
+    """
+    Plot a dark-themed radar chart for trading performance metrics.
+
+    Parameters:
+    - metrics: dict of {label: value}, where value can be float/int
+    - title: title of the chart
+    """
+    # Extract labels and values
+    labels = list(metrics.keys())
+    values = list(metrics.values())
+    num_vars = len(labels)
+
+    # Create angle values
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    values += values[:1]
+    angles += angles[:1]
+    # Set dark style
+    plt.style.use("dark_background")
+    # Plot
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, linewidth=2)
+    ax.fill(angles, values, alpha=0.3)
+
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, color="white", size=10)
+
+    ax.set_yticklabels([])  # Remove radial labels
+    ax.grid(color="gray", linestyle="dotted", alpha=0.4)
+
+    plt.title(title, size=14, color="gray", pad=20)
+    plt.tight_layout()
+    plt.show()
+    return fig
 
 
-url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-df = pd.read_csv(url)
+metrics = {
+    "Win Rate": 0.65,
+    "Risk/Reward": 1.7,
+    "Drawdown": 0.25,
+    "Profit/Loss": 1.9,
+}
 
-pl_series = clean_numeric_series(df["pl_by_percentage"])
-
-rr_barplot(df, pl_series)
-plt.show()
+plot_trading_radar_dark(metrics)

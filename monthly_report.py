@@ -29,13 +29,18 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     risk_title = "Distribution of Risk"
     pl_xlabel = "P/L by (%)"
     risk_xlabel = "Risk by (%)"
+    DoW = df["date"]
+    rr_series = clean_numeric_series(df["pl_by_rr"])
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_barplot, (df, pl)),
+        (pl_curve, (df, pl)),
         (outcome_by_day, (df,)),
+        (rr_barplot, (rr_series, DoW)),
         (heatmap_rr, (df,)),
         (plot_distribution, (pl, pl_title, pl_xlabel)),
         (plot_distribution, (risk, risk_title, risk_xlabel)),
+        (boxplot_DoW, (df, pl)),
+        (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
 
@@ -143,6 +148,6 @@ if __name__ == "__main__":
         pl = clean_numeric_series(df["pl_by_percentage"])
         stats = stats_table(df)
         fetch_and_process(df, risk, pl)
-        term_stats(stats)
+        # term_stats(stats)
     except Exception as e:
         print(f"Error: {e}")
