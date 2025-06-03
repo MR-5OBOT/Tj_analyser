@@ -21,10 +21,12 @@ def get_data_url() -> str:
 def generate_plots(df: pd.DataFrame) -> list[tuple]:
     """Prepare plotting steps as (function, args) tuples."""
     rr_series = clean_numeric_series(df["pl_by_rr"])
+    days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_barplot, (rr_series, df["date"])),
-        (heatmap_rr, (df,)),
+        (rr_curve, (df, rr_series.cumsum(), None, days)),
+        (rr_barplot, (rr_series, df["date"], None)),
+        # (heatmap_rr, (df,)),
     ]
 
 
@@ -60,7 +62,7 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Total Trades": total_trades,
         "Total P/L": f"{total_pl * 100:.2f}%",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
-        "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
+        # "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
         "Best Trade": f"{best_trade * 100:.2f}%",
         "Worst Trade": f"{worst_trade * 100:.2f}%",
         "Max Drawdown": f"{max_dd:.2f}%",

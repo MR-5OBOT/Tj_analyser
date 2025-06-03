@@ -25,14 +25,14 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     rr_series = clean_numeric_series(df["pl_by_rr"])
     return [
         (create_stats_table, (stats_table(df),)),
-        (pl_curve, (df, pl)),
+        (rr_curve, (df, rr_series)),
         (outcome_by_day, (df,)),
         # (rr_barplot_months, (rr_series, df["date"])),
         (rr_barplot, (rr_series, df["date"])),
         (heatmap_rr, (df,)),
         (plot_distribution, (pl, pl_title, pl_xlabel)),
         (plot_distribution, (risk, risk_title, risk_xlabel)),
-        (boxplot_DoW, (df, pl)),
+        # (boxplot_DoW, (df, pl)),
         (risk_vs_reward_scatter, (df, risk, pl)),
     ]
 
