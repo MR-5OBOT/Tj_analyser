@@ -20,7 +20,7 @@ def get_data_url() -> str:
 
 def generate_plots(df: pd.DataFrame) -> list[tuple]:
     """Prepare plotting steps as (function, args) tuples."""
-    rr_series = clean_numeric_series(df["pl_by_rr"])
+    rr_series = clean_numeric_series(df["R/R"])
     days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
@@ -51,21 +51,21 @@ def stats_table(df: pd.DataFrame) -> dict:
         print("Warning: No data available.")
         return {}
 
-    pl_series = clean_numeric_series(df["pl_by_percentage"])
+    rr_series = clean_numeric_series(df["R/R"])
     total_trades = len(df)
-    total_pl = pl_series.sum()
+    total_rr = rr_series.sum()
     wr_no_be, wr_with_be = winrate(df)
-    max_dd = max_drawdown_from_pct_returns(pl_series) * 100
-    best_trade, worst_trade = best_worst_trade(pl_series)
+    max_dd = max_drawdown_from_pct_returns(rr_series)
+    best_trade, worst_trade = best_worst_trade(rr_series)
 
     return {
         "Total Trades": total_trades,
-        "Total P/L": f"{total_pl * 100:.2f}%",
+        "Total R/R": f"{total_rr}",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         # "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
-        "Best Trade": f"{best_trade * 100:.2f}%",
-        "Worst Trade": f"{worst_trade * 100:.2f}%",
-        "Max Drawdown": f"{max_dd:.2f}%",
+        "Best Trade": f"{best_trade:.2f}R",
+        "Worst Trade": f"{worst_trade:.2f}R",
+        "Max Drawdown": f"{max_dd:.2f}R",
     }
 
 
@@ -84,11 +84,11 @@ def main() -> None:
     try:
         df = pd.read_csv(get_data_url())
         expected_cols = [
-            "risk_by_percentage",
-            "pl_by_percentage",
-            "pl_by_rr",
+            "contract",
+            "R/R",
             "outcome",
             "date",
+            "day",
             "entry_time",
             "exit_time",
             "symbol",

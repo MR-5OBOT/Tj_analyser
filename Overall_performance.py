@@ -17,31 +17,28 @@ def url() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
 
 
-def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
-    pl_title = "Distribution of Profit/Loss"
-    risk_title = "Distribution of Risk"
-    pl_xlabel = "P/L by (%)"
-    risk_xlabel = "Risk by (%)"
-    rr_series = clean_numeric_series(df["pl_by_rr"]).cumsum()
+def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
+    rr_title = "Distribution of R/R"
+    pl_xlabel = "R/R"
+    rr_series = clean_numeric_series(df["R/R"])
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_curve, (rr_series)),
+        (rr_curve, (rr_series,)),
         (outcome_by_day, (df,)),
         # (rr_barplot_months, (rr_series, df["date"])),
-        (rr_barplot, (rr_series, df["date"])),
+        (rr_barplot, (rr_series, df["date"], None)),
         (heatmap_rr, (df,)),
-        (plot_distribution, (pl, pl_title, pl_xlabel)),
-        (plot_distribution, (risk, risk_title, risk_xlabel)),
+        (distribution_plot, (rr, rr_title, pl_xlabel)),
         # (boxplot_DoW, (df, pl)),
-        (risk_vs_reward_scatter, (df, risk, pl)),
+        (risk_vs_reward_scatter, (df, risk, rr)),
     ]
 
 
-def fetch_and_process(df: pd.DataFrame, risk: pd.Series, pl: pd.Series) -> pd.DataFrame:
+def fetch_and_process(df: pd.DataFrame, risk: pd.Series, rr: pd.Series) -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
     # Use generate_plots directly for consistency
-    steps = generate_plots(df, risk, pl)
+    steps = generate_plots(df, risk, rr)
 
     # Execute each plotting step
     for i, (func, args) in enumerate(
@@ -64,30 +61,29 @@ def stats_table(df: pd.DataFrame) -> dict:
 
     # Calculate metrics using the helper functions
     total_trades = len(df) if df is not None else 0
-    pl_series = clean_numeric_series(df["pl_by_percentage"])
-    risk_series = clean_numeric_series(df["risk_by_percentage"])
-    rr_series = clean_numeric_series(df["pl_by_rr"])
-    total_pl = pl_series.sum()
+    risk_series = clean_numeric_series(df["contract"])
+    rr_series = clean_numeric_series(df["R/R"])
+    total_rr = rr_series.sum()
 
     wr_no_be, wr_with_be = winrate(df)
     wins_count = winning_trades(df)
     losses_count = lossing_trades(df)
     be_count = breakevens_trades(df)
-    expectancy_value = expectency(pl_series, winning_trades(df), lossing_trades(df))
-    avg_w, avg_l, avg_risk, avg_rr = avg_metrics(pl_series, risk_series, rr_series)
+    expectancy_value = expectency(rr_series, winning_trades(df), lossing_trades(df))
+    avg_risk, avg_rr = avg_metrics(risk_series, rr_series)
 
-    max_dd_value = max_drawdown_from_pct_returns(pl_series) * 100
-    best_trade, worst_trade = best_worst_trade(pl_series)
+    # max_dd_value = max_drawdown_from_pct_returns(rr_series)
+    best_trade, worst_trade = best_worst_trade(rr_series)
     min_duration_val, max_duration_val = durations(
         df,
-        start=df["entry_time"],
-        end=df["exit_time"],
+        start=pd.Series(["entry_time"]),
+        end=pd.Series(["exit_time"]),
     )
     cons_losses = consecutive_losses(df)
 
     stats = {
         "Total Trades": total_trades,
-        "Total P/L": f"{total_pl * 100:.2f}%",
+        "Total R/R": f"{total_rr}",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
         "Winning Trades": f"{wins_count:.0f}",
@@ -95,13 +91,11 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Breakeven Trades": f"{be_count:.0f}",
         "Consecutive Losses": f"{cons_losses}",
         "Expectancy": f"{expectancy_value * 100:.2f}%",
-        "Avg Win": f"{avg_w * 100:.2f}%",
-        "Avg Loss": f"{avg_l * 100:.2f}%",
-        "Avg Risk": f"{avg_risk * 100:.2f}%",
+        "Avg Risk": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade": f"{best_trade * 100:.2f}%",
         "Worst Trade": f"{worst_trade * 100:.2f}%",
-        "Max Drawdown": f"{max_dd_value:.2f}%",
+        # "Max Drawdown": f"{max_dd_value:.2f}%",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
         "Max Trade duration": f"{max_duration_val:.0f} Minutes",
     }
@@ -123,25 +117,25 @@ def term_stats(stats: dict) -> None:
 
 
 if __name__ == "__main__":
-    try:
-        df = pd.read_csv(url())
-        df_check(
-            df,
-            [
-                "risk_by_percentage",
-                "pl_by_percentage",
-                "pl_by_rr",
-                "outcome",
-                "date",
-                "entry_time",
-                "exit_time",
-                "symbol",
-            ],
-        )
-        risk = clean_numeric_series(df["risk_by_percentage"])
-        pl = clean_numeric_series(df["pl_by_percentage"])
-        stats = stats_table(df)
-        fetch_and_process(df, risk, pl)
-        # term_stats(stats)
-    except Exception as e:
-        print(f"Error: {e}")
+    # try:
+    df = pd.read_csv(url())
+    df_check(
+        df,
+        [
+            "date",
+            "day",
+            "symbol",
+            "entry_time",
+            "exit_time",
+            "contract",
+            "outcome",
+            "R/R",
+        ],
+    )
+    risk = clean_numeric_series(df["contract"])
+    rr = clean_numeric_series(df["R/R"])
+    stats = stats_table(df)
+    fetch_and_process(df, risk, rr)
+    term_stats(stats)
+    # except Exception as e:
+    #     print(f"Error: {e}")
