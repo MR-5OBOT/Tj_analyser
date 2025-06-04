@@ -21,24 +21,30 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
     rr_title = "Distribution of R/R"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
+    days = df["day"]
+    entry_time = df["entry_time"]
+    first = rr_series
+    outcome = df["outcome"]
     return [
         (create_stats_table, (stats_table(df),)),
         (rr_curve, (rr_series,)),
         (outcome_by_day, (df,)),
-        # (rr_barplot_months, (rr_series, df["date"])),
+        (rr_barplot_months, (rr_series, df["date"])),
         (rr_barplot, (rr_series, df["date"], None)),
-        (heatmap_rr, (df,)),
+        (heatmap_rr, (df, days, entry_time, rr_series)),
         (distribution_plot, (rr, rr_title, pl_xlabel)),
-        # (boxplot_DoW, (df, pl)),
-        (risk_vs_reward_scatter, (df, risk, rr)),
+        (boxplot_DoW, (rr_series, days, outcome)),
+        (risk_vs_reward_scatter, (first, risk, outcome)),
     ]
 
 
-def fetch_and_process(df: pd.DataFrame, risk: pd.Series, rr: pd.Series) -> pd.DataFrame:
+def fetch_and_process(
+    df: pd.DataFrame, risk: pd.Series, rr_series: pd.Series
+) -> pd.DataFrame:
     print("Fetching data from Google Sheets...")
 
     # Use generate_plots directly for consistency
-    steps = generate_plots(df, risk, rr)
+    steps = generate_plots(df, risk, rr_series)
 
     # Execute each plotting step
     for i, (func, args) in enumerate(
@@ -133,9 +139,9 @@ if __name__ == "__main__":
         ],
     )
     risk = clean_numeric_series(df["contract"])
-    rr = clean_numeric_series(df["R/R"])
+    rr_series = clean_numeric_series(df["R/R"])
     stats = stats_table(df)
-    fetch_and_process(df, risk, rr)
+    fetch_and_process(df, risk, rr_series)
     term_stats(stats)
-    # except Exception as e:
-    #     print(f"Error: {e}")
+# except Exception as e:
+#     print(f"Error: {e}")

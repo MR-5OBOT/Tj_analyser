@@ -55,17 +55,14 @@ def stats_table(df: pd.DataFrame) -> dict:
     total_trades = len(df)
     total_rr = rr_series.sum()
     wr_no_be, wr_with_be = winrate(df)
-    max_dd = max_drawdown_from_pct_returns(rr_series)
     best_trade, worst_trade = best_worst_trade(rr_series)
 
     return {
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr}",
-        "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
-        # "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
+        "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
         "Worst Trade": f"{worst_trade:.2f}R",
-        "Max Drawdown": f"{max_dd:.2f}R",
     }
 
 
