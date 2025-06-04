@@ -22,10 +22,10 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, pl: pd.Series):
     risk_title = "Distribution of Risk"
     pl_xlabel = "P/L by (%)"
     risk_xlabel = "Risk by (%)"
-    rr_series = clean_numeric_series(df["pl_by_rr"])
+    rr_series = clean_numeric_series(df["pl_by_rr"]).cumsum()
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_curve, (df, rr_series)),
+        (rr_curve, (rr_series)),
         (outcome_by_day, (df,)),
         # (rr_barplot_months, (rr_series, df["date"])),
         (rr_barplot, (rr_series, df["date"])),

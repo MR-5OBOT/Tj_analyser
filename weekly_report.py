@@ -24,7 +24,7 @@ def generate_plots(df: pd.DataFrame) -> list[tuple]:
     days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_curve, (df, rr_series.cumsum(), None, days)),
+        (rr_curve_weekly, (rr_series.cumsum(), None, days)),
         (rr_barplot, (rr_series, df["date"], None)),
         # (heatmap_rr, (df,)),
     ]

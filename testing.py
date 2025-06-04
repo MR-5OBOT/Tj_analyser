@@ -6,8 +6,9 @@ import numpy as np
 from DA_helpers.visualizations import rr_barplot_months
 
 from DA_helpers.data_cleaning import *
-from DA_helpers.visualizations import *
-#
+from DA_helpers.H.pl_plots import *
+from DA_helpers.H.rr_plots import *
+
 
 weekly_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
 df = pd.read_csv(weekly_url)
