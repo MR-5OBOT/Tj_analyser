@@ -25,10 +25,11 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
     risk = clean_numeric_series(df["contract"])
     outcome = df["outcome"]
     date = df["date"]
+    days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
         (rr_curve, (rr_series,)),
-        (outcome_by_day, (df, date, outcome)),
+        (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
         (rr_barplot_months, (rr_series, df["date"])),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
