@@ -24,8 +24,8 @@ def generate_plots(df: pd.DataFrame) -> list[tuple]:
     days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_curve_weekly, (rr_series.cumsum(), None, days)),
-        (rr_barplot, (rr_series, df["date"], None)),
+        (rr_curve_weekly, (rr_series.cumsum(), days, None)),
+        (rr_barplot, (rr_series, days, None)),
         # (heatmap_rr, (df,)),
     ]
 
@@ -78,25 +78,26 @@ def print_stats(stats: dict) -> None:
 
 
 def main() -> None:
-    try:
-        df = pd.read_csv(get_data_url())
-        expected_cols = [
-            "contract",
-            "R/R",
-            "outcome",
-            "date",
-            "day",
-            "entry_time",
-            "exit_time",
-            "symbol",
-        ]
-        df_check(df, expected_cols)
-        stats = stats_table(df)
-        fetch_and_process(df)
-        print_stats(stats)
+    # try:
+    df = pd.read_csv(get_data_url())
+    expected_cols = [
+        "contract",
+        "R/R",
+        "outcome",
+        "date",
+        "day",
+        "entry_time",
+        "exit_time",
+        "symbol",
+    ]
+    df_check(df, expected_cols)
+    stats = stats_table(df)
+    fetch_and_process(df)
+    print_stats(stats)
 
-    except Exception as e:
-        print(f"Error: {e}")
+
+# except Exception as e:
+#     print(f"Error: {e}")
 
 
 if __name__ == "__main__":

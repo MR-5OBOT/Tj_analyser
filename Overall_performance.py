@@ -10,8 +10,6 @@ from DA_helpers.utils import *
 from DA_helpers.reports import *
 from DA_helpers.visualizations import *
 
-from personal.stats import *
-
 
 def url() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
@@ -23,18 +21,20 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
     rr_series = clean_numeric_series(df["R/R"])
     days = df["day"]
     entry_time = df["entry_time"]
-    first = rr_series
+    reward = rr_series
+    risk = clean_numeric_series(df["contract"])
     outcome = df["outcome"]
+    date = df["date"]
     return [
         (create_stats_table, (stats_table(df),)),
         (rr_curve, (rr_series,)),
-        (outcome_by_day, (df,)),
+        (outcome_by_day, (df, date, outcome)),
         (rr_barplot_months, (rr_series, df["date"])),
-        (rr_barplot, (rr_series, df["date"], None)),
-        (heatmap_rr, (df, days, entry_time, rr_series)),
-        (distribution_plot, (rr, rr_title, pl_xlabel)),
+        (rr_barplot, (rr_series, days, None)),
+        (heatmap_rr, (rr_series, days, entry_time)),
+        (distribution_plot, (rr,)),
         (boxplot_DoW, (rr_series, days, outcome)),
-        (risk_vs_reward_scatter, (first, risk, outcome)),
+        (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
 
 
@@ -53,7 +53,7 @@ def fetch_and_process(
         func(*args)
 
     # Generate PDF using the same steps
-    pdf_path = export_pdf_report(steps)
+    pdf_path = export_pdf_report(steps, type="Report")
     print(f"\n\nReport Successfully Generated To: {pdf_path}\n")
     return df
 
@@ -70,22 +70,21 @@ def stats_table(df: pd.DataFrame) -> dict:
     risk_series = clean_numeric_series(df["contract"])
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
+    outcome = df["outcome"]
 
-    wr_no_be, wr_with_be = winrate(df)
+    wr_no_be, wr_with_be = winrate(pd.Series(outcome))
     wins_count = winning_trades(df)
-    losses_count = lossing_trades(df)
-    be_count = breakevens_trades(df)
-    expectancy_value = expectency(rr_series, winning_trades(df), lossing_trades(df))
+    losses_count = losing_trades(df)
+    be_count = breakeven_trades(df)
+    expectancy_rr = expectancy_by_rr(rr_series, winning_trades(df), losing_trades(df))
     avg_risk, avg_rr = avg_metrics(risk_series, rr_series)
 
     # max_dd_value = max_drawdown_from_pct_returns(rr_series)
-    best_trade, worst_trade = best_worst_trade(rr_series)
+    best_trade, _ = best_worst_trade(rr_series)
     min_duration_val, max_duration_val = durations(
-        df,
-        start=pd.Series(["entry_time"]),
-        end=pd.Series(["exit_time"]),
+        df, df["entry_time"], df["exit_time"]
     )
-    cons_losses = consecutive_losses(df)
+    cons_losses = consecutive_losses(pd.Series(outcome), "LOSS")
 
     stats = {
         "Total Trades": total_trades,
@@ -96,11 +95,11 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Lossing Trades": f"{losses_count:.0f}",
         "Breakeven Trades": f"{be_count:.0f}",
         "Consecutive Losses": f"{cons_losses}",
-        "Expectancy": f"{expectancy_value * 100:.2f}%",
-        "Avg Risk": f"{avg_risk}",
+        "Expectancy (R/R)": f"{expectancy_rr:.2f}",
+        "Avg Risk (contract)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
-        "Best Trade": f"{best_trade * 100:.2f}%",
-        "Worst Trade": f"{worst_trade * 100:.2f}%",
+        "Best Trade (R/R)": f"{best_trade:.2f}",
+        # "Worst Trade (R/R)": f"{worst_trade:.2f}",
         # "Max Drawdown": f"{max_dd_value:.2f}%",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
         "Max Trade duration": f"{max_duration_val:.0f} Minutes",
