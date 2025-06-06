@@ -19,14 +19,15 @@ df = pd.read_csv(overall_url)
 # df = pd.read_csv(weekly_url)
 
 outcome_series = df["outcome"]
-date = df["date"]
+date = convert_to_datetime(df["date"], format="%Y-%m-%d")
 day = df["day"]
 rr_series = clean_numeric_series(df["R/R"])
 
 # fig = outcome_by_day(outcome_series, None, day, "WIN", "LOSS", "BE")
 # fig = rr_curve(rr_series)
 # fig = rr_curve_weekly(rr_series, day)
-fig = rr_barplot(rr_series, day)
+# fig = rr_barplot(rr_series, day)
+fig = rr_barplot_months(rr_series, date)
 pdf_path = "testing.pdf"
 fig.savefig(pdf_path)
 
