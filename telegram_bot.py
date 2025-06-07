@@ -4,7 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 from dotenv import load_dotenv
-from telegram import Update, constants
+from telegram import Update, constants, BotCommand
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -13,17 +13,22 @@ from telegram.ext import (
     filters,
 )
 
-from helpers.stats import *
-from helpers.utils import *
-from live_fetch import *
+from DA_helpers.data_cleaning import *
+from DA_helpers.data_preprocessing import *
+from DA_helpers.formulas import *
+from DA_helpers.utils import *
+from DA_helpers.reports import *
+from DA_helpers.visualizations import *
+from Overall_performance import generate_plots
 
 # Load environment variables
 load_dotenv()
 
 # Set up logging
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 logger = logging.getLogger(__name__)
-
 
 # Google Sheets template link
 TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
@@ -43,10 +48,12 @@ I can help you analyze your trading performance and generate reports.
 🧾 *Your data must be:*
 - Check `/template` command
 
-upload your data to begin! 📊
+Upload your data to begin! 📊  
 For support, contact the bot admin `@MR_5OBOT`
 """
-    await update.message.reply_text(WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN)
+    await update.message.reply_text(
+        WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN
+    )
 
 
 # Command: /help
@@ -62,7 +69,6 @@ Available commands:
 📤 *Upload a file or link*:
 Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
 
-For support, contact the bot admin.
 For support, contact the bot admin `@MR_5OBOT`
 """
     await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
@@ -79,12 +85,17 @@ async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # Main handler for file or URL
 async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
+        await context.bot.send_chat_action(
+            chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING
+        )
         message = await update.message.reply_text("🔄 Processing your data...")
 
         df = None
 
         # Handle Google Sheets or raw CSV links
-        if update.message.text and update.message.text.startswith(("http://", "https://")):
+        if update.message.text and update.message.text.startswith(
+            ("http://", "https://")
+        ):
             try:
                 df = pd.read_csv(update.message.text)
             except Exception as e:
@@ -96,6 +107,12 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Handle file upload
         elif update.message.document:
+            if update.message.document.file_size > 10 * 1024 * 1024:  # 10 MB limit
+                await message.edit_text(
+                    "❌ File too large. Please upload a file under 10MB."
+                )
+                return
+
             file = await context.bot.get_file(update.message.document.file_id)
             file_bytes = await file.download_as_bytearray()
             file_name = update.message.document.file_name.lower()
@@ -106,31 +123,51 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 elif file_name.endswith((".xlsx", ".xls")):
                     df = pd.read_excel(BytesIO(file_bytes))
                 else:
-                    await message.edit_text("❌ Unsupported file format. Please send a .csv or .xlsx file.")
+                    await message.edit_text(
+                        "❌ Unsupported file format. Please send a .csv or .xlsx file."
+                    )
                     return
             except Exception as e:
-                await message.edit_text(f"❌ Failed to read the file. Error: `{e}`", parse_mode="Markdown")
+                await message.edit_text(
+                    f"❌ Failed to read the file. Error: `{e}`", parse_mode="Markdown"
+                )
                 return
 
         if df is None or df.empty:
-            await message.edit_text("❌ No valid data received. Please send a CSV/Excel file or a valid URL.")
+            await message.edit_text(
+                "❌ No valid data received. Please send a CSV/Excel file or a valid URL."
+            )
             return
 
-        # Check DataFrame structure
+        # Basic structure validation
         try:
-            df_check(df, required_columns=[])
+            df_check(
+                df,
+                required_columns=[
+                    "contract",
+                    "R/R",
+                    "outcome",
+                    "date",
+                    "day",
+                    "entry_time",
+                    "exit_time",
+                    "symbol",
+                ],
+            )
         except ValueError as e:
-            await message.edit_text(f"❌ Data validation failed: `{e}`", parse_mode="Markdown")
+            await message.edit_text(
+                f"❌ Data validation failed: `{e}`", parse_mode="Markdown"
+            )
             return
 
         await message.edit_text("📊 Generating your analysis report...")
 
         # Perform calculations
-        pl = pl_raw(df)
-        risk = risk_raw(df)
+        rr_series = clean_numeric_series(df["R/R"])
+        risk = clean_numeric_series(df["contract"])
 
         # Generate and save PDF report
-        pdf_path = export_figure_to_pdf(generate_plots(df, risk, pl))
+        pdf_path = export_pdf_report(generate_plots(df, risk, rr_series))
 
         await message.edit_text("📤 Sending your report...")
 
@@ -147,7 +184,9 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     except Exception as e:
         logger.error("Error processing file: %s", e)
-        await update.message.reply_text(f"❌ An error occurred: `{e}`", parse_mode="Markdown")
+        await update.message.reply_text(
+            f"❌ An error occurred: `{e}`", parse_mode="Markdown"
+        )
 
 
 def main() -> None:
@@ -156,16 +195,27 @@ def main() -> None:
         logger.error("TELEGRAM_BOT_TOKEN environment variable is not set.")
         return
 
-    # Initialize the bot with JobQueue disabled
     application = ApplicationBuilder().token(token).job_queue(None).build()
 
-    # Register handlers
+    async def set_bot_commands(app):
+        commands = [
+            BotCommand("start", "Start the bot and see instructions"),
+            BotCommand("help", "Show help and available commands"),
+            BotCommand("template", "Get the Google Sheets template link"),
+        ]
+        await app.bot.set_my_commands(commands)
+
+    application.post_init = set_bot_commands
+
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("template", template_command))
-    application.add_handler(MessageHandler(filters.Document.ALL | filters.Regex(r"^https?://"), process_file))
+    application.add_handler(
+        MessageHandler(
+            filters.Document.ALL | filters.Regex(r"^https?://"), process_file
+        )
+    )
 
-    # Start the bot
     application.run_polling()
 
 
