@@ -10,8 +10,6 @@ from DA_helpers.utils import *
 from DA_helpers.reports import *
 from DA_helpers.visualizations import *
 
-from personal.stats import *
-
 
 def get_data_url() -> str:
     """Returns the Google Sheets CSV URL."""
@@ -20,11 +18,13 @@ def get_data_url() -> str:
 
 def generate_plots(df: pd.DataFrame) -> list[tuple]:
     """Prepare plotting steps as (function, args) tuples."""
-    rr_series = clean_numeric_series(df["pl_by_rr"])
+    rr_series = clean_numeric_series(df["R/R"])
+    days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_barplot, (rr_series, df["date"])),
-        (heatmap_rr, (df,)),
+        (rr_curve_weekly, (rr_series, days, None)),
+        (rr_barplot, (rr_series, days, None)),
+        # (heatmap_rr, (df,)),
     ]
 
 
@@ -49,21 +49,19 @@ def stats_table(df: pd.DataFrame) -> dict:
         print("Warning: No data available.")
         return {}
 
-    pl_series = clean_numeric_series(df["pl_by_percentage"])
+    rr_series = clean_numeric_series(df["R/R"])
+    outcomes = df["outcome"]
     total_trades = len(df)
-    total_pl = pl_series.sum()
-    wr_no_be, wr_with_be = winrate(df)
-    max_dd = max_drawdown_from_pct_returns(pl_series) * 100
-    best_trade, worst_trade = best_worst_trade(pl_series)
+    total_rr = rr_series.sum()
+    wr_no_be, _ = winrate(outcomes, "WIN", "LOSS")
+    best_trade, worst_trade = best_worst_trade(rr_series)
 
     return {
         "Total Trades": total_trades,
-        "Total P/L": f"{total_pl * 100:.2f}%",
-        "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
-        "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
-        "Best Trade": f"{best_trade * 100:.2f}%",
-        "Worst Trade": f"{worst_trade * 100:.2f}%",
-        "Max Drawdown": f"{max_dd:.2f}%",
+        "Total R/R": f"{total_rr}",
+        "WinRate": f"{wr_no_be * 100:.2f}%",
+        "Best Trade": f"{best_trade:.2f}R",
+        # "Worst Trade": f"{worst_trade:.2f}R",
     }
 
 
@@ -79,25 +77,26 @@ def print_stats(stats: dict) -> None:
 
 
 def main() -> None:
-    try:
-        df = pd.read_csv(get_data_url())
-        expected_cols = [
-            "risk_by_percentage",
-            "pl_by_percentage",
-            "pl_by_rr",
-            "outcome",
-            "date",
-            "entry_time",
-            "exit_time",
-            "symbol",
-        ]
-        df_check(df, expected_cols)
-        stats = stats_table(df)
-        fetch_and_process(df)
-        print_stats(stats)
+    # try:
+    df = pd.read_csv(get_data_url())
+    expected_cols = [
+        "contract",
+        "R/R",
+        "outcome",
+        "date",
+        "day",
+        "entry_time",
+        "exit_time",
+        "symbol",
+    ]
+    df_check(df, expected_cols)
+    stats = stats_table(df)
+    fetch_and_process(df)
+    print_stats(stats)
 
-    except Exception as e:
-        print(f"Error: {e}")
+
+# except Exception as e:
+#     print(f"Error: {e}")
 
 
 if __name__ == "__main__":
