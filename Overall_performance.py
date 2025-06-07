@@ -34,8 +34,8 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (distribution_plot, (rr,)),
-        (boxplot_DoW, (rr_series, days, outcome)),
-        (risk_vs_reward_scatter, (risk, reward, outcome)),
+        # (boxplot_DoW, (rr_series, days, outcome)),
+        # (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
 
 

@@ -10,8 +10,6 @@ from DA_helpers.utils import *
 from DA_helpers.reports import *
 from DA_helpers.visualizations import *
 
-from personal.stats import *
-
 
 def get_data_url() -> str:
     """Returns the Google Sheets CSV URL."""
@@ -24,7 +22,7 @@ def generate_plots(df: pd.DataFrame) -> list[tuple]:
     days = df["day"]
     return [
         (create_stats_table, (stats_table(df),)),
-        (rr_curve_weekly, (rr_series.cumsum(), days, None)),
+        (rr_curve_weekly, (rr_series, days, None)),
         (rr_barplot, (rr_series, days, None)),
         # (heatmap_rr, (df,)),
     ]
@@ -52,9 +50,10 @@ def stats_table(df: pd.DataFrame) -> dict:
         return {}
 
     rr_series = clean_numeric_series(df["R/R"])
+    outcomes = df["outcome"]
     total_trades = len(df)
     total_rr = rr_series.sum()
-    wr_no_be, wr_with_be = winrate(df)
+    wr_no_be, _ = winrate(outcomes, "WIN", "LOSS")
     best_trade, worst_trade = best_worst_trade(rr_series)
 
     return {
@@ -62,7 +61,7 @@ def stats_table(df: pd.DataFrame) -> dict:
         "Total R/R": f"{total_rr}",
         "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
-        "Worst Trade": f"{worst_trade:.2f}R",
+        # "Worst Trade": f"{worst_trade:.2f}R",
     }
 
 
