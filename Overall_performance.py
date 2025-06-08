@@ -33,10 +33,22 @@ def generate_plots(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
         (rr_barplot_months, (rr_series, df["date"])),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
-        (distribution_plot, (rr,)),
-        # (boxplot_DoW, (rr_series, days, outcome)),
-        # (risk_vs_reward_scatter, (risk, reward, outcome)),
+        (distribution_plot, (rr, rr_title)),
+        (boxplot_DoW, (rr_series, days, outcome)),
+        (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
+
+
+def export_pdf_report(figure_list, type="Report"):
+    pdf_path = f"{datetime.datetime.now().strftime('%Y-%m-%d')}-{type}.pdf"
+    with PdfPages(pdf_path) as pdf:
+        plots = figure_list
+        for func, args in plots:
+            fig = func(*args)
+            if fig is not None:
+                pdf.savefig(fig)
+            plt.close()
+    return pdf_path
 
 
 def fetch_and_process(
