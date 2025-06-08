@@ -12,8 +12,8 @@ from DA_helpers.data_cleaning import *
 from DA_helpers.data_preprocessing import *
 from DA_helpers.formulas import *
 from DA_helpers.utils import *
-from DA_helpers.reports import *
 from DA_helpers.visualizations import *
+# from DA_helpers.reports import *
 
 
 def get_data_url_weekly() -> str:
@@ -34,14 +34,14 @@ def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
     ]
 
 
-def generate_plots_overall(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
+def generate_plots_overall(df: pd.DataFrame):
     rr_title = "Distribution of R/R"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
+    risk = clean_numeric_series(df["contract"])
     days = df["day"]
     entry_time = df["entry_time"]
     reward = rr_series
-    risk = clean_numeric_series(df["contract"])
     outcome = df["outcome"]
     date = df["date"]
 
@@ -52,7 +52,7 @@ def generate_plots_overall(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
         (rr_barplot_months, (rr_series, date)),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
-        (distribution_plot, (rr, rr_title)),
+        (distribution_plot, (rr_series, rr_title)),
         (boxplot_DoW, (rr_series, days, outcome)),
         (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
@@ -78,7 +78,7 @@ def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
     if report_type == "weekly":
         steps = generate_plots_weekly(df)
     elif report_type == "overall":
-        steps = generate_plots_overall(df, risk, rr_series)
+        steps = generate_plots_overall(df)
     else:
         raise ValueError(f"Unknown report type: {report_type}")
 
