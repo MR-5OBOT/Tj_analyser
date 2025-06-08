@@ -72,9 +72,6 @@ def export_pdf_report(figure_list, report_type="Report"):
 def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
     print("Processing and generating report...")
 
-    risk = clean_numeric_series(df["contract"])
-    rr_series = clean_numeric_series(df["R/R"])
-
     if report_type == "weekly":
         steps = generate_plots_weekly(df)
     elif report_type == "overall":

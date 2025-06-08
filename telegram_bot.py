@@ -1,25 +1,21 @@
 import logging
 import os
 from io import BytesIO
-
 import pandas as pd
 from dotenv import load_dotenv
-from telegram import Update, constants, BotCommand
+from telegram import Update, constants
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    ConversationHandler,
     filters,
 )
 
 from DA_helpers.data_cleaning import *
 from DA_helpers.data_preprocessing import *
-from DA_helpers.formulas import *
-from DA_helpers.utils import *
-from DA_helpers.reports import *
-from DA_helpers.visualizations import *
-from Overall_performance import generate_plots
+from Tj_analyser import *
 
 # Load environment variables
 load_dotenv()
@@ -31,87 +27,100 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Google Sheets template link
-TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/1JwaEanv8tku6dXSGWsu3c7KFZvCtEjQEcKkzO0YcrPQ/edit?usp=sharing"
+TEMPLATE_URL = "https://docs.google.com/spreadsheets/d/16noFFWS0NSFe__Jq4yguBA1wts9MH8CLu8qtJRCTz0g/edit?usp=sharing"
+
+# State for conversation
+WAITING_FOR_FILE = 0
 
 
-# Command: /start
+# /start command with template link
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    WELCOME_MESSAGE = """
+    START_HELP = f"""
 👋 *Welcome to the Trading Analysis Bot!*
 
-I can help you analyze your trading performance and generate reports.
+I can help you analyze your trading performance and generate PDF reports.
 
 📌 *You can send me:*
 - A CSV or Excel file
-- A direct Google Sheets CSV link
+- A direct Google Sheets CSV export link
 
-🧾 *Your data must be:*
-- Check `/template` command
+📈 *Available commands:*
+- `/start`: Show this help message
+- `/weekly`: Upload a file/link for a *weekly* report
+- `/overall`: Upload a file/link for an *overall* report
+- `/cancel`: Cancel the current operation
 
-Upload your data to begin! 📊  
-For support, contact the bot admin `@MR_5OBOT`
+💡 *Spreadsheet template*: [Google Sheets Template]({TEMPLATE_URL})
+
+For support, contact `@MR_5OBOT`
 """
     await update.message.reply_text(
-        WELCOME_MESSAGE, parse_mode=constants.ParseMode.MARKDOWN
+        START_HELP,
+        parse_mode=constants.ParseMode.MARKDOWN,
+        disable_web_page_preview=True,
     )
 
 
-# Command: /help
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    help_text = """
-📚 *Help - Trading Analysis Bot*
-
-Available commands:
-- `/start`: Show the welcome message and instructions.
-- `/help`: Display this help message.
-- `/template`: Get the Google Sheets template link.
-
-📤 *Upload a file or link*:
-Send a CSV/Excel file or a Google Sheets CSV link to generate a trading report.
-
-For support, contact the bot admin `@MR_5OBOT`
-"""
-    await update.message.reply_text(help_text, parse_mode=constants.ParseMode.MARKDOWN)
-
-
-# Command: /template
-async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# /weekly command
+async def weekly_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["report_type"] = "weekly"
     await update.message.reply_text(
-        f"📥 Download the template here: [Google Sheets Template]({TEMPLATE_URL})",
+        "📅 *Weekly Report Mode*\n\n📥 Send a CSV, Excel file, or Google Sheets link.",
         parse_mode=constants.ParseMode.MARKDOWN,
     )
+    return WAITING_FOR_FILE
 
 
-# Main handler for file or URL
-async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+# /overall command
+async def overall_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["report_type"] = "overall"
+    await update.message.reply_text(
+        "📊 *Overall Report Mode*\n\n📥 Send a CSV, Excel file, or Google Sheets link.",
+        parse_mode=constants.ParseMode.MARKDOWN,
+    )
+    return WAITING_FOR_FILE
+
+
+# Unified report processor
+async def handle_user_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    report_type = context.user_data.get("report_type")
+    if report_type not in ["weekly", "overall"]:
+        await update.message.reply_text("❌ Please use /weekly or /overall to start.")
+        return ConversationHandler.END
+
     try:
         await context.bot.send_chat_action(
             chat_id=update.effective_chat.id, action=constants.ChatAction.TYPING
         )
-        message = await update.message.reply_text("🔄 Processing your data...")
+        message = await update.message.reply_text("🔄 Processing...")
 
         df = None
+        file_source = update.message.text or update.message.document
 
-        # Handle Google Sheets or raw CSV links
+        if not file_source:
+            await message.edit_text("❌ No file or link provided.")
+            return WAITING_FOR_FILE
+
+        # Handle Google Sheets link
         if update.message.text and update.message.text.startswith(
             ("http://", "https://")
         ):
             try:
-                df = pd.read_csv(update.message.text)
+                csv_url = update.message.text.replace(
+                    "/edit?usp=sharing", "/export?format=csv"
+                )
+                df = pd.read_csv(csv_url)
             except Exception as e:
                 await message.edit_text(
-                    f"❌ Could not read from the link. Make sure it's a direct CSV export link.\nError: `{e}`",
-                    parse_mode="Markdown",
+                    f"❌ Invalid link. Error: {e}", parse_mode="Markdown"
                 )
-                return
+                return ConversationHandler.END
 
         # Handle file upload
         elif update.message.document:
-            if update.message.document.file_size > 10 * 1024 * 1024:  # 10 MB limit
-                await message.edit_text(
-                    "❌ File too large. Please upload a file under 10MB."
-                )
-                return
+            if update.message.document.file_size > 10 * 1024 * 1024:  # 10MB limit
+                await message.edit_text("❌ File too large (max 10MB).")
+                return ConversationHandler.END
 
             file = await context.bot.get_file(update.message.document.file_id)
             file_bytes = await file.download_as_bytearray()
@@ -123,100 +132,114 @@ async def process_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 elif file_name.endswith((".xlsx", ".xls")):
                     df = pd.read_excel(BytesIO(file_bytes))
                 else:
-                    await message.edit_text(
-                        "❌ Unsupported file format. Please send a .csv or .xlsx file."
-                    )
-                    return
+                    await message.edit_text("❌ Only CSV or Excel files supported.")
+                    return ConversationHandler.END
             except Exception as e:
                 await message.edit_text(
-                    f"❌ Failed to read the file. Error: `{e}`", parse_mode="Markdown"
+                    f"❌ File processing failed. Error: {e}", parse_mode="Markdown"
                 )
-                return
+                return ConversationHandler.END
 
         if df is None or df.empty:
-            await message.edit_text(
-                "❌ No valid data received. Please send a CSV/Excel file or a valid URL."
-            )
-            return
+            await message.edit_text("❌ Empty or unreadable data.")
+            return ConversationHandler.END
 
-        # Basic structure validation
-        try:
-            df_check(
-                df,
-                required_columns=[
-                    "contract",
-                    "R/R",
-                    "outcome",
-                    "date",
-                    "day",
-                    "entry_time",
-                    "exit_time",
-                    "symbol",
-                ],
-            )
-        except ValueError as e:
-            await message.edit_text(
-                f"❌ Data validation failed: `{e}`", parse_mode="Markdown"
-            )
-            return
+        # Validate columns
+        df_check(
+            df,
+            required_columns=[
+                "contract",
+                "R/R",
+                "outcome",
+                "date",
+                "day",
+                "entry_time",
+                "exit_time",
+                "symbol",
+            ],
+        )
 
-        await message.edit_text("📊 Generating your analysis report...")
+        await message.edit_text("📊 Generating report...")
 
-        # Perform calculations
-        rr_series = clean_numeric_series(df["R/R"])
-        risk = clean_numeric_series(df["contract"])
+        # Generate report
+        pdf_path = export_pdf_report(
+            generate_plots_weekly(df)
+            if report_type == "weekly"
+            else generate_plots_overall(df)
+        )
 
-        # Generate and save PDF report
-        pdf_path = export_pdf_report(generate_plots(df, risk, rr_series))
+        await message.edit_text("📤 Sending report...")
 
-        await message.edit_text("📤 Sending your report...")
-
-        # Send PDF
-        with open(pdf_path, "rb") as pdf:
+        with open(pdf_path, "rb") as pdf_file:
             await context.bot.send_document(
                 chat_id=update.effective_chat.id,
-                document=pdf,
-                filename=f"trading_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                caption="📈 Here's your trading analysis report!",
+                document=pdf_file,
+                filename=f"{report_type}_report_{pd.Timestamp.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf",
+                caption=f"📈 Your *{report_type.capitalize()}* report!",
+                parse_mode=constants.ParseMode.MARKDOWN,
             )
 
         os.remove(pdf_path)
+        context.user_data.clear()
 
     except Exception as e:
-        logger.error("Error processing file: %s", e)
-        await update.message.reply_text(
-            f"❌ An error occurred: `{e}`", parse_mode="Markdown"
-        )
+        logger.error(f"Error in {report_type} report: {e}")
+        await message.edit_text(f"❌ Error: {e}", parse_mode="Markdown")
+
+    return ConversationHandler.END
+
+
+# /cancel command
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data.clear()
+    await update.message.reply_text("Operation cancelled.")
+    return ConversationHandler.END
 
 
 def main() -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        logger.error("TELEGRAM_BOT_TOKEN environment variable is not set.")
+        logger.error("TELEGRAM_BOT_TOKEN not set.")
         return
 
-    application = ApplicationBuilder().token(token).job_queue(None).build()
+    app = ApplicationBuilder().token(token).build()
 
-    async def set_bot_commands(app):
+    # Set bot commands
+    async def set_bot_commands(application):
         commands = [
-            BotCommand("start", "Start the bot and see instructions"),
-            BotCommand("help", "Show help and available commands"),
-            BotCommand("template", "Get the Google Sheets template link"),
+            ("start", "Show help and template link"),
+            ("weekly", "Generate weekly report"),
+            ("overall", "Generate overall report"),
+            ("cancel", "Cancel operation"),
         ]
-        await app.bot.set_my_commands(commands)
+        await application.bot.set_my_commands(commands)
 
-    application.post_init = set_bot_commands
+    app.post_init = set_bot_commands
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("template", template_command))
-    application.add_handler(
-        MessageHandler(
-            filters.Document.ALL | filters.Regex(r"^https?://"), process_file
-        )
+    # Conversation handler
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CommandHandler("weekly", weekly_command),
+            CommandHandler("overall", overall_command),
+        ],
+        states={
+            WAITING_FOR_FILE: [
+                MessageHandler(
+                    filters.Document.ALL | filters.TEXT & ~filters.COMMAND,
+                    handle_user_file,
+                )
+            ]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+        per_user=True,
+        per_chat=True,
     )
 
-    application.run_polling()
+    # Add handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(conv_handler)
+
+    app.run_polling()
 
 
 if __name__ == "__main__":
