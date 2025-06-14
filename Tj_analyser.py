@@ -97,7 +97,7 @@ def stats_table_weekly(df: pd.DataFrame) -> dict:
 
     return {
         "Total Trades": total_trades,
-        "Total R/R": f"{total_rr}",
+        "Total R/R": f"{total_rr:.2f}",
         "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
     }
@@ -124,7 +124,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
 
     return {
         "Total Trades": total_trades,
-        "Total R/R": f"{total_rr}",
+        "Total R/R": f"{total_rr:.2f}",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
         "Winning Trades": f"{wins_count}",
