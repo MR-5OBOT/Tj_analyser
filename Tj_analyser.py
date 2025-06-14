@@ -8,12 +8,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from DA_helpers.data_cleaning import *
-from DA_helpers.data_preprocessing import *
-from DA_helpers.formulas import *
-from DA_helpers.utils import *
-from DA_helpers.visualizations import *
-# from DA_helpers.reports import *
+from helpers.data_cleaning import *
+from helpers.data_preprocessing import *
+from helpers.formulas import *
+from helpers.utils import *
+from helpers.visualizations import *
+# from helpers.reports import *
 
 
 def get_data_url_weekly() -> str:
