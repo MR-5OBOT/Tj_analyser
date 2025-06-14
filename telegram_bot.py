@@ -13,8 +13,8 @@ from telegram.ext import (
     filters,
 )
 
-from DA_helpers.data_cleaning import *
-from DA_helpers.data_preprocessing import *
+from helpers.data_cleaning import *
+from helpers.data_preprocessing import *
 from Tj_analyser import *
 
 # Load environment variables
