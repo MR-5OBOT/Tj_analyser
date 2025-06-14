@@ -8,12 +8,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from DA_helpers.data_cleaning import *
-from DA_helpers.data_preprocessing import *
-from DA_helpers.formulas import *
-from DA_helpers.utils import *
-from DA_helpers.reports import *
-from DA_helpers.visualizations import *
+from helpers.data_cleaning import *
+from helpers.data_preprocessing import *
+from helpers.formulas import *
+from helpers.utils import *
+from helpers.visualizations import *
+# from helpers.reports import *
 
 
 def get_data_url_weekly() -> str:
@@ -34,14 +34,14 @@ def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
     ]
 
 
-def generate_plots_overall(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
+def generate_plots_overall(df: pd.DataFrame):
     rr_title = "Distribution of R/R"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
+    risk = clean_numeric_series(df["contract"])
     days = df["day"]
     entry_time = df["entry_time"]
     reward = rr_series
-    risk = clean_numeric_series(df["contract"])
     outcome = df["outcome"]
     date = df["date"]
 
@@ -52,7 +52,7 @@ def generate_plots_overall(df: pd.DataFrame, risk: pd.Series, rr: pd.Series):
         (rr_barplot_months, (rr_series, date)),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
-        (distribution_plot, (rr, rr_title)),
+        (distribution_plot, (rr_series, rr_title)),
         (boxplot_DoW, (rr_series, days, outcome)),
         (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
@@ -72,13 +72,10 @@ def export_pdf_report(figure_list, report_type="Report"):
 def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
     print("Processing and generating report...")
 
-    risk = clean_numeric_series(df["contract"])
-    rr_series = clean_numeric_series(df["R/R"])
-
     if report_type == "weekly":
         steps = generate_plots_weekly(df)
     elif report_type == "overall":
-        steps = generate_plots_overall(df, risk, rr_series)
+        steps = generate_plots_overall(df)
     else:
         raise ValueError(f"Unknown report type: {report_type}")
 
@@ -100,7 +97,7 @@ def stats_table_weekly(df: pd.DataFrame) -> dict:
 
     return {
         "Total Trades": total_trades,
-        "Total R/R": f"{total_rr}",
+        "Total R/R": f"{total_rr:.2f}",
         "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
     }
@@ -127,7 +124,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
 
     return {
         "Total Trades": total_trades,
-        "Total R/R": f"{total_rr}",
+        "Total R/R": f"{total_rr:.2f}",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
         "Winning Trades": f"{wins_count}",
