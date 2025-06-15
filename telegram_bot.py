@@ -58,6 +58,19 @@ async def check_password(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return ASKING_FOR_PASSWORD
 
 
+# /template command
+async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        f"📄 *Template Spreadsheet*\n\n"
+        f"Use this template to structure your data before uploading.\n"
+        f"🔗 [Open Template]({TEMPLATE_URL})\n\n"
+        f"Make sure your sheet includes the following columns:\n"
+        f"`contract`, `R/R`, `outcome`, `date`, `day`, `entry_time`, `exit_time`, `symbol`",
+        parse_mode=constants.ParseMode.MARKDOWN,
+        disable_web_page_preview=False,
+    )
+
+
 # /weekly command
 async def weekly_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not context.user_data.get("authenticated"):
@@ -213,6 +226,7 @@ def main() -> None:
             ("start", "Authenticate and unlock bot"),
             ("weekly", "Generate weekly report"),
             ("overall", "Generate overall report"),
+            ("template", "View the spreadsheet template"),
             ("cancel", "Cancel operation"),
         ]
         await application.bot.set_my_commands(commands)
@@ -254,6 +268,7 @@ def main() -> None:
     # Add handlers
     app.add_handler(password_handler)
     app.add_handler(report_handler)
+    app.add_handler(CommandHandler("template", template_command))
 
     app.run_polling()
 
