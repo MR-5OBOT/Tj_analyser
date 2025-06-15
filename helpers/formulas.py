@@ -45,6 +45,27 @@ def losing_trades(
     return losses
 
 
+def profit_factor(trade_results: pd.Series) -> float:
+    """
+    Calculate the profit factor from a pandas Series of trade results (R/R).
+
+    Args:
+        trade_results (pd.Series): Series of trade PnLs, R/R (positive for wins, negative for losses).
+
+    Returns:
+        float: Profit factor (gross profit / gross loss). Returns float('inf') if no losses.
+    """
+    wins = trade_results[trade_results > 0]
+    losses = trade_results[trade_results < 0]
+    total_profit = wins.sum()
+    total_loss = abs(losses.sum())
+
+    if total_loss == 0:
+        return float("inf")  # Avoid division by zero
+
+    return total_profit / total_loss
+
+
 def avg_metrics(
     risk_series: pd.Series = pd.Series(dtype=int),
     rr_series: pd.Series = pd.Series(dtype=float),
