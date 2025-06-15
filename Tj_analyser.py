@@ -109,6 +109,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
     outcome = df["outcome"]
+    profit_factor_value = profit_factor(rr_series)
 
     wr_no_be, wr_with_be = winrate(pd.Series(outcome))
     wins_count = winning_trades(df)
@@ -127,6 +128,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         "Total R/R": f"{total_rr:.2f}",
         "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
         "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
+        "Profit Factor": f"{profit_factor_value:.2f}",
         "Winning Trades": f"{wins_count}",
         "Lossing Trades": f"{losses_count}",
         "Breakeven Trades": f"{be_count}",
