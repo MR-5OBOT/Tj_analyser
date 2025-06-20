@@ -112,7 +112,7 @@ def rr_curve_weekly(
     dark_mode: bool = True,
 ):
     """
-    Plots a line plot of R/R by day of the week.
+    Plots a line plot of cumulative R/R by day of the week.
 
     Args:
         rr_series (pd.Series): Risk/reward values.
@@ -128,28 +128,31 @@ def rr_curve_weekly(
 
     # Determine x values
     if days is not None:
-        x_vals = days.str.lower()
+        x_vals = days.str.strip().str.lower()
     elif dates is not None:
-        # x_vals = pd.to_datetime(dates, format="%Y-%m-%d").dt.day_name().str.lower()
         x_vals = pd.to_datetime(dates, errors="coerce").dt.day_name().str.lower()
     else:
         raise ValueError("No date or day series was provided!")
 
+    # Group R/R by day and sum
+    grouped_rr = rr_series.groupby(x_vals).sum()
+    day_order = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    ordered_rr = grouped_rr.reindex(day_order).dropna()
+    # ordered_rr = grouped_rr.reindex(day_order).fillna(0)  # Fill missing days with 0
+
     # Compute cumulative sum
-    cum_series = rr_series.cumsum()
+    cum_series = ordered_rr.cumsum()
+    # Plot line
     sns.lineplot(
-        x=x_vals,
-        y=cum_series,
-        label="R/R",
+        x=cum_series.index,
+        y=cum_series.values,
+        label="Cumulative R/R",
         color="#4B6661",
         marker="o",
         linewidth=2,
         markersize=8,
-        # zorder=3,
         ax=ax,
     )
-    # plt.fill_between(x_vals, cum_series, color="#747474", alpha=0.2)
-    # plt.ylim(min(cum_series) - 0.5, max(cum_series) + 0.5)
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -196,7 +199,7 @@ def rr_barplot(
 
     # Get day labels
     if days is not None:
-        day_labels = days.str.lower()
+        day_labels = days.str.strip().str.lower()
     elif dates is not None:
         day_labels = pd.to_datetime(dates, errors="coerce").dt.day_name().str.lower()
     else:
@@ -206,6 +209,7 @@ def rr_barplot(
     grouped_rr = rr_series.groupby(day_labels).sum()
     day_order = ["monday", "tuesday", "wednesday", "thursday", "friday"]
     ordered_rr = grouped_rr.reindex(day_order).dropna()
+    # ordered_rr = grouped_rr.reindex(day_order).fillna(0)  # Fill missing days with 0
 
     sns.barplot(
         x=ordered_rr.index,
@@ -214,7 +218,6 @@ def rr_barplot(
         errorbar=None,
         color="#476A64",
         ax=ax,
-        zorder=3,
     )
     plt.axhline(0, color="#515151", linestyle="-", linewidth=1)
     ax.set_title(title)
