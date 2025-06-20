@@ -130,7 +130,9 @@ def rr_curve_weekly(
     if days is not None:
         x_vals = days.str.strip().str.lower()
     elif dates is not None:
-        x_vals = pd.to_datetime(dates, errors="coerce").dt.day_name().str.lower()
+        x_vals = (
+            pd.to_datetime(dates, errors="coerce").dt.day_name().strip().str.lower()
+        )
     else:
         raise ValueError("No date or day series was provided!")
 
@@ -201,7 +203,9 @@ def rr_barplot(
     if days is not None:
         day_labels = days.str.strip().str.lower()
     elif dates is not None:
-        day_labels = pd.to_datetime(dates, errors="coerce").dt.day_name().str.lower()
+        day_labels = (
+            pd.to_datetime(dates, errors="coerce").dt.day_name().strip().str.lower()
+        )
     else:
         raise ValueError("No date or day series was provided!")
 
@@ -358,7 +362,10 @@ def outcome_by_day(
     if date_series is not None:
         days = (
             # pd.to_datetime(date_series, format="%Y-%m-%d", errors="coerce")
-            pd.to_datetime(date_series, errors="coerce").dt.day_name().str.lower()
+            pd.to_datetime(date_series, errors="coerce")
+            .dt.day_name()
+            .strip()
+            .str.lower()
         )
     else:
         days = day_series.str.strip().str.lower()
@@ -590,7 +597,7 @@ def heatmap_rr(
     temp_df = pd.DataFrame(
         {
             "rr": rr_series,
-            "day": days.str.lower(),
+            "day": days.str.strip().str.lower(),
             "hour": entry_time.apply(parse_time).apply(
                 lambda x: x.hour if pd.notna(x) else None
             ),
