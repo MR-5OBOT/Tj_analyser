@@ -108,7 +108,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     risk_series = clean_numeric_series(df["contract"])
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
-    outcome = df["outcome"]
+    outcome = df["outcome"].str.strip()
     profit_factor_value = profit_factor(rr_series)
 
     wr_no_be, wr_with_be = winrate(pd.Series(outcome))
@@ -126,15 +126,15 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     return {
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr:.2f}",
-        "Win-Rate (No BE)": f"{wr_no_be * 100:.2f}%",
-        "Win-Rate (With BE)": f"{wr_with_be * 100:.2f}%",
-        "Profit Factor": f"{profit_factor_value:.2f}",
+        "WinRate": f"{wr_no_be * 100:.2f}%",
+        # "WinRate (With BE)": f"{wr_with_be * 100:.2f}%",
+        # "Profit Factor": f"{profit_factor_value:.2f}", # used for $ or % returns
         "Winning Trades": f"{wins_count}",
         "Lossing Trades": f"{losses_count}",
         "Breakeven Trades": f"{be_count}",
         "Consecutive Losses": f"{cons_losses}",
         "Expectancy (R/R)": f"{expectancy_rr:.2f}",
-        "Avg Risk (contract)": f"{avg_risk}",
+        # "Avg Risk (contract)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade (R/R)": f"{best_trade:.2f}",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
@@ -154,7 +154,7 @@ def main():
         "--type",
         type=str,
         choices=["weekly", "overall"],
-        # default="overall",
+        default="overall",
         required=True,
         help="Choose the type of report to generate",
     )
