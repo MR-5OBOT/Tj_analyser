@@ -227,30 +227,56 @@ def durations(df: pd.DataFrame, start: pd.Series, end: pd.Series):
     return min, max
 
 
-def consecutive_losses(outcome: pd.Series, loss_str: str) -> int:
+def consecutive_wins_and_losses(
+    outcome: pd.Series, loss_str: str, win_str: str
+) -> tuple[int, int]:
     """
-    Calculate the maximum number of consecutive losses in a series of trade outcomes.
+    Calculate the maximum number of consecutive wins and losses in a series of trade outcomes.
 
     Args:
         outcome (pd.Series): A pandas Series containing trade outcomes (e.g., 'WIN', 'LOSS').
         loss_str (str): The string value representing a loss (e.g., 'LOSS', 'loss', 'L').
+        win_str (str): The string value representing a win (e.g., 'WIN', 'win', 'W').
 
     Returns:
-        int: The maximum number of consecutive losses found in the series.
+        Tuple[int, int]: A tuple containing (max_consecutive_losses, max_consecutive_wins).
+
+    Raises:
+        ValueError: If loss_str and win_str are identical or if either is empty.
+        TypeError: If outcome is not a pandas Series.
 
     Notes:
-        - The comparison is case-sensitive. To make it case-insensitive, consider
-          passing `outcome.str.lower()` and `loss_str.lower()`.
-        - Returns 0 if the series is empty or no matching loss values are found.
+        - The comparison is case-sensitive. For case-insensitive comparison, pass
+          outcome.str.lower(), loss_str.lower(), and win_str.lower().
+        - Returns (0, 0) if the series is empty.
+        - Non-matching values (neither win_str nor loss_str) reset both streaks.
     """
+    # Input validation
+    if not isinstance(outcome, pd.Series):
+        raise TypeError("outcome must be a pandas Series")
+    if not loss_str or not win_str:
+        raise ValueError("loss_str and win_str cannot be empty")
+    if loss_str == win_str:
+        raise ValueError("loss_str and win_str must be different")
     if outcome.empty:
-        return 0
-    current_streak = 0
-    max_streak = 0
-    for outcome in outcome:
-        if outcome == loss_str:
-            current_streak += 1
-            max_streak = max(max_streak, current_streak)
+        return (0, 0)
+
+    max_loss_streak = 0
+    max_win_streak = 0
+    current_loss_streak = 0
+    current_win_streak = 0
+
+    for value in outcome:
+        if value == loss_str:
+            current_loss_streak += 1
+            current_win_streak = 0
+            max_loss_streak = max(max_loss_streak, current_loss_streak)
+        elif value == win_str:
+            current_win_streak += 1
+            current_loss_streak = 0
+            max_win_streak = max(max_win_streak, current_win_streak)
         else:
-            current_streak = 0
-    return max_streak
+            current_loss_streak = 0
+            current_win_streak = 0
+
+    return (max_loss_streak, max_win_streak)

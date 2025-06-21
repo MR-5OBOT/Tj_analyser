@@ -30,5 +30,3 @@ entry_time = df["entry_time"]
 
 # Open the PDF using xdg-open
 # subprocess.run(["thorium-browser", pdf_path], check=True)
-
-print(profit_factor(rr_series))

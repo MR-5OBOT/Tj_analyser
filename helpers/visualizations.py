@@ -629,43 +629,77 @@ def create_stats_table(
     stats: dict,
     *,
     title: str = "Trading Performance Summary",
-    figsize: tuple = (8, 6),
+    figsize: tuple[int, int] = (8, 6),
     labelsize: int = 12,
     dark_mode: bool = True,
 ):
     """
-    Creates a table of trading statistics.
+    Creates a modern, headerless table of trading statistics with a sleek design.
 
     Args:
-        stats (dict): Dictionary of statistic names and values.
+        stats (Dict): Dictionary of statistic names and values.
+
     Returns:
-        matplotlib.figure.Figure: The generated figure.
+        matplotlib.figure.Figure: The generated figure with the styled table.
     """
+    # Set style based on dark mode
     if dark_mode:
         plt.style.use("dark_background")
+        bg_color = "#010101"
+        text_color = "#e0e0e0"
+        accent_color = "#797979"
+    else:
+        plt.style.use("default")
+        bg_color = "#ffffff"
+        text_color = "#333333"
+        accent_color = "#2b6cb0"
 
+    # Create figure and axis
     fig, ax = plt.subplots(figsize=figsize)
     ax.axis("off")
+    fig.patch.set_facecolor(bg_color)
 
+    # Prepare table data
     table_data = [[k, v] for k, v in stats.items()]
+
+    # Create table without headers
     table = ax.table(
         cellText=table_data,
-        colLabels=["Statistic", "Value"],
         loc="center",
-        cellLoc="center",
-        colColours=["#111111", "#111111"],
+        cellLoc="left",
+        edges="open",  # Remove outer borders for modern look
     )
+
+    # Style the table
     table.auto_set_font_size(False)
     table.set_fontsize(labelsize)
-    table.scale(1.2, 1.5)
-    for (i, _), cell in table.get_celld().items():
-        if i == 0:
-            cell.set_facecolor("#111111")
-            cell.set_text_props(color="white", weight="bold")
-        else:
-            cell.set_facecolor("#111111")
-            cell.set_text_props(color="white")
+    table.scale(1.3, 1.6)  # Adjust table scaling for better spacing
 
-    plt.title(title, pad=20, color="white")
+    # Customize cell appearance
+    for (i, j), cell in table.get_celld().items():
+        cell.set_facecolor(bg_color)
+        cell.set_text_props(color=text_color, weight="medium")
+        cell.set_height(0.08)  # Increase row height for better readability
+        cell.PAD = 0.1  # Add padding inside cells
+        # Alternate row shading for visual distinction
+        if i % 2 == 0:
+            cell.set_facecolor("#2a2a2a" if dark_mode else "#f7fafc")
+        # Left-align first column, right-align second column
+        cell.set_text_props(ha="left" if j == 0 else "right")
+
+    # Add a modern title
+    plt.title(
+        title,
+        pad=30,
+        color=accent_color,
+        fontsize=labelsize + 4,
+        weight="bold",
+        fontfamily="sans-serif",
+    )
+
+    # Adjust layout and add subtle figure border
     fig.tight_layout()
+    fig.patch.set_edgecolor(accent_color)
+    fig.patch.set_linewidth(1)
+
     return fig

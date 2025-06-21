@@ -121,18 +121,19 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     min_duration_val, max_duration_val = durations(
         df, df["entry_time"], df["exit_time"]
     )
-    cons_losses = consecutive_losses(outcome, "LOSS")
+    cons_losses, cons_wins = consecutive_wins_and_losses(outcome, "LOSS", "WIN")
 
     return {
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr:.2f}",
         "WinRate": f"{wr_no_be * 100:.2f}%",
         # "WinRate (With BE)": f"{wr_with_be * 100:.2f}%",
-        # "Profit Factor": f"{profit_factor_value:.2f}", # used for $ or % returns
         "Winning Trades": f"{wins_count}",
         "Lossing Trades": f"{losses_count}",
         "Breakeven Trades": f"{be_count}",
         "Consecutive Losses": f"{cons_losses}",
+        "Consecutive Wins": f"{cons_wins}",
+        "Profit Factor (R/R)": f"{profit_factor_value:.2f}",  # used for $ or % returns
         "Expectancy (R/R)": f"{expectancy_rr:.2f}",
         # "Avg Risk (contract)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
