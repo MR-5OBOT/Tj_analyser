@@ -52,9 +52,11 @@ def generate_plots_overall(df: pd.DataFrame):
         (rr_barplot_months, (rr_series, date)),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
-        (distribution_plot, (rr_series, rr_title)),
-        (boxplot_DoW, (rr_series, days, outcome)),
-        (risk_vs_reward_scatter, (risk, reward, outcome)),
+        (bar_losses_by_time_range, (outcome, entry_time)),
+        (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
+        # (distribution_plot, (rr_series, rr_title)),
+        # (boxplot_DoW, (rr_series, days, outcome)),
+        # (risk_vs_reward_scatter, (risk, reward, outcome)),
     ]
 
 
@@ -135,7 +137,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         "Consecutive Wins": f"{cons_wins}",
         "Profit Factor (R/R)": f"{profit_factor_value:.2f}",  # used for $ or % returns
         "Expectancy (R/R)": f"{expectancy_rr:.2f}",
-        # "Avg Risk (contracts)": f"{avg_risk}",
+        # "Avg Risk (contract)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade (R/R)": f"{best_trade:.2f}",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
