@@ -38,7 +38,7 @@ def generate_plots_overall(df: pd.DataFrame):
     rr_title = "Distribution of R/R"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
-    risk = clean_numeric_series(df["contract"])
+    risk = clean_numeric_series(df["contracts"])
     days = df["day"]
     entry_time = df["entry_time"]
     reward = rr_series
@@ -105,7 +105,7 @@ def stats_table_weekly(df: pd.DataFrame) -> dict:
 
 def stats_table_overall(df: pd.DataFrame) -> dict:
     total_trades = len(df)
-    risk_series = clean_numeric_series(df["contract"])
+    risk_series = clean_numeric_series(df["contracts"])
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
     outcome = df["outcome"].str.strip()
@@ -135,7 +135,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         "Consecutive Wins": f"{cons_wins}",
         "Profit Factor (R/R)": f"{profit_factor_value:.2f}",  # used for $ or % returns
         "Expectancy (R/R)": f"{expectancy_rr:.2f}",
-        # "Avg Risk (contract)": f"{avg_risk}",
+        # "Avg Risk (contracts)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade (R/R)": f"{best_trade:.2f}",
         "Min Trade duration": f"{min_duration_val:.0f} Minutes",
@@ -175,7 +175,7 @@ def main():
             "symbol",
             "entry_time",
             "exit_time",
-            "contract",
+            "contracts",
             "outcome",
             "R/R",
         ],

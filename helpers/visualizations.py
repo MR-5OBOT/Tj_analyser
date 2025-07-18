@@ -510,7 +510,7 @@ def risk_vs_reward_scatter(
     outcome: pd.Series,
     *,
     title: str = "Risk vs Reward",
-    xlabel: str = "Contract",
+    xlabel: str = "Contracts",
     ylabel: str = "R/R",
     figsize: tuple = (8, 6),
     rotation: int = 0,
