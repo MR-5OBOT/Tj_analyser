@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime, time
 
 
 def winrate(
@@ -280,3 +281,77 @@ def consecutive_wins_and_losses(
             current_win_streak = 0
 
     return (max_loss_streak, max_win_streak)
+
+
+def time_ranges_stats(
+    outcome: pd.Series, entry_time: pd.Series, time_ranges: list
+) -> pd.DataFrame:
+    """
+    Calculate win rates and print trade totals for each time range.
+
+    Parameters:
+    - outcome: pd.Series, trade outcomes ("WIN", "LOSS", "BE")
+    - entry_time: pd.Series, trade entry times (e.g., "08:15:00")
+    - time_ranges: list of tuples, (label, start_time, end_time)
+
+    Returns:
+    - pd.DataFrame, columns: ["Time Range", "Win Rate (%)"]
+    """
+    # Validate inputs
+    if not (isinstance(outcome, pd.Series) and isinstance(entry_time, pd.Series)):
+        raise ValueError("outcome and entry_time must be pandas Series")
+    if len(outcome) != len(entry_time):
+        raise ValueError("outcome and entry_time must have the same length")
+    if not set(outcome).issubset({"WIN", "LOSS", "BE"}):
+        raise ValueError("outcome must contain only 'WIN', 'LOSS', or 'BE'")
+    if not all(isinstance(tr, tuple) and len(tr) == 3 for tr in time_ranges):
+        raise ValueError("time_ranges must be a list of (label, start, end) tuples")
+
+    # Prepare data
+    try:
+        df = pd.DataFrame(
+            {
+                "outcome": outcome,
+                "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
+            }
+        )
+    except ValueError as e:
+        raise ValueError("Invalid time format in entry_time") from e
+
+    # Parse time ranges
+    try:
+        parsed_ranges = [
+            (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
+            for label, start, end in time_ranges
+        ]
+    except ValueError as e:
+        raise ValueError("Invalid time format in time_ranges") from e
+
+    # Calculate win rates and totals
+    data = []
+    total_trades_all = 0
+    print("Trade Outcome Totals by Time Range:")
+    for label, start, end in parsed_ranges:
+        range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
+        total_trades = range_data.shape[0]
+        total_trades_all += total_trades
+        win_trades = range_data[range_data["outcome"] == "WIN"].shape[0]
+        loss_trades = range_data[range_data["outcome"] == "LOSS"].shape[0]
+        be_trades = range_data[range_data["outcome"] == "BE"].shape[0]
+        win_rate = (win_trades / total_trades * 100) if total_trades > 0 else 0
+        print(
+            f"{label}: {total_trades} trades (WIN: {win_trades}, LOSS: {loss_trades}, BE: {be_trades})"
+        )
+        data.append({"Time Range": label, "Win Rate (%)": round(win_rate, 2)})
+
+    print()
+    print(f"Overall Total Trades: {total_trades_all}")
+
+    # Create DataFrame
+    result_df = pd.DataFrame(data)
+    result_df["Time Range"] = pd.Categorical(
+        result_df["Time Range"],
+        categories=[label for label, _, _ in parsed_ranges],
+        ordered=True,
+    )
+    return result_df.sort_values("Time Range")

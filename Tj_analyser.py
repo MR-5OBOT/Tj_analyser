@@ -1,6 +1,7 @@
 import argparse
 import datetime
 from pathlib import Path
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from tqdm import tqdm
 
 from helpers.data_cleaning import *
 from helpers.data_preprocessing import *
-from helpers.formulas import *
+from helpers.calculations import *
 from helpers.utils import *
 from helpers.visualizations import *
 # from helpers.reports import *
@@ -49,19 +50,19 @@ def generate_plots_overall(df: pd.DataFrame):
         (create_stats_table, (stats_table_overall(df),)),
         (rr_curve, (rr_series,)),
         (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
-        (rr_barplot_months, (rr_series, date)),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
+        (bar_outcomes_by_custom_ranges, (outcome, entry_time)),
         (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
-        (bar_losses_by_time_range, (outcome, entry_time)),
         # (distribution_plot, (rr_series, rr_title)),
         # (boxplot_DoW, (rr_series, days, outcome)),
         # (risk_vs_reward_scatter, (risk, reward, outcome)),
+        (rr_barplot_months, (rr_series, date)),
     ]
 
 
 def export_pdf_report(figure_list, report_type="Report"):
-    pdf_path = f"{datetime.datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
+    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"  # Fixed line
     with PdfPages(pdf_path) as pdf:
         for func, args in figure_list:
             fig = func(*args)

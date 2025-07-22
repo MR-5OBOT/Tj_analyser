@@ -625,193 +625,99 @@ def heatmap_rr(
     return fig
 
 
-def create_stats_table(
-    stats: dict,
-    *,
-    title: str = "Trading Performance Summary",
-    figsize: tuple[int, int] = (8, 6),
-    labelsize: int = 12,
-    dark_mode: bool = True,
-):
-    """
-    Creates a modern, headerless table of trading statistics with a sleek design.
-
-    Args:
-        stats (Dict): Dictionary of statistic names and values.
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure with the styled table.
-    """
-    # Set style based on dark mode
-    if dark_mode:
-        plt.style.use("dark_background")
-        bg_color = "#010101"
-        text_color = "#e0e0e0"
-        accent_color = "#797979"
-    else:
-        plt.style.use("default")
-        bg_color = "#ffffff"
-        text_color = "#333333"
-        accent_color = "#2b6cb0"
-
-    # Create figure and axis
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.axis("off")
-    fig.patch.set_facecolor(bg_color)
-
-    # Prepare table data
-    table_data = [[k, v] for k, v in stats.items()]
-
-    # Create table without headers
-    table = ax.table(
-        cellText=table_data,
-        loc="center",
-        cellLoc="left",
-        edges="open",  # Remove outer borders for modern look
-    )
-
-    # Style the table
-    table.auto_set_font_size(False)
-    table.set_fontsize(labelsize)
-    table.scale(1.3, 1.6)  # Adjust table scaling for better spacing
-
-    # Customize cell appearance
-    for (i, j), cell in table.get_celld().items():
-        cell.set_facecolor(bg_color)
-        cell.set_text_props(color=text_color, weight="medium")
-        cell.set_height(0.08)  # Increase row height for better readability
-        cell.PAD = 0.1  # Add padding inside cells
-        # Alternate row shading for visual distinction
-        if i % 2 == 0:
-            cell.set_facecolor("#2a2a2a" if dark_mode else "#f7fafc")
-        # Left-align first column, right-align second column
-        cell.set_text_props(ha="left" if j == 0 else "right")
-
-    # Add a modern title
-    plt.title(
-        title,
-        pad=30,
-        color=accent_color,
-        fontsize=labelsize + 4,
-        weight="bold",
-        fontfamily="sans-serif",
-    )
-
-    # Adjust layout and add subtle figure border
-    fig.tight_layout()
-    fig.patch.set_edgecolor(accent_color)
-    fig.patch.set_linewidth(1)
-
-    return fig
-
-
-def bar_losses_by_time_range(
+def bar_outcomes_by_custom_ranges(
     outcome: pd.Series,
     entry_time: pd.Series,
     *,
-    title: str = "Number of Losing Trades by Time Range",
-    xlabel: str = "Time Range",
-    ylabel: str = "Number of Losing Trades",
+    title: str = "Trade Outcomes by Time Range",
+    xlabel: str = "Count",
+    ylabel: str = "",
     figsize: tuple = (8, 6),
-    rotation: int = 45,
-    labelsize: int = 10,
     dark_mode: bool = True,
 ):
-    """
-    Creates a bar chart of losing trade counts in two time ranges (08:30–09:30, 09:30–11:00).
-
-    Args:
-        outcome (pd.Series): Trade outcomes ('WIN', 'LOSS', 'BE').
-        entry_time (pd.Series): Entry time values (timestamps).
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    # Set style based on dark_mode
     if dark_mode:
         plt.style.use("dark_background")
     else:
         plt.style.use("default")
 
-    # Create figure and axis
-    fig, ax = plt.subplots(figsize=figsize)
-
-    # Create DataFrame
-    temp_df = pd.DataFrame(
+    # Prepare data
+    df = pd.DataFrame(
         {
             "outcome": outcome,
-            "time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
+            "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
         }
     )
 
-    # Define time ranges
-    ranges = [
-        (
-            "08:30–09:30",
-            pd.to_datetime("08:30:00").time(),
-            pd.to_datetime("09:30:00").time(),
-        ),
-        (
-            "09:30–11:00",
-            pd.to_datetime("09:30:00").time(),
-            pd.to_datetime("11:00:00").time(),
-        ),
+    time_ranges = [
+        ("08:00–08:30", "08:00", "08:30"),
+        ("08:30–09:00", "08:30", "09:00"),
+        ("09:00–09:30", "09:00", "09:30"),
+        ("09:30–10:00", "09:30", "10:00"),
+        ("10:00–11:00", "10:00", "11:00"),
+    ]
+    parsed_ranges = [
+        (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
+        for label, start, end in time_ranges
     ]
 
-    # Count losses in each range
-    loss_counts = []
-    for label, start, end in ranges:
-        mask = (
-            (temp_df["time"] >= start)
-            & (temp_df["time"] < end)
-            & (temp_df["outcome"] == "LOSS")
-        )
-        count = temp_df[mask].shape[0]
-        loss_counts.append({"range_label": label, "count": count})
+    data = []
+    total_trades_all = 0  # Track overall total
+    for label, start, end in parsed_ranges:
+        range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
+        total_trades = range_data.shape[0]
+        total_trades_all += total_trades
 
-    # Create DataFrame for plotting
-    loss_counts_df = pd.DataFrame(loss_counts)
+        for outcome_type in ["WIN", "LOSS", "BE"]:
+            count = range_data[range_data["outcome"] == outcome_type].shape[0]
+            data.append({"Time Range": label, "Outcome": outcome_type, "Count": count})
 
-    # If no losses, create empty DataFrame
-    if loss_counts_df.empty:
-        loss_counts_df = pd.DataFrame(
-            {"range_label": [r[0] for r in ranges], "count": [0, 0]}
-        )
+    plot_df = pd.DataFrame(data)
 
-    # Plot bar chart using Seaborn
-    sns.barplot(
-        data=loss_counts_df,
-        x="range_label",
-        y="count",
-        color="#FF6384" if dark_mode else "#FF6384",
-        ax=ax,
+    # Ensure correct ordering
+    plot_df["Time Range"] = pd.Categorical(
+        plot_df["Time Range"],
+        categories=[label for label, _, _ in parsed_ranges],
+        ordered=True,
     )
 
-    # Customize plot
+    # Plot
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.barplot(
+        data=plot_df,
+        y="Time Range",
+        x="Count",
+        hue="Outcome",
+        palette={"WIN": "#466963", "LOSS": "#333333", "BE": "#607250"},
+        linewidth=1.5,
+        edgecolor="black",
+        ax=ax,
+        dodge=True,
+    )
+
+    # Style
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.tick_params(
-        axis="x",
-        rotation=rotation,
-        labelsize=labelsize,
-        color="gray" if dark_mode else "black",
-    )
-    ax.tick_params(
-        axis="y", labelsize=labelsize, color="gray" if dark_mode else "black"
-    )
+    ax.tick_params(axis="x", labelsize=10)
+    ax.tick_params(axis="y", labelsize=10)
+
+    # Clean look
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray" if dark_mode else "black")
-    ax.spines["bottom"].set_color("gray" if dark_mode else "black")
-    ax.title.set_color("gray" if dark_mode else "black")
-    ax.xaxis.label.set_color("gray" if dark_mode else "black")
-    ax.yaxis.label.set_color("gray" if dark_mode else "black")
-    ax.tick_params(colors="gray" if dark_mode else "black")
 
-    # Ensure y-axis starts at 0
-    ax.set_ylim(0, max(loss_counts_df["count"].max() + 1, 1))
+    if dark_mode:
+        ax.spines["left"].set_color("gray")
+        ax.spines["bottom"].set_color("gray")
+        ax.title.set_color("gray")
+        ax.xaxis.label.set_color("gray")
+        ax.yaxis.label.set_color("gray")
+        ax.tick_params(colors="gray")
+    else:
+        ax.spines["left"].set_color("black")
+        ax.spines["bottom"].set_color("black")
 
+    # Legend
+    ax.legend(title="Outcome", loc="upper right", frameon=True)
     fig.tight_layout()
     return fig
 
@@ -914,4 +820,83 @@ def rr_vs_hour_range_bubble_scatter(
     ax.legend(new_handles, new_labels, title="Outcome", loc="upper right")
 
     fig.tight_layout()
+    return fig
+
+
+def create_stats_table(
+    stats: dict,
+    *,
+    title: str = "Trading Performance Summary",
+    figsize: tuple[int, int] = (8, 6),
+    labelsize: int = 12,
+    dark_mode: bool = True,
+):
+    """
+    Creates a modern, headerless table of trading statistics with a sleek design.
+
+    Args:
+        stats (Dict): Dictionary of statistic names and values.
+
+    Returns:
+        matplotlib.figure.Figure: The generated figure with the styled table.
+    """
+    # Set style based on dark mode
+    if dark_mode:
+        plt.style.use("dark_background")
+        bg_color = "#010101"
+        text_color = "#e0e0e0"
+        accent_color = "#797979"
+    else:
+        plt.style.use("default")
+        bg_color = "#ffffff"
+        text_color = "#333333"
+        accent_color = "#2b6cb0"
+
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axis("off")
+    fig.patch.set_facecolor(bg_color)
+
+    # Prepare table data
+    table_data = [[k, v] for k, v in stats.items()]
+
+    # Create table without headers
+    table = ax.table(
+        cellText=table_data,
+        loc="center",
+        cellLoc="left",
+        edges="open",  # Remove outer borders for modern look
+    )
+
+    # Style the table
+    table.auto_set_font_size(False)
+    table.set_fontsize(labelsize)
+    table.scale(1.3, 1.6)  # Adjust table scaling for better spacing
+
+    # Customize cell appearance
+    for (i, j), cell in table.get_celld().items():
+        cell.set_facecolor(bg_color)
+        cell.set_text_props(color=text_color, weight="medium")
+        cell.set_height(0.08)  # Increase row height for better readability
+        cell.PAD = 0.1  # Add padding inside cells
+        # Alternate row shading for visual distinction
+        if i % 2 == 0:
+            cell.set_facecolor("#2a2a2a" if dark_mode else "#f7fafc")
+        # Left-align first column, right-align second column
+        cell.set_text_props(ha="left" if j == 0 else "right")
+
+    # Add a modern title
+    plt.title(
+        title,
+        pad=30,
+        color=accent_color,
+        fontsize=labelsize + 4,
+        weight="bold",
+        fontfamily="sans-serif",
+    )
+
+    # Adjust layout and add subtle figure border
+    fig.tight_layout()
+    fig.patch.set_edgecolor(accent_color)
+    fig.patch.set_linewidth(1)
     return fig
