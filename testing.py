@@ -30,13 +30,13 @@ outcome_series = df["outcome"]
 entry_time = df["entry_time"]
 
 time_ranges = [
-    ("08:00–08:30", "08:00", "08:30"),
-    ("08:30–09:00", "08:30", "09:00"),
-    ("09:00–09:30", "09:00", "09:30"),
-    ("09:30–10:00", "09:30", "10:00"),
-    ("10:00–11:00", "10:00", "11:00"),
+    ("09:00–11:00", "09:00", "11:00"),
+    # ("08:30–09:00", "08:30", "09:00"),
+    # ("09:00–09:30", "09:00", "09:30"),
+    # ("09:30–10:00", "09:30", "10:00"),
+    # ("10:00–11:00", "10:00", "11:00"),
 ]
 
 print(time_ranges_stats(outcome_series, entry_time, time_ranges))
-print(bar_outcomes_by_custom_ranges(outcome_series, entry_time))
-plt.show()
+# print(bar_outcomes_by_custom_ranges(outcome_series, entry_time))
+# plt.show()

@@ -338,7 +338,9 @@ def time_ranges_stats(
         win_trades = range_data[range_data["outcome"] == "WIN"].shape[0]
         loss_trades = range_data[range_data["outcome"] == "LOSS"].shape[0]
         be_trades = range_data[range_data["outcome"] == "BE"].shape[0]
-        win_rate = (win_trades / total_trades * 100) if total_trades > 0 else 0
+        win_rate = (
+            (win_trades / (win_trades + loss_trades) * 100) if total_trades > 0 else 0
+        )
         print(
             f"{label}: {total_trades} trades (WIN: {win_trades}, LOSS: {loss_trades}, BE: {be_trades})"
         )
