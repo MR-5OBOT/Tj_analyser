@@ -21,8 +21,12 @@ def get_data_url_weekly() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
 
 
+def get_data_url_overall_removed_data() -> str:
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=2113128113&single=true&output=csv"
+
+
 def get_data_url_overall() -> str:
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
 
 
 def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
@@ -45,6 +49,13 @@ def generate_plots_overall(df: pd.DataFrame):
     reward = rr_series
     outcome = df["outcome"]
     date = df["date"]
+    time_ranges = [
+        # ("08:00–08:30", "08:00", "08:30"),
+        # ("08:30–09:00", "08:30", "09:00"),
+        ("09:00–09:30", "09:00", "09:30"),
+        ("09:30–10:00", "09:30", "10:00"),
+        ("10:00–11:00", "10:00", "11:00"),
+    ]
 
     return [
         (create_stats_table, (stats_table_overall(df),)),
@@ -52,7 +63,7 @@ def generate_plots_overall(df: pd.DataFrame):
         (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
-        (bar_outcomes_by_custom_ranges, (outcome, entry_time)),
+        (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
         (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
         # (distribution_plot, (rr_series, rr_title)),
         # (boxplot_DoW, (rr_series, days, outcome)),
@@ -141,8 +152,8 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         # "Avg Risk (contract)": f"{avg_risk}",
         "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade (R/R)": f"{best_trade:.2f}",
-        "Min Trade duration": f"{min_duration_val:.0f} Minutes",
-        "Max Trade duration": f"{max_duration_val:.0f} Minutes",
+        # "Min Trade duration": f"{min_duration_val:.0f} Minutes",
+        # "Max Trade duration": f"{max_duration_val:.0f} Minutes",
     }
 
 

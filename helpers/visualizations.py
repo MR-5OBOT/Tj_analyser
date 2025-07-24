@@ -628,6 +628,7 @@ def heatmap_rr(
 def bar_outcomes_by_custom_ranges(
     outcome: pd.Series,
     entry_time: pd.Series,
+    time_ranges: list = None,
     *,
     title: str = "Trade Outcomes by Time Range",
     xlabel: str = "Count",
@@ -647,14 +648,13 @@ def bar_outcomes_by_custom_ranges(
             "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
         }
     )
-
-    time_ranges = [
-        ("08:00–08:30", "08:00", "08:30"),
-        ("08:30–09:00", "08:30", "09:00"),
-        ("09:00–09:30", "09:00", "09:30"),
-        ("09:30–10:00", "09:30", "10:00"),
-        ("10:00–11:00", "10:00", "11:00"),
-    ]
+    # time_ranges = [
+    #     ("08:00–08:30", "08:00", "08:30"),
+    #     ("08:30–09:00", "08:30", "09:00"),
+    #     ("09:00–09:30", "09:00", "09:30"),
+    #     ("09:30–10:00", "09:30", "10:00"),
+    #     ("10:00–11:00", "10:00", "11:00"),
+    # ]
     parsed_ranges = [
         (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
         for label, start, end in time_ranges

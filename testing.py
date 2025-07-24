@@ -15,23 +15,17 @@ from helpers.visualizations import *
 from Tj_analyser import *
 
 weekly_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
-overall_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=212787870&single=true&output=csv"
-df = pd.read_csv(overall_url)
+overall_removed_data = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=2113128113&single=true&output=csv"
+overall_main = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
+df = pd.read_csv(overall_main)
 # df = pd.read_csv(weekly_url)
-
-date = convert_to_datetime(df["date"], format="%Y-%m-%d")
-day = df["day"]
-rr_series = clean_numeric_series(df["R/R"])
-
-# last to 50 rows
-df_reduced = df.iloc[-30:]
 
 outcome_series = df["outcome"]
 entry_time = df["entry_time"]
 
 time_ranges = [
     ("09:00–11:00", "09:00", "11:00"),
-    # ("08:30–09:00", "08:30", "09:00"),
+    # ("08:00–09:00", "08:00", "09:00"),
     # ("09:00–09:30", "09:00", "09:30"),
     # ("09:30–10:00", "09:30", "10:00"),
     # ("10:00–11:00", "10:00", "11:00"),
@@ -40,3 +34,10 @@ time_ranges = [
 print(time_ranges_stats(outcome_series, entry_time, time_ranges))
 # print(bar_outcomes_by_custom_ranges(outcome_series, entry_time))
 # plt.show()
+
+
+df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S").dt.time
+df = df[(df["entry_time"] >= time(9, 0)) & (df["entry_time"] <= time(11, 0))]
+df.to_csv("removed_data.csv", index=False)
+
+# print(df.head(30))
