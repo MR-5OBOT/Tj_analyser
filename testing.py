@@ -17,8 +17,9 @@ from Tj_analyser import *
 weekly_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
 overall_removed_data = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=2113128113&single=true&output=csv"
 overall_main = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
+fsociety_model_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=616999731&single=true&output=csv"
 df = pd.read_csv(overall_main)
-# df = pd.read_csv(weekly_url)
+# df = pd.read_csv(fsociety_model_url)
 
 outcome_series = df["outcome"]
 entry_time = df["entry_time"]
@@ -30,14 +31,18 @@ time_ranges = [
     # ("09:30–10:00", "09:30", "10:00"),
     # ("10:00–11:00", "10:00", "11:00"),
 ]
-
-print(time_ranges_stats(outcome_series, entry_time, time_ranges))
-# print(bar_outcomes_by_custom_ranges(outcome_series, entry_time))
-# plt.show()
+# print(time_ranges_stats(outcome_series, entry_time, time_ranges))
 
 
-df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S").dt.time
-df = df[(df["entry_time"] >= time(9, 0)) & (df["entry_time"] <= time(11, 0))]
-df.to_csv("removed_data.csv", index=False)
+# df["entry_time"] = pd.to_datetime(df["entry_time"], format="%H:%M:%S").dt.time
+# df = df[(df["entry_time"] >= time(9, 0)) & (df["entry_time"] <= time(11, 0))]
+# df.to_csv("removed_data.csv", index=False)
 
 # print(df.head(30))
+
+print(f"winrate {winrate(outcome_series)[0] * 100:.2f}%")
+print(f"winrate with be {winrate(outcome_series)[1] * 100:.2f}%")
+
+
+rr_vs_session_bubble_scatter(df["R/R"], outcome_series)
+plt.show()

@@ -65,7 +65,7 @@ async def template_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         f"Use this template to structure your data before uploading.\n"
         f"🔗 [Open Template]({TEMPLATE_URL})\n\n"
         f"Make sure your sheet includes the following columns:\n"
-        f"`contracts`, `R/R`, `outcome`, `date`, `day`, `entry_time`, `exit_time`, `symbol`",
+        f"`contracts`, `R/R`, `outcome`, `date`, `day`, `entry_time`, `symbol`",
         parse_mode=constants.ParseMode.MARKDOWN,
         disable_web_page_preview=False,
     )
@@ -172,7 +172,6 @@ async def handle_user_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "date",
                 "day",
                 "entry_time",
-                "exit_time",
                 "symbol",
             ],
         )

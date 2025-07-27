@@ -40,7 +40,9 @@ def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
 
 
 def generate_plots_overall(df: pd.DataFrame):
-    rr_title = "Distribution of R/R"
+    rr_title = "Distribution of Reward by R/R"
+    risk_title = "Distribution of Risk by Contracts"
+    sl_points_title = "Distribution of Stop-Loss points"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
     risk = clean_numeric_series(df["contracts"])
@@ -64,10 +66,11 @@ def generate_plots_overall(df: pd.DataFrame):
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
-        (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
-        # (distribution_plot, (rr_series, rr_title)),
-        # (boxplot_DoW, (rr_series, days, outcome)),
+        (rr_vs_trades_bubble_scatter, (rr_series, outcome)),
+        (distribution_plot, (df["sl_points"], sl_points_title)),
+        # (distribution_plot, (reward, rr_title)),
         # (risk_vs_reward_scatter, (risk, reward, outcome)),
+        # (boxplot_DoW, (rr_series, days, outcome)),
         (rr_barplot_months, (rr_series, date)),
     ]
 
@@ -132,9 +135,6 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     expectancy_rr = expectancy_by_rr(rr_series, wins_count, losses_count)
     avg_risk, avg_rr = avg_metrics(risk_series, rr_series)
     best_trade, _ = best_worst_trade(rr_series)
-    min_duration_val, max_duration_val = durations(
-        df, df["entry_time"], df["exit_time"]
-    )
     cons_losses, cons_wins = consecutive_wins_and_losses(outcome, "LOSS", "WIN")
 
     return {
@@ -188,7 +188,6 @@ def main():
             "day",
             "symbol",
             "entry_time",
-            "exit_time",
             "contracts",
             "outcome",
             "R/R",
