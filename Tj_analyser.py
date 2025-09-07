@@ -1,5 +1,4 @@
 import argparse
-import datetime
 from pathlib import Path
 from datetime import datetime
 
@@ -21,12 +20,12 @@ def get_data_url_weekly() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
 
 
-def get_data_url_overall_removed_data() -> str:
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=2113128113&single=true&output=csv"
-
-
-def get_data_url_overall() -> str:
+def get_data_url_overall_new() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
+
+
+def get_data_url_overall_old() -> str:
+    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1400474645&single=true&output=csv"
 
 
 def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
@@ -66,8 +65,8 @@ def generate_plots_overall(df: pd.DataFrame):
         (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
-        (rr_vs_trades_bubble_scatter, (rr_series, outcome)),
-        (distribution_plot, (df["sl_points"], sl_points_title)),
+        # (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
+        # (distribution_plot, (df["sl_points"], sl_points_title)),
         # (distribution_plot, (reward, rr_title)),
         # (risk_vs_reward_scatter, (risk, reward, outcome)),
         # (boxplot_DoW, (rr_series, days, outcome)),
@@ -75,26 +74,18 @@ def generate_plots_overall(df: pd.DataFrame):
     ]
 
 
-def export_pdf_report(figure_list, report_type="Report"):
-    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"  # Fixed line
-    with PdfPages(pdf_path) as pdf:
-        for func, args in figure_list:
-            fig = func(*args)
-            if fig is not None:
-                pdf.savefig(fig)
-            plt.close()
-    return pdf_path
-
-
 def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
     print("Processing and generating report...")
 
-    if report_type == "weekly":
-        steps = generate_plots_weekly(df)
-    elif report_type == "overall":
-        steps = generate_plots_overall(df)
-    else:
+    plot_funcs = {
+        "weekly": generate_plots_weekly,
+        "overall_old": generate_plots_overall,
+        "overall_new": generate_plots_overall,
+    }
+    if report_type not in plot_funcs:
         raise ValueError(f"Unknown report type: {report_type}")
+
+    steps = plot_funcs[report_type](df)
 
     for func, args in tqdm(steps, desc="Generating plots", unit="step"):
         func(*args)
@@ -163,22 +154,42 @@ def term_stats(stats: dict) -> None:
         print(f"{key:<25}: {value}")
 
 
+def export_pdf_report(figure_list, report_type="Report"):
+    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"  # Fixed line
+    with PdfPages(pdf_path) as pdf:
+        for func, args in figure_list:
+            fig = func(*args)
+            if fig is not None:
+                pdf.savefig(fig)
+            plt.close()
+    return pdf_path
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate trading report.")
     parser.add_argument(
         "--type",
         type=str,
-        choices=["weekly", "overall"],
-        default="overall",
+        choices=["weekly", "overall_new", "overall_old"],
         required=True,
         help="Choose the type of report to generate",
     )
     args = parser.parse_args()
     report_type = args.type
 
-    # Choose URL and stats method based on type
-    url = get_data_url_weekly() if report_type == "weekly" else get_data_url_overall()
-    stats_func = stats_table_weekly if report_type == "weekly" else stats_table_overall
+    url_funcs = {
+        "weekly": get_data_url_weekly,
+        "overall_new": get_data_url_overall_new,
+        "overall_old": get_data_url_overall_old,
+    }
+    stats_funcs = {
+        "weekly": stats_table_weekly,
+        "overall_old": stats_table_overall,
+        "overall_new": stats_table_overall,
+    }
+
+    url = url_funcs[report_type]()
+    stats_func = stats_funcs[report_type]
 
     df = pd.read_csv(url)
     df_check(
@@ -193,8 +204,9 @@ def main():
             "R/R",
         ],
     )
-    stats = stats_func(df)
+
     fetch_and_process(df, report_type)
+    stats = stats_func(df)
     term_stats(stats)
 
 

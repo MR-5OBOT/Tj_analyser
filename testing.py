@@ -44,5 +44,5 @@ print(f"winrate {winrate(outcome_series)[0] * 100:.2f}%")
 print(f"winrate with be {winrate(outcome_series)[1] * 100:.2f}%")
 
 
-rr_vs_session_bubble_scatter(df["R/R"], outcome_series)
+rr_vs_hour_range_bubble_scatter(entry_time, df["R/R"], outcome_series)
 plt.show()
