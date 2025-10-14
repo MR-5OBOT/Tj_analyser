@@ -9,11 +9,10 @@ def pl_curve(
     *,
     title: str = "Performance by (%)",
     xlabel: str = "Trades",
-    ylabel: str = "",
+    ylabel: str = "Sum",
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Plots a cumulative line plot for percentage gains.
@@ -26,13 +25,11 @@ def pl_curve(
         figsize (tuple): Figure size.
         rotation (int): X-axis label rotation.
         labelsize (int): Tick label size.
-        dark_mode (bool): Use dark background if True.
 
     Returns:
         matplotlib.figure.Figure: The generated figure.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
     x = range(len(pl_series))
@@ -60,11 +57,10 @@ def rr_curve(
     *,
     title: str = "Performance by (R/R)",
     xlabel: str = "Trades",
-    ylabel: str = "",
+    ylabel: str = "Sum",
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Plots a cumulative line plot for risk/reward (R/R).
@@ -75,8 +71,7 @@ def rr_curve(
     Returns:
         matplotlib.figure.Figure: The generated figure.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
     x = range(len(rr_series))
@@ -109,7 +104,6 @@ def rr_curve_weekly(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: float = 9.5,
-    dark_mode: bool = True,
 ):
     """
     Plots a line plot of cumulative R/R by day of the week.
@@ -121,8 +115,7 @@ def rr_curve_weekly(
     Returns:
         matplotlib.figure.Figure: The generated figure or None if no valid x-axis data.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -182,8 +175,7 @@ def rr_barplot(
     ylabel: str = "",
     figsize: tuple = (8, 6),
     rotation: int = 0,
-    labelsize: float = 9.5,
-    dark_mode: bool = True,
+    labelsize: float = 10,
 ):
     """
     Creates a bar plot of total R/R by day of the week.
@@ -195,8 +187,7 @@ def rr_barplot(
     Returns:
         matplotlib.figure.Figure: The generated figure or None if no valid x-axis data.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=figsize)
 
     # Get day labels
@@ -251,7 +242,6 @@ def rr_barplot_months(
     figsize: tuple = (8, 6),
     rotation: int = 45,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """Create a bar plot of summed R/R values by month from given dates.
 
@@ -263,9 +253,7 @@ def rr_barplot_months(
     Raises:
         ValueError: If inputs are empty, mismatched, or dates are invalid.
     """
-    # Set dark mode if specified
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     # Input validation
     if rr_series.empty or dates.empty:
@@ -340,7 +328,6 @@ def outcome_by_day(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Creates a bar plot of outcome counts by day of the week.
@@ -354,8 +341,7 @@ def outcome_by_day(
     """
     if date_series is None and day_series is None:
         raise ValueError("Provide either date_series or day_series.")
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -402,7 +388,7 @@ def outcome_by_day(
     ax.xaxis.label.set_color("gray")
     ax.yaxis.label.set_color("gray")
     ax.tick_params(colors="gray")
-    # ax.legend()
+    ax.legend(title="OUTCOMES", loc="best")
     fig.tight_layout()
     return fig
 
@@ -417,7 +403,6 @@ def distribution_plot(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Plots a histogram with KDE for a given series.
@@ -427,8 +412,7 @@ def distribution_plot(
     Returns:
         matplotlib.figure.Figure: The generated figure.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
     sns.histplot(
@@ -469,7 +453,6 @@ def boxplot_DoW(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Creates a boxplot of the given series by day of the week and outcome.
@@ -481,8 +464,7 @@ def boxplot_DoW(
     Returns:
         matplotlib.figure.Figure: The generated figure.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
     days = days.str.lower()
@@ -515,7 +497,6 @@ def risk_vs_reward_scatter(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Creates a scatter plot of risk vs reward with outcome as hue.
@@ -527,8 +508,7 @@ def risk_vs_reward_scatter(
     Returns:
         matplotlib.figure.Figure: The generated figure.
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     fig, ax = plt.subplots(figsize=figsize)
     sns.scatterplot(
@@ -566,7 +546,6 @@ def heatmap_rr(
     figsize: tuple = (8, 6),
     rotation: int = 0,
     labelsize: int = 10,
-    dark_mode: bool = True,
 ):
     """
     Creates a heatmap of R/R by day and entry hour.
@@ -590,8 +569,7 @@ def heatmap_rr(
             except ValueError:
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
     fig, ax = plt.subplots(figsize=figsize)
 
     temp_df = pd.DataFrame(
@@ -628,18 +606,14 @@ def heatmap_rr(
 def bar_outcomes_by_custom_ranges(
     outcome: pd.Series,
     entry_time: pd.Series,
-    time_ranges: list = None,
+    time_ranges: list,
     *,
     title: str = "Trade Outcomes by Time Range",
     xlabel: str = "Count",
     ylabel: str = "",
     figsize: tuple = (8, 6),
-    dark_mode: bool = True,
 ):
-    if dark_mode:
-        plt.style.use("dark_background")
-    else:
-        plt.style.use("default")
+    plt.style.use("dark_background")
 
     # Prepare data
     df = pd.DataFrame(
@@ -648,32 +622,24 @@ def bar_outcomes_by_custom_ranges(
             "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
         }
     )
-    # time_ranges = [
-    #     ("08:00–08:30", "08:00", "08:30"),
-    #     ("08:30–09:00", "08:30", "09:00"),
-    #     ("09:00–09:30", "09:00", "09:30"),
-    #     ("09:30–10:00", "09:30", "10:00"),
-    #     ("10:00–11:00", "10:00", "11:00"),
-    # ]
+
+    # Parse ranges
     parsed_ranges = [
         (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
         for label, start, end in time_ranges
     ]
 
+    # Collect counts
     data = []
-    total_trades_all = 0  # Track overall total
     for label, start, end in parsed_ranges:
         range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
-        total_trades = range_data.shape[0]
-        total_trades_all += total_trades
-
         for outcome_type in ["WIN", "LOSS", "BE"]:
             count = range_data[range_data["outcome"] == outcome_type].shape[0]
             data.append({"Time Range": label, "Outcome": outcome_type, "Count": count})
 
     plot_df = pd.DataFrame(data)
 
-    # Ensure correct ordering
+    # Ensure correct time range order
     plot_df["Time Range"] = pd.Categorical(
         plot_df["Time Range"],
         categories=[label for label, _, _ in parsed_ranges],
@@ -698,26 +664,21 @@ def bar_outcomes_by_custom_ranges(
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", labelsize=10)
-    ax.tick_params(axis="y", labelsize=10)
-
-    # Clean look
+    ax.tick_params(axis="x", rotation=0, labelsize=10, color="gray")
+    ax.tick_params(axis="y", rotation=0, labelsize=10, color="gray")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("gray")
+    ax.spines["bottom"].set_color("gray")
+    ax.title.set_color("gray")
+    ax.xaxis.label.set_color("gray")
+    ax.yaxis.label.set_color("gray")
+    ax.tick_params(colors="gray")
+    fig.tight_layout()
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    if dark_mode:
-        ax.spines["left"].set_color("gray")
-        ax.spines["bottom"].set_color("gray")
-        ax.title.set_color("gray")
-        ax.xaxis.label.set_color("gray")
-        ax.yaxis.label.set_color("gray")
-        ax.tick_params(colors="gray")
-    else:
-        ax.spines["left"].set_color("black")
-        ax.spines["bottom"].set_color("black")
-
-    # Legend
-    ax.legend(title="Outcome", loc="upper right", frameon=True)
+    ax.legend(title="OUTCOMES", loc="best")
     fig.tight_layout()
     return fig
 
@@ -733,7 +694,6 @@ def rr_vs_hour_range_bubble_scatter(
     figsize: tuple = (8, 6),
     rotation: int = 45,
     labelsize: int = 10,
-    dark_mode: bool = True,
     size_scale: tuple = (50, 500),  # min and max bubble size
 ):
     """
@@ -747,8 +707,7 @@ def rr_vs_hour_range_bubble_scatter(
     Returns:
         matplotlib.figure.Figure
     """
-    if dark_mode:
-        plt.style.use("dark_background")
+    plt.style.use("dark_background")
 
     # Extract hour and build hour range label
     hour_ints = entry_time.apply(
@@ -829,7 +788,6 @@ def create_stats_table(
     title: str = "Trading Performance Summary",
     figsize: tuple[int, int] = (8, 6),
     labelsize: int = 12,
-    dark_mode: bool = True,
 ):
     """
     Creates a modern, headerless table of trading statistics with a sleek design.
@@ -840,17 +798,10 @@ def create_stats_table(
     Returns:
         matplotlib.figure.Figure: The generated figure with the styled table.
     """
-    # Set style based on dark mode
-    if dark_mode:
-        plt.style.use("dark_background")
-        bg_color = "#010101"
-        text_color = "#e0e0e0"
-        accent_color = "#797979"
-    else:
-        plt.style.use("default")
-        bg_color = "#ffffff"
-        text_color = "#333333"
-        accent_color = "#2b6cb0"
+    plt.style.use("dark_background")
+    bg_color = "#010101"
+    text_color = "#e0e0e0"
+    accent_color = "#797979"
 
     # Create figure and axis
     fig, ax = plt.subplots(figsize=figsize)
@@ -881,7 +832,7 @@ def create_stats_table(
         cell.PAD = 0.1  # Add padding inside cells
         # Alternate row shading for visual distinction
         if i % 2 == 0:
-            cell.set_facecolor("#2a2a2a" if dark_mode else "#f7fafc")
+            cell.set_facecolor("#2a2a2a")
         # Left-align first column, right-align second column
         cell.set_text_props(ha="left" if j == 0 else "right")
 

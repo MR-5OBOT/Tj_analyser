@@ -53,7 +53,7 @@ def generate_plots_overall(df: pd.DataFrame):
     time_ranges = [
         # ("08:00–08:30", "08:00", "08:30"),
         # ("08:30–09:00", "08:30", "09:00"),
-        ("09:00–09:30", "09:00", "09:30"),
+        # ("09:00–09:30", "09:00", "09:30"),
         ("09:30–10:00", "09:30", "10:00"),
         ("10:00–11:00", "10:00", "11:00"),
     ]
@@ -62,11 +62,11 @@ def generate_plots_overall(df: pd.DataFrame):
         (create_stats_table, (stats_table_overall(df),)),
         (rr_curve, (rr_series,)),
         (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
-        (rr_barplot, (rr_series, days, None)),
+        # (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
         # (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
-        # (distribution_plot, (df["sl_points"], sl_points_title)),
+        (distribution_plot, (df["sl_points"], sl_points_title)),
         # (distribution_plot, (reward, rr_title)),
         # (risk_vs_reward_scatter, (risk, reward, outcome)),
         # (boxplot_DoW, (rr_series, days, outcome)),
@@ -97,16 +97,16 @@ def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
 
 def stats_table_weekly(df: pd.DataFrame) -> dict:
     rr_series = clean_numeric_series(df["R/R"])
-    outcomes = df["outcome"]
+    outcome = df["outcome"].str.strip()
     total_trades = len(df)
     total_rr = rr_series.sum()
-    wr_no_be, _ = winrate(outcomes, "WIN", "LOSS")
+    wr_no_be, wr_with_be = winrate(outcome, "WIN", "LOSS")
     best_trade, worst_trade = best_worst_trade(rr_series)
 
     return {
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr:.2f}",
-        "WinRate": f"{wr_no_be * 100:.2f}%",
+        # "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
     }
 
@@ -119,7 +119,7 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     outcome = df["outcome"].str.strip()
     profit_factor_value = profit_factor(rr_series)
 
-    wr_no_be, wr_with_be = winrate(pd.Series(outcome))
+    wr_no_be, wr_with_be = winrate(outcome)
     wins_count = winning_trades(df)
     losses_count = losing_trades(df)
     be_count = breakeven_trades(df)
