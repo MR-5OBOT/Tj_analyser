@@ -20,12 +20,8 @@ def get_data_url_weekly() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
 
 
-def get_data_url_overall_new() -> str:
+def get_data_url_overall() -> str:
     return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
-
-
-def get_data_url_overall_old() -> str:
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1400474645&single=true&output=csv"
 
 
 def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
@@ -79,8 +75,7 @@ def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
 
     plot_funcs = {
         "weekly": generate_plots_weekly,
-        "overall_old": generate_plots_overall,
-        "overall_new": generate_plots_overall,
+        "overall": generate_plots_overall,
     }
     if report_type not in plot_funcs:
         raise ValueError(f"Unknown report type: {report_type}")
@@ -116,17 +111,17 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
     risk_series = clean_numeric_series(df["contracts"])
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
-    outcome = df["outcome"].str.strip()
+    outcomes = df["outcome"].str.strip()
     profit_factor_value = profit_factor(rr_series)
 
-    wr_no_be, wr_with_be = winrate(outcome)
+    wr_no_be, wr_with_be = winrate(outcomes)
     wins_count = winning_trades(df)
     losses_count = losing_trades(df)
     be_count = breakeven_trades(df)
-    expectancy_rr = expectancy_by_rr(rr_series, wins_count, losses_count)
+    expectancy_rr = expectancy_from_rr(outcomes, rr_series)
     avg_risk, avg_rr = avg_metrics(risk_series, rr_series)
     best_trade, _ = best_worst_trade(rr_series)
-    cons_losses, cons_wins = consecutive_wins_and_losses(outcome, "LOSS", "WIN")
+    cons_losses, cons_wins = consecutive_wins_and_losses(outcomes, "LOSS", "WIN")
 
     return {
         "Total Trades": total_trades,
@@ -138,10 +133,10 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         "Breakeven Trades": f"{be_count}",
         "Consecutive Losses": f"{cons_losses}",
         "Consecutive Wins": f"{cons_wins}",
+        "Avg R/R": f"{avg_rr:.2f}",
+        "Avg Risk (contract)": f"{avg_risk:.0f}",
         "Profit Factor (R/R)": f"{profit_factor_value:.2f}",  # used for $ or % returns
         "Expectancy (R/R)": f"{expectancy_rr:.2f}",
-        # "Avg Risk (contract)": f"{avg_risk}",
-        "Avg R/R": f"{avg_rr:.2f}",
         "Best Trade (R/R)": f"{best_trade:.2f}",
         # "Min Trade duration": f"{min_duration_val:.0f} Minutes",
         # "Max Trade duration": f"{max_duration_val:.0f} Minutes",
@@ -170,7 +165,7 @@ def main():
     parser.add_argument(
         "--type",
         type=str,
-        choices=["weekly", "overall_new", "overall_old"],
+        choices=["weekly", "overall"],
         required=True,
         help="Choose the type of report to generate",
     )
@@ -179,13 +174,11 @@ def main():
 
     url_funcs = {
         "weekly": get_data_url_weekly,
-        "overall_new": get_data_url_overall_new,
-        "overall_old": get_data_url_overall_old,
+        "overall": get_data_url_overall,
     }
     stats_funcs = {
         "weekly": stats_table_weekly,
-        "overall_old": stats_table_overall,
-        "overall_new": stats_table_overall,
+        "overall": stats_table_overall,
     }
 
     url = url_funcs[report_type]()

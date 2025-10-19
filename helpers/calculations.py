@@ -6,6 +6,11 @@ from datetime import datetime, time
 def winrate(
     outcomes: pd.Series, win_str: str = "WIN", loss_str: str = "LOSS"
 ) -> tuple[float, float]:
+    """
+    Returns:
+        wr = winrate without BE's
+        wr_with_be = winrate witt BE's
+    """
     if outcomes.empty:
         return 0.0, 0.0
     wins = (outcomes == win_str).sum()
@@ -68,8 +73,8 @@ def profit_factor(trade_results: pd.Series) -> float:
 
 
 def avg_metrics(
-    risk_series: pd.Series = pd.Series(dtype=int),
-    rr_series: pd.Series = pd.Series(dtype=float),
+    risk_series: pd.Series = pd.Series(),
+    rr_series: pd.Series = pd.Series(),
 ) -> tuple[int, float]:
     """
     Calculate the average number of contracts per trade (rounded) and average risk-reward ratio.
@@ -84,7 +89,7 @@ def avg_metrics(
             - avg_rr (float): Average risk-reward ratio (rounded to 2 decimals).
     """
     # Average number of contracts (must be whole number)
-    avg_contracts = round(risk_series.mean()) if not risk_series.empty else 0
+    avg_contracts = round(risk_series.mean(), 0) if not risk_series.empty else 0
 
     # Average risk-reward ratio (float)
     avg_rr = round(rr_series.mean(), 2) if not rr_series.empty else 0.0
@@ -168,37 +173,37 @@ def max_drawdown_from_equity(equity_balances=None) -> float:
     return -drawdown.min()
 
 
-def expectancy_by_rr(rr_series: pd.Series, wins: int, losses: int) -> float:
+def expectancy_from_rr(outcomes: pd.Series, rr_series: pd.Series) -> float:
     """
-    Calculate trading expectancy based on win/loss count and RR (risk-reward) series.
+    Calculate trading expectancy per trade from outcomes and R/R series.
 
     Args:
-        rr_series (pd.Series): Series of risk-reward ratios for winning trades (should be > 0).
-        wins (int): Number of winning trades.
-        losses (int): Number of losing trades.
+        outcomes (pd.Series): Series with "WIN", "LOSS" (ignore "BE")
+        rr_series (pd.Series): Series of R-multiples
 
     Returns:
-        float: Expectancy per trade in R-multiples.
-
-    Notes:
-        - Assumes average loss = 1R.
-        - If RR series is empty or total trades = 0, returns 0.0.
-        - Only positive RR values are used to calculate avg win.
+        float: Expectancy per trade in R-multiples
     """
-    total_trades = wins + losses
-    if total_trades == 0 or rr_series.empty:
+    if rr_series.empty or outcomes.empty or len(outcomes) != len(rr_series):
         return 0.0
+
+    # Consider only WIN and LOSS trades
+    mask = outcomes.isin(["WIN", "LOSS"])
+    filtered_outcomes = outcomes[mask]
+
+    total_trades = len(filtered_outcomes)
+    if total_trades == 0:
+        return 0.0
+
     # Win rate and loss rate
-    wr = wins / total_trades
-    lr = 1 - wr
+    wr = (filtered_outcomes == "WIN").sum() / total_trades
+    lr = (filtered_outcomes == "LOSS").sum() / total_trades
 
-    # Filter RR values to only positive ones for avg win
-    positive_rr = rr_series[rr_series > 0]
-    avg_win = positive_rr.mean() if not positive_rr.empty else 0.0
-    # Assume average loss = 1R
-    avg_loss = 1
+    # Average win/loss R directly from R/R series
+    avg_win = rr_series[rr_series > 0].mean() if (rr_series > 0).any() else 0
+    avg_loss = abs(rr_series[rr_series < 0].mean()) if (rr_series < 0).any() else 0
 
-    # Expectancy formula
+    # Expectancy
     expectancy = (wr * avg_win) - (lr * avg_loss)
     return round(expectancy, 2)
 
