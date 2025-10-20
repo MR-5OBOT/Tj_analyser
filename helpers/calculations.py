@@ -175,7 +175,7 @@ def max_drawdown_from_equity(equity_balances=None) -> float:
 
 def expectancy_from_rr(outcomes: pd.Series, rr_series: pd.Series) -> float:
     """
-    Calculate trading expectancy per trade from outcomes and R/R series.
+    Calculate trading expectancy.
 
     Args:
         outcomes (pd.Series): Series with "WIN", "LOSS" (ignore "BE")
@@ -187,23 +187,22 @@ def expectancy_from_rr(outcomes: pd.Series, rr_series: pd.Series) -> float:
     if rr_series.empty or outcomes.empty or len(outcomes) != len(rr_series):
         return 0.0
 
-    # Consider only WIN and LOSS trades
-    mask = outcomes.isin(["WIN", "LOSS"])
-    filtered_outcomes = outcomes[mask]
+    # filter outcomes to execlude BE
+    mask = outcomes.isin(["WIN", "LOSS"])  # bolean series
+    filtered_outcomes = outcomes[mask]  # filtered no BE
 
     total_trades = len(filtered_outcomes)
     if total_trades == 0:
         return 0.0
 
-    # Win rate and loss rate
+    # Win/Loss rates purely from outcomes
     wr = (filtered_outcomes == "WIN").sum() / total_trades
     lr = (filtered_outcomes == "LOSS").sum() / total_trades
 
-    # Average win/loss R directly from R/R series
+    # Avg win/loss purely from rr_series
     avg_win = rr_series[rr_series > 0].mean() if (rr_series > 0).any() else 0
     avg_loss = abs(rr_series[rr_series < 0].mean()) if (rr_series < 0).any() else 0
 
-    # Expectancy
     expectancy = (wr * avg_win) - (lr * avg_loss)
     return round(expectancy, 2)
 

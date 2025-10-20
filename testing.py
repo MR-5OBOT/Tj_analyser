@@ -40,9 +40,7 @@ time_ranges = [
 
 # print(df.head(30))
 
-print(f"winrate {winrate(outcome_series)[0] * 100:.2f}%")
-print(f"winrate with be {winrate(outcome_series)[1] * 100:.2f}%")
-
-
-rr_vs_hour_range_bubble_scatter(entry_time, df["R/R"], outcome_series)
-plt.show()
+rr_series = clean_numeric_series(df["R/R"])
+EV = expectancy_from_rr(outcome_series, rr_series)
+print(EV)
+print(rr_series[rr_series < 0].mean())
