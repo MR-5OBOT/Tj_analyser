@@ -78,11 +78,6 @@ def avg_metrics(
 ) -> tuple[int, float]:
     """
     Calculate the average number of contracts per trade (rounded) and average risk-reward ratio.
-
-    Args:
-        risk_series (pd.Series): Series of contract counts per trade.
-        rr_series (pd.Series): Series of risk-reward ratios.
-
     Returns:
         tuple: (avg_contracts, avg_rr)
             - avg_contracts (int): Rounded average number of contracts per trade.
