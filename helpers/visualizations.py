@@ -782,6 +782,51 @@ def rr_vs_hour_range_bubble_scatter(
     return fig
 
 
+def rr_vs_sl_points(
+    sl_points_series: pd.Series,
+    rr_series: pd.Series,
+    outcome: pd.Series,
+    *,
+    title: str = "R/R vs SL Points",
+    # xlabel: str = "Entry Time Range",
+    # ylabel: str = "R/R",
+    figsize: tuple = (8, 6),
+    rotation: int = 45,
+    labelsize: int = 10,
+    size_scale: tuple = (50, 500),  # min and max bubble size
+):
+    plt.style.use("dark_background")
+
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.scatterplot(
+        x=sl_points_series,
+        y=rr_series,
+        hue=outcome,
+        sizes=size_scale,
+        palette={"WIN": "#466963", "LOSS": "#C05478", "BE": "#888444"},
+        edgecolor="black",
+        alpha=0.8,
+        ax=ax,
+    )
+
+    ax.set_title(title)
+    # ax.set_xlabel(xlabel)
+    # ax.set_ylabel(ylabel)
+    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("gray")
+    ax.spines["bottom"].set_color("gray")
+    ax.title.set_color("gray")
+    ax.xaxis.label.set_color("gray")
+    ax.yaxis.label.set_color("gray")
+    ax.tick_params(colors="gray")
+
+    fig.tight_layout()
+    plt.savefig("plot.png")
+    return fig
+
+
 def create_stats_table(
     stats: dict,
     *,

@@ -40,6 +40,7 @@ def generate_plots_overall(df: pd.DataFrame):
     sl_points_title = "Distribution of Stop-Loss points"
     pl_xlabel = "R/R"
     rr_series = clean_numeric_series(df["R/R"])
+    sl_points = clean_numeric_series(df["sl_points"])
     risk = clean_numeric_series(df["contracts"])
     days = df["day"]
     entry_time = df["entry_time"]
@@ -61,10 +62,11 @@ def generate_plots_overall(df: pd.DataFrame):
         # (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
-        # (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
+        (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
         (distribution_plot, (df["sl_points"], sl_points_title)),
         # (distribution_plot, (reward, rr_title)),
-        # (risk_vs_reward_scatter, (risk, reward, outcome)),
+        (risk_vs_reward_scatter, (risk, reward, outcome)),
+        (rr_vs_sl_points, (sl_points, reward, outcome)),
         # (boxplot_DoW, (rr_series, days, outcome)),
         (rr_barplot_months, (rr_series, date)),
     ]
