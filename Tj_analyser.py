@@ -1,32 +1,50 @@
+"""Modern refactored main script with clean imports and structure."""
+
 import argparse
 from pathlib import Path
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from helpers.data_cleaning import *
-from helpers.data_preprocessing import *
-from helpers.calculations import *
-from helpers.utils import *
-from helpers.visualizations import *
-# from helpers.reports import *
-
-
-def get_data_url_weekly() -> str:
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1682820713&single=true&output=csv"
-
-
-def get_data_url_overall() -> str:
-    return "https://docs.google.com/spreadsheets/d/e/2PACX-1vQL7L-HMzezpuFCDOuS0wdUm81zbX4iVOokaFUGonVR1XkhS6CeDl1gHUrW4U0Le4zihfpqSDphTu4I/pub?gid=1587441688&single=true&output=csv"
+# Explicit imports instead of wildcards
+from helpers.data_cleaning import clean_numeric_series
+from helpers.utils import df_check
+from helpers.calculations import (
+    winrate,
+    winning_trades,
+    losing_trades,
+    breakeven_trades,
+    profit_factor,
+    avg_metrics,
+    best_worst_trade,
+    expectancy_from_rr,
+    consecutive_wins_and_losses,
+)
+from helpers.visualizations import (
+    create_stats_table,
+    rr_curve,
+    rr_curve_weekly,
+    rr_barplot,
+    rr_barplot_months,
+    outcome_by_day,
+    heatmap_rr,
+    bar_outcomes_by_custom_ranges,
+    rr_vs_hour_range_bubble_scatter,
+    distribution_plot,
+    risk_vs_reward_scatter,
+    rr_vs_sl_points,
+)
+from config import DATA_URL_WEEKLY, DATA_URL_OVERALL, REQUIRED_COLUMNS
 
 
 def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
+    """Generate plot functions and arguments for weekly reports."""
     rr_series = clean_numeric_series(df["R/R"])
     days = df["day"]
+    
     return [
         (create_stats_table, (stats_table_weekly(df),)),
         (rr_curve_weekly, (rr_series, days, None)),
@@ -34,23 +52,17 @@ def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
     ]
 
 
-def generate_plots_overall(df: pd.DataFrame):
-    rr_title = "Distribution of Reward by R/R"
-    risk_title = "Distribution of Risk by Contracts"
-    sl_points_title = "Distribution of Stop-Loss points"
-    pl_xlabel = "R/R"
+def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
+    """Generate plot functions and arguments for overall reports."""
     rr_series = clean_numeric_series(df["R/R"])
     sl_points = clean_numeric_series(df["sl_points"])
     risk = clean_numeric_series(df["contracts"])
     days = df["day"]
     entry_time = df["entry_time"]
-    reward = rr_series
     outcome = df["outcome"]
     date = df["date"]
+    
     time_ranges = [
-        # ("08:00–08:30", "08:00", "08:30"),
-        # ("08:30–09:00", "08:30", "09:00"),
-        # ("09:00–09:30", "09:00", "09:30"),
         ("09:30–10:00", "09:30", "10:00"),
         ("10:00–11:00", "10:00", "11:00"),
     ]
@@ -59,64 +71,41 @@ def generate_plots_overall(df: pd.DataFrame):
         (create_stats_table, (stats_table_overall(df),)),
         (rr_curve, (rr_series,)),
         (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
-        # (rr_barplot, (rr_series, days, None)),
         (heatmap_rr, (rr_series, days, entry_time)),
         (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
         (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
-        (distribution_plot, (df["sl_points"], sl_points_title)),
-        # (distribution_plot, (reward, rr_title)),
-        (risk_vs_reward_scatter, (risk, reward, outcome)),
-        (rr_vs_sl_points, (sl_points, reward, outcome)),
-        # (boxplot_DoW, (rr_series, days, outcome)),
+        (distribution_plot, (df["sl_points"], "Distribution of Stop-Loss points")),
+        (risk_vs_reward_scatter, (risk, rr_series, outcome)),
+        (rr_vs_sl_points, (sl_points, rr_series, outcome)),
         (rr_barplot_months, (rr_series, date)),
     ]
 
 
-def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
-    print("Processing and generating report...")
-
-    plot_funcs = {
-        "weekly": generate_plots_weekly,
-        "overall": generate_plots_overall,
-    }
-    if report_type not in plot_funcs:
-        raise ValueError(f"Unknown report type: {report_type}")
-
-    steps = plot_funcs[report_type](df)
-
-    for func, args in tqdm(steps, desc="Generating plots", unit="step"):
-        func(*args)
-
-    pdf_path = export_pdf_report(steps, report_type=report_type.capitalize())
-    print(f"\n Report successfully saved to: {pdf_path}")
-    return df
-
-
 def stats_table_weekly(df: pd.DataFrame) -> dict:
+    """Calculate statistics for weekly report."""
     rr_series = clean_numeric_series(df["R/R"])
     outcome = df["outcome"].str.strip()
     total_trades = len(df)
     total_rr = rr_series.sum()
-    wr_no_be, wr_with_be = winrate(outcome, "WIN", "LOSS")
-    best_trade, worst_trade = best_worst_trade(rr_series)
+    best_trade, _ = best_worst_trade(rr_series)
 
     return {
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr:.2f}",
-        # "WinRate": f"{wr_no_be * 100:.2f}%",
         "Best Trade": f"{best_trade:.2f}R",
     }
 
 
 def stats_table_overall(df: pd.DataFrame) -> dict:
+    """Calculate statistics for overall report."""
     total_trades = len(df)
     risk_series = clean_numeric_series(df["contracts"])
     rr_series = clean_numeric_series(df["R/R"])
     total_rr = rr_series.sum()
     outcomes = df["outcome"].str.strip()
+    
     profit_factor_value = profit_factor(rr_series)
-
-    wr_no_be, wr_with_be = winrate(outcomes)
+    wr_no_be, _ = winrate(outcomes)
     wins_count = winning_trades(df)
     losses_count = losing_trades(df)
     be_count = breakeven_trades(df)
@@ -129,78 +118,101 @@ def stats_table_overall(df: pd.DataFrame) -> dict:
         "Total Trades": total_trades,
         "Total R/R": f"{total_rr:.2f}",
         "WinRate": f"{wr_no_be * 100:.2f}%",
-        # "WinRate (With BE)": f"{wr_with_be * 100:.2f}%",
         "Winning Trades": f"{wins_count}",
-        "Lossing Trades": f"{losses_count}",
+        "Losing Trades": f"{losses_count}",
         "Breakeven Trades": f"{be_count}",
         "Consecutive Losses": f"{cons_losses}",
         "Consecutive Wins": f"{cons_wins}",
         "Avg R/R": f"{avg_rr:.2f}",
-        "Avg Risk (contract)": f"{avg_risk:.0f}",
-        "Profit Factor (R/R)": f"{profit_factor_value:.2f}",  # used for $ or % returns
-        "Expectancy (R/R)": f"{expectancy_rr:.2f}",
-        "Best Trade (R/R)": f"{best_trade:.2f}",
-        # "Min Trade duration": f"{min_duration_val:.0f} Minutes",
-        # "Max Trade duration": f"{max_duration_val:.0f} Minutes",
+        "Avg Risk (contracts)": f"{avg_risk:.0f}",
+        "Profit Factor": f"{profit_factor_value:.2f}",
+        "Expectancy": f"{expectancy_rr:.2f}",
+        "Best Trade": f"{best_trade:.2f}R",
     }
 
 
 def term_stats(stats: dict) -> None:
-    print("\n --- Trading Statistics ---")
+    """Print statistics to terminal in formatted way."""
+    print("\n--- Trading Statistics ---")
     for key, value in stats.items():
         print(f"{key:<25}: {value}")
 
 
-def export_pdf_report(figure_list, report_type="Report"):
-    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"  # Fixed line
+def export_pdf_report(figure_list: list[tuple], report_type: str = "Report") -> str:
+    """Export all figures to a PDF file."""
+    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
+    
     with PdfPages(pdf_path) as pdf:
         for func, args in figure_list:
             fig = func(*args)
             if fig is not None:
                 pdf.savefig(fig)
             plt.close()
+    
     return pdf_path
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate trading report.")
+def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
+    """Process data and generate report."""
+    print("Processing and generating report...")
+
+    plot_funcs = {
+        "weekly": generate_plots_weekly,
+        "overall": generate_plots_overall,
+    }
+    
+    if report_type not in plot_funcs:
+        raise ValueError(f"Unknown report type: {report_type}")
+
+    steps = plot_funcs[report_type](df)
+
+    for func, args in tqdm(steps, desc="Generating plots", unit="step"):
+        func(*args)
+
+    pdf_path = export_pdf_report(steps, report_type=report_type.capitalize())
+    print(f"\nReport successfully saved to: {pdf_path}")
+    
+    return df
+
+
+def main() -> None:
+    """Main entry point for the application."""
+    parser = argparse.ArgumentParser(
+        description="Generate trading performance reports from Google Sheets data."
+    )
     parser.add_argument(
         "--type",
         type=str,
         choices=["weekly", "overall"],
         required=True,
-        help="Choose the type of report to generate",
+        help="Type of report to generate (weekly or overall)",
     )
     args = parser.parse_args()
     report_type = args.type
 
-    url_funcs = {
-        "weekly": get_data_url_weekly,
-        "overall": get_data_url_overall,
+    # URL mapping
+    url_map = {
+        "weekly": DATA_URL_WEEKLY,
+        "overall": DATA_URL_OVERALL,
     }
+    
+    # Stats function mapping
     stats_funcs = {
         "weekly": stats_table_weekly,
         "overall": stats_table_overall,
     }
 
-    url = url_funcs[report_type]()
+    url = url_map[report_type]
     stats_func = stats_funcs[report_type]
 
+    # Fetch and validate data
     df = pd.read_csv(url)
-    df_check(
-        df,
-        [
-            "date",
-            "day",
-            "symbol",
-            "entry_time",
-            "contracts",
-            "outcome",
-            "R/R",
-        ],
-    )
+    df_check(df, REQUIRED_COLUMNS)
 
+    # Generate report
     fetch_and_process(df, report_type)
+    
+    # Display stats in terminal
     stats = stats_func(df)
     term_stats(stats)
 

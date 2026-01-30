@@ -1,20 +1,39 @@
 # Tj_Analyser
 
-A Python-based GUI application for analyzing trading journals, providing statistical insights and visualizations for CFDs and Futures trading data.
+A Python CLI tool for analyzing trading journals, providing statistical insights and visualizations for trading performance data.
 
 ## Features
 
-- **File Upload**: Supports CSV and Excel files with size validation (default max: 10 MB).
+- **Data Import**: Fetches trading data directly from Google Sheets CSV exports
+- **Report Types**:
+  - **Weekly Reports**: Quick performance summaries by day of the week
+  - **Overall Reports**: Comprehensive analysis with multiple visualizations
 - **Statistics**:
-  - Overall stats: Total trades, win rate, total P/L, average win/loss percentage, average risk, average risk-reward ratio (R/R), best/worst trade, and max drawdown.
-  - Day-of-week performance: Win/loss counts for Monday through Friday.
-  - Hour-of-day performance: Win/loss counts and best trading hour based on P/L.
+  - Win rate, profit factor, expectancy
+  - Risk/reward metrics, consecutive wins/losses
+  - Best/worst trades, average risk per trade
 - **Visualizations**:
-  - Balance history graph (P/L percentage over time).
-  - P/L distribution histogram.
-  - Boxplot for day-of-week vs. P/L.
-  - Risk vs. reward scatter plot.
-  - Heatmap of R/R by day and hour.
-- **GUI**:
-  - Simple Tkinter interface with buttons for CFDs/Futures templates and data import.
-  - Status bar for real-time feedback (e.g., "Uploading file...", "Data processed successfully").
+  - R/R performance curves and bar charts
+  - Outcome distribution by day and time
+  - Heatmaps of R/R by day & hour
+  - Risk vs reward scatter plots
+  - Monthly performance breakdowns
+- **PDF Export**: All reports saved as professional PDF documents
+
+## Usage
+
+```bash
+# Generate weekly report
+python Tj_analyser.py --type weekly
+
+# Generate overall report
+python Tj_analyser.py --type overall
+```
+
+## Requirements
+
+See `requirements.txt` for dependencies. Install with:
+```bash
+pip install -r requirements.txt
+```
+

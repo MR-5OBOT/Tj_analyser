@@ -1,317 +1,167 @@
+"""Modern visualization functions with reduced code duplication."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.figure import Figure
 
-
-def pl_curve(
-    pl_series: pd.Series,
-    *,
-    title: str = "Performance by (%)",
-    xlabel: str = "Trades",
-    ylabel: str = "Sum",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Plots a cumulative line plot for percentage gains.
-
-    Args:
-        series (pd.Series): Percentage gains/losses.
-        title (str): Plot title.
-        xlabel (str): X-axis label.
-        ylabel (str): Y-axis label.
-        figsize (tuple): Figure size.
-        rotation (int): X-axis label rotation.
-        labelsize (int): Tick label size.
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
-    x = range(len(pl_series))
-    sns.lineplot(x=x, y=pl_series.cumsum(), label="Gains (%)", color="#4B6661", ax=ax)
-
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-    ax.legend()
-    fig.tight_layout()
-    return fig
+from config import COLORS, PLOT_DEFAULTS, DAY_ORDER
+from helpers.plot_styling import create_figure, style_axes, finalize_plot
 
 
 def rr_curve(
     rr_series: pd.Series,
-    *,
     title: str = "Performance by (R/R)",
     xlabel: str = "Trades",
     ylabel: str = "Sum",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Plots a cumulative line plot for risk/reward (R/R).
-
-    Args:
-        series (pd.Series): Risk/reward values.
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Plot cumulative R/R performance."""
+    fig, ax = create_figure(figsize)
+    
     x = range(len(rr_series))
-    sns.lineplot(x=x, y=rr_series.cumsum(), label="R/R", color="#4B6661", ax=ax)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    sns.lineplot(x=x, y=rr_series.cumsum(), label="R/R", color=COLORS["primary"], ax=ax)
+    
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def rr_curve_weekly(
     rr_series: pd.Series,
     days: pd.Series | None = None,
     dates: pd.Series | None = None,
-    *,
     title: str = "Performance by R/R",
     xlabel: str = "",
     ylabel: str = "",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: float = 9.5,
-):
-    """
-    Plots a line plot of cumulative R/R by day of the week.
-
-    Args:
-        rr_series (pd.Series): Risk/reward values.
-        days (pd.Series, optional): Day names. Takes precedence over dates.
-        dates (pd.Series, optional): Date values to derive day names.
-    Returns:
-        matplotlib.figure.Figure: The generated figure or None if no valid x-axis data.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Plot cumulative R/R by day of the week."""
+    fig, ax = create_figure(figsize)
 
     # Determine x values
     if days is not None:
         x_vals = days.str.strip().str.lower()
     elif dates is not None:
-        x_vals = (
-            pd.to_datetime(dates, errors="coerce").dt.day_name().strip().str.lower()
-        )
+        x_vals = pd.to_datetime(dates, errors="coerce").dt.day_name().str.strip().str.lower()
     else:
         raise ValueError("No date or day series was provided!")
 
-    # Group R/R by day and sum
+    # Group and order by day
     grouped_rr = rr_series.groupby(x_vals).sum()
-    day_order = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-    ordered_rr = grouped_rr.reindex(day_order).dropna()
-    # ordered_rr = grouped_rr.reindex(day_order).fillna(0)  # Fill missing days with 0
-
-    # Compute cumulative sum
+    ordered_rr = grouped_rr.reindex(DAY_ORDER).dropna()
     cum_series = ordered_rr.cumsum()
-    # Plot line
+    
+    # Plot
     sns.lineplot(
         x=cum_series.index,
         y=cum_series.values,
         label="Cumulative R/R",
-        color="#4B6661",
+        color=COLORS["primary"],
         marker="o",
-        linewidth=2,
-        markersize=8,
+        linewidth=PLOT_DEFAULTS["linewidth"],
+        markersize=PLOT_DEFAULTS["markersize"],
         ax=ax,
     )
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def rr_barplot(
     rr_series: pd.Series,
     days: pd.Series | None = None,
     dates: pd.Series | None = None,
-    *,
     title: str = "R/R By Each Day",
     xlabel: str = "",
     ylabel: str = "",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: float = 10,
-):
-    """
-    Creates a bar plot of total R/R by day of the week.
-
-    Args:
-        rr_series (pd.Series): Raw risk/reward values.
-        days (pd.Series, optional): Day names. Takes precedence over dates.
-        dates (pd.Series, optional): Date values to derive day names.
-    Returns:
-        matplotlib.figure.Figure: The generated figure or None if no valid x-axis data.
-    """
-    plt.style.use("dark_background")
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create bar plot of total R/R by day."""
+    fig, ax = create_figure(figsize)
 
     # Get day labels
     if days is not None:
         day_labels = days.str.strip().str.lower()
     elif dates is not None:
-        day_labels = (
-            pd.to_datetime(dates, errors="coerce").dt.day_name().strip().str.lower()
-        )
+        day_labels = pd.to_datetime(dates, errors="coerce").dt.day_name().str.strip().str.lower()
     else:
         raise ValueError("No date or day series was provided!")
 
-    # Group raw R/R values by weekday and sum
+    # Group and order
     grouped_rr = rr_series.groupby(day_labels).sum()
-    day_order = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-    ordered_rr = grouped_rr.reindex(day_order).dropna()
-    # ordered_rr = grouped_rr.reindex(day_order).fillna(0)  # Fill missing days with 0
+    ordered_rr = grouped_rr.reindex(DAY_ORDER).dropna()
 
     sns.barplot(
         x=ordered_rr.index,
         y=ordered_rr.values,
         label="R/R",
         errorbar=None,
-        color="#476A64",
+        color=COLORS["secondary"],
         ax=ax,
     )
-    plt.axhline(0, color="#515151", linestyle="-", linewidth=1)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    
+    ax.axhline(0, color=COLORS["gray"], linestyle="-", linewidth=1)
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def rr_barplot_months(
     rr_series: pd.Series,
     dates: pd.Series,
-    *,
     title: str = "R/R By Each Month",
     xlabel: str = "",
     ylabel: str = "Total R/R",
-    figsize: tuple = (8, 6),
-    rotation: int = 45,
-    labelsize: int = 10,
-):
-    """Create a bar plot of summed R/R values by month from given dates.
-
-    Args:
-        rr_series: Series of R/R values.
-        dates: Series of dates corresponding to R/R values.
-    Returns:
-        Matplotlib figure object.
-    Raises:
-        ValueError: If inputs are empty, mismatched, or dates are invalid.
-    """
-    plt.style.use("dark_background")
-
-    # Input validation
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create bar plot of R/R by month."""
+    # Validation
     if rr_series.empty or dates.empty:
         raise ValueError("Input series cannot be empty")
     if len(rr_series) != len(dates):
         raise ValueError("rr_series and dates must have the same length")
 
-    # Convert dates to datetime
+    # Convert dates
     dates = pd.to_datetime(dates, errors="coerce")
     if dates.isna().all():
         raise ValueError("No valid dates provided")
 
-    # Create DataFrame
+    # Create and process DataFrame
     df = pd.DataFrame({"dates": dates, "rr": rr_series})
-    # Extract month, year, and month name
     df["month_num"] = df["dates"].dt.month
     df["year"] = df["dates"].dt.year
-    df["month_name"] = df["dates"].dt.strftime("%b %Y")  # e.g., "Jan 2024"
+    df["month_name"] = df["dates"].dt.strftime("%b %Y")
 
-    # Group by month_num, year, and month_name to sum R/R
-    monthly_rr = (
-        df.groupby(["year", "month_num", "month_name"])["rr"].sum().reset_index()
-    )
-    # Sort by year and month_num for calendar order
+    monthly_rr = df.groupby(["year", "month_num", "month_name"])["rr"].sum().reset_index()
     monthly_rr = monthly_rr.sort_values(["year", "month_num"])
 
-    # Dynamically adjust figure size based on number of months
+    # Dynamic figure size
     num_months = len(monthly_rr)
-    if figsize is None:
-        figsize = (max(8, num_months * 0.75), 6)  # Scale width with number of months
-
-    # Create plot
-    fig, ax = plt.subplots(figsize=figsize)
+    dynamic_figsize = (max(8, num_months * 0.75), 6)
+    
+    fig, ax = create_figure(dynamic_figsize)
+    
     sns.barplot(
         x="month_name",
         y="rr",
         data=monthly_rr,
         label="R/R",
-        color="#476A64",
+        color=COLORS["secondary"],
         errorbar=None,
         ax=ax,
     )
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    plt.axhline(0, color="#515151", linestyle="-", linewidth=1)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    
+    ax.axhline(0, color=COLORS["gray"], linestyle="-", linewidth=1)
+    style_axes(ax, title, xlabel, ylabel, rotation=45)
     ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def outcome_by_day(
@@ -321,76 +171,46 @@ def outcome_by_day(
     win: str = "WIN",
     loss: str = "LOSS",
     be: str = "BE",
-    *,
     title: str = "Outcome by Day",
     xlabel: str = "",
     ylabel: str = "",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Creates a bar plot of outcome counts by day of the week.
-
-    Args:
-        date_series (pd.Series): Series of datetime values (optional).
-        day_series (pd.Series): Series of weekday names (optional).
-        outcome_series (pd.Series): Series with outcome values.
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create bar plot of outcome counts by day."""
     if date_series is None and day_series is None:
         raise ValueError("Provide either date_series or day_series.")
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    
+    fig, ax = create_figure(figsize)
 
     if date_series is not None:
-        days = (
-            # pd.to_datetime(date_series, format="%Y-%m-%d", errors="coerce")
-            pd.to_datetime(date_series, errors="coerce")
-            .dt.day_name()
-            .strip()
-            .str.lower()
-        )
+        days = pd.to_datetime(date_series, errors="coerce").dt.day_name().str.strip().str.lower()
     else:
         days = day_series.str.strip().str.lower()
 
-    df = pd.DataFrame(
-        {
-            "day": days,
-            "outcome": outcome_series.astype(str).str.strip(),
-        }
-    )
+    df = pd.DataFrame({
+        "day": days,
+        "outcome": outcome_series.astype(str).str.strip(),
+    })
+    
     counts = df.groupby(["day", "outcome"]).size().reset_index(name="count")
-    day_order = ["monday", "tuesday", "wednesday", "thursday", "friday"]
+    
     sns.barplot(
         data=counts,
         x="day",
         y="count",
         hue="outcome",
-        palette={win: "#466963", loss: "#333333", be: "#607250"},
-        order=day_order,
-        edgecolor="black",
-        linewidth=1.5,
+        palette={win: COLORS["win"], loss: COLORS["neutral"], be: COLORS["breakeven"]},
+        order=DAY_ORDER,
+        edgecolor=PLOT_DEFAULTS["edgecolor"],
+        linewidth=PLOT_DEFAULTS["edge_linewidth"],
         ax=ax,
     )
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    
+    style_axes(ax, title, xlabel, ylabel)
     ax.spines["bottom"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
     ax.legend(title="OUTCOMES", loc="best")
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def distribution_plot(
@@ -399,165 +219,64 @@ def distribution_plot(
     xlabel: str = "",
     ylabel: str = "Frequency",
     dist_label: str = "R/R",
-    *,
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Plots a histogram with KDE for a given series.
-
-    Args:
-        series (pd.Series): Data to plot.
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Plot histogram with KDE."""
+    fig, ax = create_figure(figsize)
+    
     sns.histplot(
         series,
         bins=10,
         kde=True,
-        edgecolor="black",
-        linewidth=1.5,
+        edgecolor=PLOT_DEFAULTS["edgecolor"],
+        linewidth=PLOT_DEFAULTS["edge_linewidth"],
         ax=ax,
         label=dist_label,
     )
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend()
-    fig.tight_layout()
-    return fig
-
-
-def boxplot_DoW(
-    series: pd.Series,
-    days: pd.Series,
-    outcome: pd.Series,
-    *,
-    title: str = "R/R by Day",
-    xlabel: str = "",
-    ylabel: str = "R/R",
-    palette: str = "YlGnBu",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Creates a boxplot of the given series by day of the week and outcome.
-
-    Args:
-        series (pd.Series): Values to plot on the Y-axis.
-        days (pd.Series): Corresponding day names.
-        outcome (pd.Series): Used as hue.
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
-    days = days.str.lower()
-    sns.boxplot(x=days, y=series, hue=outcome, palette=palette, ax=ax)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-    ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def risk_vs_reward_scatter(
     risk_series: pd.Series,
     reward_series: pd.Series,
     outcome: pd.Series,
-    *,
     title: str = "Risk vs Reward",
     xlabel: str = "Contracts",
     ylabel: str = "R/R",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Creates a scatter plot of risk vs reward with outcome as hue.
-
-    Args:
-        risk_series (pd.Series): Risk values.
-        reward_series (pd.Series): Reward values.
-        outcome (pd.Series): Outcome values (e.g., 'WIN', 'LOSS', 'BE').
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create scatter plot of risk vs reward."""
+    fig, ax = create_figure(figsize)
+    
     sns.scatterplot(
         x=risk_series,
         y=reward_series,
         hue=outcome,
-        palette={"WIN": "#466963", "LOSS": "#C05478", "BE": "#444333"},
+        palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": COLORS["neutral"]},
         ax=ax,
     )
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
+    
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend()
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def heatmap_rr(
     rr_series: pd.Series,
     days: pd.Series,
     entry_time: pd.Series,
-    *,
     title: str = "Total R/R by Day & Hour",
     xlabel: str = "",
     ylabel: str = "Entry Hour",
-    figsize: tuple = (8, 6),
-    rotation: int = 0,
-    labelsize: int = 10,
-):
-    """
-    Creates a heatmap of R/R by day and entry hour.
-
-    Args:
-        rr_series (pd.Series): Risk/reward values.
-        days (pd.Series): Day names.
-        entry_time (pd.Series): Entry time values.
-    Returns:
-        matplotlib.figure.Figure: The generated figure.
-    """
-
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create heatmap of R/R by day and entry hour."""
+    
     def parse_time(time_str):
         if pd.isna(time_str) or str(time_str).strip() == "":
             return pd.to_datetime("00:00", format="%H:%M").time()
@@ -569,67 +288,47 @@ def heatmap_rr(
             except ValueError:
                 return pd.to_datetime("00:00", format="%H:%M").time()
 
-    plt.style.use("dark_background")
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = create_figure(figsize)
 
-    temp_df = pd.DataFrame(
-        {
-            "rr": rr_series,
-            "day": days.str.strip().str.lower(),
-            "hour": entry_time.apply(parse_time).apply(
-                lambda x: x.hour if pd.notna(x) else None
-            ),
-        }
-    )
+    temp_df = pd.DataFrame({
+        "rr": rr_series,
+        "day": days.str.strip().str.lower(),
+        "hour": entry_time.apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None),
+    })
+    
     temp_df = temp_df.dropna(subset=["rr", "hour", "day"])
-    matrix = pd.pivot_table(
-        temp_df, values="rr", index="hour", columns="day", aggfunc="sum"
-    )
+    matrix = pd.pivot_table(temp_df, values="rr", index="hour", columns="day", aggfunc="sum")
+    
     sns.heatmap(matrix, annot=True, cmap="RdBu_r", ax=ax)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.tick_params(axis="y", rotation=0, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-    fig.tight_layout()
-    return fig
+    
+    style_axes(ax, title, xlabel, ylabel)
+    ax.tick_params(axis="y", rotation=0)
+    
+    return finalize_plot(fig)
 
 
 def bar_outcomes_by_custom_ranges(
     outcome: pd.Series,
     entry_time: pd.Series,
     time_ranges: list,
-    *,
     title: str = "Trade Outcomes by Time Range",
     xlabel: str = "Count",
     ylabel: str = "",
-    figsize: tuple = (8, 6),
-):
-    plt.style.use("dark_background")
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create bar plot of outcomes by custom time ranges."""
+    fig, ax = create_figure(figsize)
 
-    # Prepare data
-    df = pd.DataFrame(
-        {
-            "outcome": outcome,
-            "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
-        }
-    )
+    df = pd.DataFrame({
+        "outcome": outcome,
+        "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
+    })
 
-    # Parse ranges
     parsed_ranges = [
         (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
         for label, start, end in time_ranges
     ]
 
-    # Collect counts
     data = []
     for label, start, end in parsed_ranges:
         range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
@@ -638,106 +337,63 @@ def bar_outcomes_by_custom_ranges(
             data.append({"Time Range": label, "Outcome": outcome_type, "Count": count})
 
     plot_df = pd.DataFrame(data)
-
-    # Ensure correct time range order
     plot_df["Time Range"] = pd.Categorical(
         plot_df["Time Range"],
         categories=[label for label, _, _ in parsed_ranges],
         ordered=True,
     )
 
-    # Plot
-    fig, ax = plt.subplots(figsize=figsize)
     sns.barplot(
         data=plot_df,
         y="Time Range",
         x="Count",
         hue="Outcome",
-        palette={"WIN": "#466963", "LOSS": "#333333", "BE": "#607250"},
-        linewidth=1.5,
-        edgecolor="black",
+        palette={"WIN": COLORS["win"], "LOSS": COLORS["neutral"], "BE": COLORS["breakeven"]},
+        linewidth=PLOT_DEFAULTS["edge_linewidth"],
+        edgecolor=PLOT_DEFAULTS["edgecolor"],
         ax=ax,
         dodge=True,
     )
 
-    # Style
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=0, labelsize=10, color="gray")
-    ax.tick_params(axis="y", rotation=0, labelsize=10, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-    fig.tight_layout()
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
+    style_axes(ax, title, xlabel, ylabel)
     ax.legend(title="OUTCOMES", loc="best")
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def rr_vs_hour_range_bubble_scatter(
     entry_time: pd.Series,
     rr_series: pd.Series,
     outcome: pd.Series,
-    *,
     title: str = "R/R vs Entry Hour Range",
     xlabel: str = "Entry Time Range",
     ylabel: str = "R/R",
-    figsize: tuple = (8, 6),
-    rotation: int = 45,
-    labelsize: int = 10,
-    size_scale: tuple = (50, 500),  # min and max bubble size
-):
-    """
-    Scatter bubble plot of Risk/Reward vs Hour Range colored by outcome.
-    Dot size reflects how many trades have the same R/R in that hour range.
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+    size_scale: tuple = (50, 500),
+) -> Figure:
+    """Bubble scatter plot of R/R vs hour range."""
+    fig, ax = create_figure(figsize)
 
-    Args:
-        entry_time (pd.Series): Time column (str like '09:35:00' or datetime).
-        rr_series (pd.Series): Risk-Reward values.
-        outcome (pd.Series): WIN, LOSS, BE values.
-    Returns:
-        matplotlib.figure.Figure
-    """
-    plt.style.use("dark_background")
-
-    # Extract hour and build hour range label
     hour_ints = entry_time.apply(
         lambda t: pd.to_datetime(t).hour if isinstance(t, str) else t.hour
     )
     hour_ranges = hour_ints.apply(lambda h: f"{h:02d}:00–{(h + 1) % 24:02d}:00")
 
-    # Create a DataFrame with all relevant data
-    df = pd.DataFrame(
-        {
-            "hour_range": hour_ranges,
-            "rr": rr_series,
-            "outcome": outcome,
-        }
-    )
+    df = pd.DataFrame({
+        "hour_range": hour_ranges,
+        "rr": rr_series,
+        "outcome": outcome,
+    })
 
-    # Count duplicates by hour_range + rr + outcome (for bubble size)
     df["count"] = df.groupby(["hour_range", "rr", "outcome"])["rr"].transform("count")
-
-    # Drop duplicates so each point appears once with size = count
     df_unique = df.drop_duplicates(subset=["hour_range", "rr", "outcome"]).copy()
 
-    # Sort hour_range in chronological order
     sorted_hours = sorted(df_unique["hour_range"].unique(), key=lambda x: int(x[:2]))
     df_unique["hour_range"] = pd.Categorical(
         df_unique["hour_range"], categories=sorted_hours, ordered=True
     )
     df_unique = df_unique.sort_values("hour_range")
 
-    fig, ax = plt.subplots(figsize=figsize)
     scatter = sns.scatterplot(
         data=df_unique,
         x="hour_range",
@@ -745,31 +401,16 @@ def rr_vs_hour_range_bubble_scatter(
         hue="outcome",
         size="count",
         sizes=size_scale,
-        palette={"WIN": "#466963", "LOSS": "#C05478", "BE": "#888444"},
-        edgecolor="black",
+        palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": "#888444"},
+        edgecolor=PLOT_DEFAULTS["edgecolor"],
         alpha=0.8,
         ax=ax,
     )
 
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-
-    # Adjust legend for size (count)
+    style_axes(ax, title, xlabel, ylabel, rotation=45)
+    
+    # Clean up legend
     handles, labels = scatter.get_legend_handles_labels()
-    # Legend order is hue first, then size, so:
-    # We'll remove old size legend and add a new one manually if needed.
-
-    # Remove old size legend entries
     new_handles = []
     new_labels = []
     for h, l in zip(handles, labels):
@@ -777,111 +418,77 @@ def rr_vs_hour_range_bubble_scatter(
             new_handles.append(h)
             new_labels.append(l)
     ax.legend(new_handles, new_labels, title="Outcome", loc="upper right")
-
-    fig.tight_layout()
-    return fig
+    
+    return finalize_plot(fig)
 
 
 def rr_vs_sl_points(
     sl_points_series: pd.Series,
     rr_series: pd.Series,
     outcome: pd.Series,
-    *,
     title: str = "R/R vs SL Points",
-    # xlabel: str = "Entry Time Range",
-    # ylabel: str = "R/R",
-    figsize: tuple = (8, 6),
-    rotation: int = 45,
-    labelsize: int = 10,
-    size_scale: tuple = (50, 500),  # min and max bubble size
-):
-    plt.style.use("dark_background")
-
-    fig, ax = plt.subplots(figsize=figsize)
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+    size_scale: tuple = (50, 500),
+) -> Figure:
+    """Scatter plot of R/R vs stop-loss points."""
+    fig, ax = create_figure(figsize)
+    
     sns.scatterplot(
         x=sl_points_series,
         y=rr_series,
         hue=outcome,
         sizes=size_scale,
-        palette={"WIN": "#466963", "LOSS": "#C05478", "BE": "#888444"},
-        edgecolor="black",
+        palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": "#888444"},
+        edgecolor=PLOT_DEFAULTS["edgecolor"],
         alpha=0.8,
         ax=ax,
     )
 
-    ax.set_title(title)
-    # ax.set_xlabel(xlabel)
-    # ax.set_ylabel(ylabel)
-    ax.tick_params(axis="x", rotation=rotation, labelsize=labelsize, color="gray")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("gray")
-    ax.spines["bottom"].set_color("gray")
-    ax.title.set_color("gray")
-    ax.xaxis.label.set_color("gray")
-    ax.yaxis.label.set_color("gray")
-    ax.tick_params(colors="gray")
-
-    fig.tight_layout()
-    plt.savefig("plot.png")
-    return fig
+    style_axes(ax, title, rotation=45)
+    
+    return finalize_plot(fig)
 
 
 def create_stats_table(
     stats: dict,
-    *,
     title: str = "Trading Performance Summary",
     figsize: tuple[int, int] = (8, 6),
     labelsize: int = 12,
-):
-    """
-    Creates a modern, headerless table of trading statistics with a sleek design.
-
-    Args:
-        stats (Dict): Dictionary of statistic names and values.
-
-    Returns:
-        matplotlib.figure.Figure: The generated figure with the styled table.
-    """
-    plt.style.use("dark_background")
+) -> Figure:
+    """Create a modern stats table."""
+    fig, ax = create_figure(figsize)
+    
     bg_color = "#010101"
     text_color = "#e0e0e0"
     accent_color = "#797979"
-
-    # Create figure and axis
-    fig, ax = plt.subplots(figsize=figsize)
+    
     ax.axis("off")
     fig.patch.set_facecolor(bg_color)
 
-    # Prepare table data
     table_data = [[k, v] for k, v in stats.items()]
 
-    # Create table without headers
     table = ax.table(
         cellText=table_data,
         loc="center",
         cellLoc="left",
-        edges="open",  # Remove outer borders for modern look
+        edges="open",
     )
 
-    # Style the table
     table.auto_set_font_size(False)
     table.set_fontsize(labelsize)
-    table.scale(1.3, 1.6)  # Adjust table scaling for better spacing
+    table.scale(1.3, 1.6)
 
-    # Customize cell appearance
     for (i, j), cell in table.get_celld().items():
         cell.set_facecolor(bg_color)
         cell.set_text_props(color=text_color, weight="medium")
-        cell.set_height(0.08)  # Increase row height for better readability
-        cell.PAD = 0.1  # Add padding inside cells
-        # Alternate row shading for visual distinction
+        cell.set_height(0.08)
+        cell.PAD = 0.1
+        
         if i % 2 == 0:
             cell.set_facecolor("#2a2a2a")
-        # Left-align first column, right-align second column
+        
         cell.set_text_props(ha="left" if j == 0 else "right")
 
-    # Add a modern title
     plt.title(
         title,
         pad=30,
@@ -891,8 +498,7 @@ def create_stats_table(
         fontfamily="sans-serif",
     )
 
-    # Adjust layout and add subtle figure border
-    fig.tight_layout()
     fig.patch.set_edgecolor(accent_color)
     fig.patch.set_linewidth(1)
-    return fig
+    
+    return finalize_plot(fig)
