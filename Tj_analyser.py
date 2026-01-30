@@ -1,5 +1,3 @@
-"""Modern refactored main script with clean imports and structure."""
-
 import argparse
 from pathlib import Path
 from datetime import datetime
