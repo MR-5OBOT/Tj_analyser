@@ -21,15 +21,15 @@ def clean_numeric_series(series, return_nan=False) -> pd.Series:
             if x.endswith("%"):
                 try:
                     return float(x.rstrip("%")) / 100
-                except:
+                except (ValueError, TypeError):
                     return invalid
             try:
                 return float(x)
-            except:
+            except (ValueError, TypeError):
                 return invalid
         try:
             return float(x)
-        except:
+        except (ValueError, TypeError):
             return invalid
 
     return series.apply(_convert)
