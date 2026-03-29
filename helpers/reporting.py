@@ -1,22 +1,12 @@
-import argparse
 from datetime import datetime
+from pathlib import Path
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 from tqdm import tqdm
 
-from config import DATA_URL_OVERALL, DATA_URL_WEEKLY
-from helpers.calculations import (
-    stats_table_overall,
-    stats_table_weekly,
-)
-from helpers.journal_normalization import (
-    load_journal_config,
-    load_journal_data,
-    normalize_journal,
-    print_detected_mappings,
-)
+from helpers.calculations import stats_table_overall, stats_table_weekly
 from helpers.utils import has_non_empty, series_or_none
 from helpers.visualizations import (
     asset_performance_bar,
@@ -78,7 +68,6 @@ def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
     rr_series = series_or_none(df, "rr")
     stop_loss_points = series_or_none(df, "stop_loss_points")
     position_size = series_or_none(df, "position_size")
-
     date_series = df["trade_date"] if "trade_date" in df.columns else None
     day_series = df["trade_day"] if "trade_day" in df.columns else None
 
@@ -116,16 +105,14 @@ def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
 
     return plots
 
-def term_stats(stats: dict) -> None:
-    """Print statistics to terminal in formatted way."""
-    print("\n--- Trading Statistics ---")
-    for key, value in stats.items():
-        print(f"{key:<25}: {value}")
 
-
-def export_pdf_report(figure_list: list[tuple], report_type: str = "Report") -> str:
+def export_pdf_report(
+    figure_list: list[tuple],
+    report_type: str = "Report",
+    output_path: str | Path | None = None,
+) -> str:
     """Export all figures to a PDF file."""
-    pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
+    pdf_path = str(output_path) if output_path else f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
 
     with PdfPages(pdf_path) as pdf:
         for func, args in tqdm(figure_list, desc="Generating plots", unit="plot"):
@@ -137,10 +124,8 @@ def export_pdf_report(figure_list: list[tuple], report_type: str = "Report") -> 
     return pdf_path
 
 
-def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
-    """Process data and generate report."""
-    print("Processing and generating report...")
-
+def build_report(df: pd.DataFrame, report_type: str) -> tuple[list[tuple], dict]:
+    """Build plots and stats for a report type."""
     plot_funcs = {
         "weekly": generate_plots_weekly,
         "overall": generate_plots_overall,
@@ -153,60 +138,4 @@ def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
     if report_type not in plot_funcs:
         raise ValueError(f"Unknown report type: {report_type}")
 
-    steps = plot_funcs[report_type](df)
-    pdf_path = export_pdf_report(steps, report_type=report_type.capitalize())
-    print(f"\nReport successfully saved to: {pdf_path}")
-
-    stats = stats_funcs[report_type](df)
-    term_stats(stats)
-    return df
-
-
-def load_input_dataframe(report_type: str, input_path: str | None, config_path: str | None) -> pd.DataFrame:
-    """Load data from a local journal or fallback URL, then normalize it."""
-    journal_config = load_journal_config(config_path)
-
-    if input_path or journal_config.get("source", {}).get("path"):
-        raw_df = load_journal_data(input_path, journal_config)
-    else:
-        url_map = {
-            "weekly": DATA_URL_WEEKLY,
-            "overall": DATA_URL_OVERALL,
-        }
-        raw_df = pd.read_csv(url_map[report_type])
-
-    return normalize_journal(raw_df, journal_config)
-
-def main() -> None:
-    """Main entry point for the application."""
-    parser = argparse.ArgumentParser(
-        description="Generate trading performance reports from CSV or Excel journals."
-    )
-    parser.add_argument(
-        "--type",
-        type=str,
-        choices=["weekly", "overall"],
-        required=True,
-        help="Type of report to generate (weekly or overall)",
-    )
-    parser.add_argument(
-        "--input",
-        type=str,
-        default=None,
-        help="Path to a CSV or Excel journal file",
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=None,
-        help="Path to a journal mapping config TOML file",
-    )
-    args = parser.parse_args()
-
-    df = load_input_dataframe(args.type, args.input, args.config)
-    print_detected_mappings(df)
-    fetch_and_process(df, args.type)
-
-
-if __name__ == "__main__":
-    main()
+    return plot_funcs[report_type](df), stats_funcs[report_type](df)

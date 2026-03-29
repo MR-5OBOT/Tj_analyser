@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: tj-analyser-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: free
+    autoDeploy: true

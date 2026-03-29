@@ -1,6 +1,11 @@
+fastapi
+httpx
 pandas
+pydantic-settings
 numpy
 tqdm
 matplotlib
 seaborn
 openpyxl
+python-multipart
+uvicorn

@@ -1,66 +1,13 @@
-from pathlib import Path
-import tomllib
-
 import pandas as pd
 
 from config import (
     CANONICAL_COLUMNS,
     COLUMN_ALIASES,
-    DEFAULT_JOURNAL_CONFIG_PATH,
     MINIMUM_REQUIRED_COLUMNS,
     OUTCOME_VALUE_MAP,
 )
 from helpers.data_cleaning import clean_numeric_series, convert_to_datetime
 from helpers.utils import normalize_label
-
-
-def load_journal_config(config_path: str | None = None) -> dict:
-    """Load the user-facing journal mapping config."""
-    config_file = Path(config_path or DEFAULT_JOURNAL_CONFIG_PATH)
-    if not config_file.exists():
-        return {
-            "source": {"path": "", "sheet_name": 0},
-            "columns": {column: None for column in CANONICAL_COLUMNS},
-            "outcome_map": OUTCOME_VALUE_MAP.copy(),
-        }
-
-    with config_file.open("r", encoding="utf-8") as file:
-        loaded = tomllib.loads(file.read())
-
-    loaded.setdefault("source", {})
-    loaded.setdefault("columns", {})
-    loaded.setdefault("outcome_map", {})
-
-    normalized_columns = {column: None for column in CANONICAL_COLUMNS}
-    normalized_columns.update(loaded["columns"])
-    loaded["columns"] = normalized_columns
-    loaded["outcome_map"] = {
-        **OUTCOME_VALUE_MAP,
-        **{normalize_label(key): value for key, value in loaded["outcome_map"].items()},
-    }
-    return loaded
-
-
-def load_journal_data(input_path: str | None, journal_config: dict) -> pd.DataFrame:
-    """Load CSV or Excel journal data from CLI input or config."""
-    source_path = input_path or journal_config.get("source", {}).get("path")
-    if not source_path:
-        raise ValueError(
-            "No input journal file provided. Use --input or set source.path in journal_config.toml."
-        )
-
-    path = Path(source_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Journal file not found: {path}")
-
-    suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return pd.read_csv(path)
-    if suffix in {".xlsx", ".xls", ".xlsm"}:
-        sheet_name = journal_config.get("source", {}).get("sheet_name", 0)
-        return pd.read_excel(path, sheet_name=sheet_name)
-
-    raise ValueError(f"Unsupported file type: {suffix}")
 
 
 def normalize_journal(df: pd.DataFrame, journal_config: dict) -> pd.DataFrame:
@@ -208,18 +155,3 @@ def _normalize_time_value(value) -> str | None:
             return parsed.strftime("%H:%M:%S")
 
     return None
-
-
-def print_detected_mappings(df: pd.DataFrame) -> None:
-    """Print the detected source-to-canonical column mapping."""
-    detected_mappings = df.attrs.get("detected_mappings", {})
-
-    print("\n--- Detected Journal Mappings ---")
-    if not detected_mappings:
-        print("No columns were mapped.")
-        return
-
-    for canonical_name in CANONICAL_COLUMNS:
-        source_column = detected_mappings.get(canonical_name)
-        if source_column:
-            print(f"{source_column} -> {canonical_name}")
