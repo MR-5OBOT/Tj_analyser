@@ -34,10 +34,8 @@ def style_axes(
     # Set labels and title
     if title:
         ax.set_title(title, color=COLORS["text"])
-    if xlabel:
-        ax.set_xlabel(xlabel, color=COLORS["text"])
-    if ylabel:
-        ax.set_ylabel(ylabel, color=COLORS["text"])
+    ax.set_xlabel(xlabel, color=COLORS["text"])
+    ax.set_ylabel(ylabel, color=COLORS["text"])
     
     # Configure tick parameters
     ax.tick_params(

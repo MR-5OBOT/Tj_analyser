@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, time
 
+from config import DAY_ORDER
+from helpers.utils import has_non_empty, series_or_none, weekly_day_labels
+
 
 def winrate(
     outcomes: pd.Series, win_str: str = "WIN", loss_str: str = "LOSS"
@@ -202,31 +205,6 @@ def expectancy_from_rr(outcomes: pd.Series, rr_series: pd.Series) -> float:
     return round(expectancy, 2)
 
 
-def durations(df: pd.DataFrame, start: pd.Series, end: pd.Series):
-    """Get the min and the max trades durations"""
-    try:
-        # Specify the expected format to avoid warnings
-        start = pd.to_datetime(start, format="%H:%M:%S", errors="coerce")
-        end = pd.to_datetime(end, format="%H:%M:%S", errors="coerce")
-    except ValueError:
-        return 0.0, 0.0
-
-    start = pd.to_datetime(start, errors="coerce")
-    end = pd.to_datetime(end, errors="coerce")
-
-    # Check if all values are NaT (i.e., conversion failed for all rows)
-    if start.isna().all() or end.isna().all():
-        return 0.0, 0.0
-
-    df["minutes"] = (end - start).dt.total_seconds() / 60
-
-    # Filter only the rows where 'outcome' is "WIN" and 'minutes' > 0
-    only_wins = df[(df["minutes"] > 0) & (df["outcome"] == "WIN")]["minutes"]
-    min = only_wins.min() if not only_wins.empty else 0.0
-    max = only_wins.max() if not only_wins.empty else 0.0
-    return min, max
-
-
 def consecutive_wins_and_losses(
     outcome: pd.Series, loss_str: str, win_str: str
 ) -> tuple[int, int]:
@@ -282,77 +260,99 @@ def consecutive_wins_and_losses(
     return (max_loss_streak, max_win_streak)
 
 
-def time_ranges_stats(
-    outcome: pd.Series, entry_time: pd.Series, time_ranges: list
-) -> pd.DataFrame:
-    """
-    Calculate win rates and print trade totals for each time range.
 
-    Parameters:
-    - outcome: pd.Series, trade outcomes ("WIN", "LOSS", "BE")
-    - entry_time: pd.Series, trade entry times (e.g., "08:15:00")
-    - time_ranges: list of tuples, (label, start_time, end_time)
 
-    Returns:
-    - pd.DataFrame, columns: ["Time Range", "Win Rate (%)"]
-    """
-    # Validate inputs
-    if not (isinstance(outcome, pd.Series) and isinstance(entry_time, pd.Series)):
-        raise ValueError("outcome and entry_time must be pandas Series")
-    if len(outcome) != len(entry_time):
-        raise ValueError("outcome and entry_time must have the same length")
-    if not set(outcome).issubset({"WIN", "LOSS", "BE"}):
-        raise ValueError("outcome must contain only 'WIN', 'LOSS', or 'BE'")
-    if not all(isinstance(tr, tuple) and len(tr) == 3 for tr in time_ranges):
-        raise ValueError("time_ranges must be a list of (label, start, end) tuples")
+def daily_rr_summary(rr_series: pd.Series, day_series: pd.Series) -> pd.Series:
+    """Aggregate total R by weekday."""
+    valid_mask = rr_series.notna() & day_series.notna()
+    rr_series = rr_series[valid_mask]
+    day_series = day_series[valid_mask]
+    if rr_series.empty or day_series.empty:
+        return pd.Series(dtype=float)
 
-    # Prepare data
-    try:
-        df = pd.DataFrame(
-            {
-                "outcome": outcome,
-                "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
-            }
-        )
-    except ValueError as e:
-        raise ValueError("Invalid time format in entry_time") from e
+    return rr_series.groupby(day_series).sum().reindex(
+        [day for day in DAY_ORDER if day in day_series.values]
+    ).dropna()
 
-    # Parse time ranges
-    try:
-        parsed_ranges = [
-            (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
-            for label, start, end in time_ranges
-        ]
-    except ValueError as e:
-        raise ValueError("Invalid time format in time_ranges") from e
 
-    # Calculate win rates and totals
-    data = []
-    total_trades_all = 0
-    print("Trade Outcome Totals by Time Range:")
-    for label, start, end in parsed_ranges:
-        range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
-        total_trades = range_data.shape[0]
-        total_trades_all += total_trades
-        win_trades = range_data[range_data["outcome"] == "WIN"].shape[0]
-        loss_trades = range_data[range_data["outcome"] == "LOSS"].shape[0]
-        be_trades = range_data[range_data["outcome"] == "BE"].shape[0]
-        win_rate = (
-            (win_trades / (win_trades + loss_trades) * 100) if total_trades > 0 else 0
-        )
-        print(
-            f"{label}: {total_trades} trades (WIN: {win_trades}, LOSS: {loss_trades}, BE: {be_trades})"
-        )
-        data.append({"Time Range": label, "Win Rate (%)": round(win_rate, 2)})
+def max_drawdown_r(rr_series: pd.Series) -> float:
+    """Calculate max drawdown from cumulative R as a positive R value."""
+    rr_series = rr_series.dropna()
+    if rr_series.empty:
+        return 0.0
 
-    print()
-    print(f"Overall Total Trades: {total_trades_all}")
+    cumulative_rr = rr_series.cumsum()
+    drawdown = cumulative_rr - cumulative_rr.cummax()
+    return abs(float(drawdown.min()))
 
-    # Create DataFrame
-    result_df = pd.DataFrame(data)
-    result_df["Time Range"] = pd.Categorical(
-        result_df["Time Range"],
-        categories=[label for label, _, _ in parsed_ranges],
-        ordered=True,
-    )
-    return result_df.sort_values("Time Range")
+
+def stats_table_weekly(df: pd.DataFrame) -> dict:
+    """Calculate summary statistics for the weekly report."""
+    stats: dict[str, str | int] = {"Total Trades": len(df)}
+    rr_series = series_or_none(df, "rr")
+    outcomes = df["outcome"].astype(str).str.strip() if "outcome" in df.columns else None
+    day_series = weekly_day_labels(df)
+
+    if rr_series is not None and not rr_series.empty:
+        stats["Total R/R"] = f"{rr_series.sum():.2f}"
+
+        if day_series is not None:
+            daily_rr = daily_rr_summary(rr_series, day_series)
+            if not daily_rr.empty:
+                stats["Best Day"] = f"{daily_rr.idxmax().title()} ({daily_rr.max():.2f}R)"
+                stats["Worst Day"] = f"{daily_rr.idxmin().title()} ({daily_rr.min():.2f}R)"
+
+    if has_non_empty(df, "trade_date"):
+        valid_dates = pd.to_datetime(df["trade_date"], errors="coerce").dropna()
+        if not valid_dates.empty:
+            stats["Week Range"] = (
+                f"{valid_dates.min().strftime('%Y-%m-%d')} to "
+                f"{valid_dates.max().strftime('%Y-%m-%d')}"
+            )
+
+    if outcomes is not None and not outcomes.empty:
+        stats["Winning Trades"] = winning_trades(df, outcome_col="outcome", win_str="WIN")
+        stats["Losing Trades"] = losing_trades(df, outcome_col="outcome", loss_str="LOSS")
+        stats["Breakeven Trades"] = breakeven_trades(df, outcome_col="outcome", breakeven_str="BE")
+
+    return stats
+
+
+def stats_table_overall(df: pd.DataFrame) -> dict:
+    """Calculate summary statistics for the overall report."""
+    stats: dict[str, str | int] = {"Total Trades": len(df)}
+    rr_series = series_or_none(df, "rr")
+    position_size = series_or_none(df, "position_size")
+    outcomes = df["outcome"].astype(str).str.strip() if "outcome" in df.columns else None
+
+    if rr_series is not None and not rr_series.empty:
+        total_rr = rr_series.sum()
+        profit_factor_value = profit_factor(rr_series)
+        best_trade, _ = best_worst_trade(rr_series)
+        stats["Total R/R"] = f"{total_rr:.2f}"
+        stats["Profit Factor"] = f"{profit_factor_value:.2f}"
+        stats["Max Drawdown"] = f"{max_drawdown_r(rr_series):.2f}R"
+        stats["Best Trade"] = f"{best_trade:.2f}R"
+
+    if outcomes is not None and not outcomes.empty:
+        wr_no_be, _ = winrate(outcomes)
+        stats["WinRate"] = f"{wr_no_be * 100:.2f}%"
+        stats["Winning Trades"] = winning_trades(df, outcome_col="outcome", win_str="WIN")
+        stats["Losing Trades"] = losing_trades(df, outcome_col="outcome", loss_str="LOSS")
+        stats["Breakeven Trades"] = breakeven_trades(df, outcome_col="outcome", breakeven_str="BE")
+        cons_losses, cons_wins = consecutive_wins_and_losses(outcomes, "LOSS", "WIN")
+        stats["Consecutive Losses"] = cons_losses
+        stats["Consecutive Wins"] = cons_wins
+
+    if position_size is not None and rr_series is not None and not rr_series.empty:
+        avg_risk, avg_rr = avg_metrics(position_size, rr_series)
+        stats["Avg R/R"] = f"{avg_rr:.2f}"
+        stats["Avg Position Size"] = f"{avg_risk:.0f}"
+
+    if outcomes is not None and rr_series is not None and not rr_series.empty:
+        stats["Expectancy"] = f"{expectancy_from_rr(outcomes, rr_series):.2f}"
+
+    if has_non_empty(df, "asset"):
+        stats["Assets Traded"] = df["asset"].dropna().nunique()
+
+    return stats

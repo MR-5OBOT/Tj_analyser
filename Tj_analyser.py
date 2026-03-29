@@ -1,133 +1,120 @@
 import argparse
-from pathlib import Path
 from datetime import datetime
 
 import pandas as pd
-from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 from tqdm import tqdm
 
-# Explicit imports instead of wildcards
-from helpers.data_cleaning import clean_numeric_series
-from helpers.utils import df_check
+from config import DATA_URL_OVERALL, DATA_URL_WEEKLY
 from helpers.calculations import (
-    winrate,
-    winning_trades,
-    losing_trades,
-    breakeven_trades,
-    profit_factor,
-    avg_metrics,
-    best_worst_trade,
-    expectancy_from_rr,
-    consecutive_wins_and_losses,
+    stats_table_overall,
+    stats_table_weekly,
 )
+from helpers.journal_normalization import (
+    load_journal_config,
+    load_journal_data,
+    normalize_journal,
+    print_detected_mappings,
+)
+from helpers.utils import has_non_empty, series_or_none
 from helpers.visualizations import (
+    asset_performance_bar,
+    bar_outcomes_by_custom_ranges,
     create_stats_table,
-    rr_curve,
-    rr_curve_weekly,
+    distribution_plot,
+    drawdown_curve,
+    heatmap_rr,
+    outcome_by_day,
+    risk_vs_reward_scatter,
     rr_barplot,
     rr_barplot_months,
-    outcome_by_day,
-    heatmap_rr,
-    bar_outcomes_by_custom_ranges,
+    rr_curve,
     rr_vs_hour_range_bubble_scatter,
-    distribution_plot,
-    risk_vs_reward_scatter,
     rr_vs_sl_points,
 )
-from config import DATA_URL_WEEKLY, DATA_URL_OVERALL, REQUIRED_COLUMNS
+
+
+def has_columns(df: pd.DataFrame, *columns: str) -> bool:
+    return all(column in df.columns for column in columns)
+
+
+def add_plot(plots: list[tuple], enabled: bool, func, *args) -> None:
+    """Append a plot only when its data requirements are satisfied."""
+    if enabled:
+        plots.append((func, args))
 
 
 def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
     """Generate plot functions and arguments for weekly reports."""
-    rr_series = clean_numeric_series(df["R/R"])
-    days = df["day"]
-    
-    return [
-        (create_stats_table, (stats_table_weekly(df),)),
-        (rr_curve_weekly, (rr_series, days, None)),
-        (rr_barplot, (rr_series, days, None)),
-    ]
+    plots: list[tuple] = [(create_stats_table, (stats_table_weekly(df),))]
+
+    rr_series = series_or_none(df, "rr")
+    days = df["trade_day"] if "trade_day" in df.columns else None
+    dates = df["trade_date"] if "trade_date" in df.columns else None
+    add_plot(
+        plots,
+        rr_series is not None and (has_non_empty(df, "trade_day") or has_non_empty(df, "trade_date")),
+        rr_barplot,
+        rr_series,
+        days,
+        dates,
+        "Weekly R by Day",
+        "",
+        "Total R",
+    )
+
+    return plots
 
 
 def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
     """Generate plot functions and arguments for overall reports."""
-    rr_series = clean_numeric_series(df["R/R"])
-    sl_points = clean_numeric_series(df["sl_points"])
-    risk = clean_numeric_series(df["contracts"])
-    days = df["day"]
-    entry_time = df["entry_time"]
-    outcome = df["outcome"]
-    date = df["date"]
-    
+    plots: list[tuple] = [(create_stats_table, (stats_table_overall(df),))]
     time_ranges = [
         ("09:30–10:00", "09:30", "10:00"),
         ("10:00–11:00", "10:00", "11:00"),
     ]
 
-    return [
-        (create_stats_table, (stats_table_overall(df),)),
-        (rr_curve, (rr_series,)),
-        (outcome_by_day, (outcome, None, days, "WIN", "LOSS", "BE")),
-        (heatmap_rr, (rr_series, days, entry_time)),
-        (bar_outcomes_by_custom_ranges, (outcome, entry_time, time_ranges)),
-        (rr_vs_hour_range_bubble_scatter, (entry_time, rr_series, outcome)),
-        (distribution_plot, (df["sl_points"], "Distribution of Stop-Loss points")),
-        (risk_vs_reward_scatter, (risk, rr_series, outcome)),
-        (rr_vs_sl_points, (sl_points, rr_series, outcome)),
-        (rr_barplot_months, (rr_series, date)),
-    ]
+    rr_series = series_or_none(df, "rr")
+    stop_loss_points = series_or_none(df, "stop_loss_points")
+    position_size = series_or_none(df, "position_size")
 
+    date_series = df["trade_date"] if "trade_date" in df.columns else None
+    day_series = df["trade_day"] if "trade_day" in df.columns else None
 
-def stats_table_weekly(df: pd.DataFrame) -> dict:
-    """Calculate statistics for weekly report."""
-    rr_series = clean_numeric_series(df["R/R"])
-    outcome = df["outcome"].str.strip()
-    total_trades = len(df)
-    total_rr = rr_series.sum()
-    best_trade, _ = best_worst_trade(rr_series)
+    add_plot(plots, rr_series is not None and not rr_series.empty, rr_curve, rr_series)
+    add_plot(plots, rr_series is not None and not rr_series.empty, drawdown_curve, rr_series)
+    add_plot(plots, rr_series is not None and has_non_empty(df, "asset"), asset_performance_bar, df["asset"], rr_series)
+    add_plot(
+        plots,
+        has_non_empty(df, "outcome") and (has_non_empty(df, "trade_day") or has_non_empty(df, "trade_date")),
+        outcome_by_day,
+        df["outcome"],
+        date_series,
+        day_series,
+        "WIN",
+        "LOSS",
+        "BE",
+    )
+    add_plot(plots, rr_series is not None and has_columns(df, "trade_day", "entry_time"), heatmap_rr, rr_series, df["trade_day"], df["entry_time"])
+    add_plot(plots, has_columns(df, "outcome", "entry_time"), bar_outcomes_by_custom_ranges, df["outcome"], df["entry_time"], time_ranges)
+    add_plot(plots, rr_series is not None and has_columns(df, "entry_time", "outcome"), rr_vs_hour_range_bubble_scatter, df["entry_time"], rr_series, df["outcome"])
+    add_plot(plots, stop_loss_points is not None and not stop_loss_points.empty, distribution_plot, stop_loss_points, "Distribution of Stop-Loss points", "Stop-Loss Points")
+    add_plot(
+        plots,
+        position_size is not None and rr_series is not None and has_non_empty(df, "outcome"),
+        risk_vs_reward_scatter,
+        position_size,
+        rr_series,
+        df["outcome"],
+        "Position Size vs R/R",
+        "Position Size",
+        "R/R",
+    )
+    add_plot(plots, stop_loss_points is not None and rr_series is not None and has_non_empty(df, "outcome"), rr_vs_sl_points, stop_loss_points, rr_series, df["outcome"])
+    add_plot(plots, rr_series is not None and has_non_empty(df, "trade_date"), rr_barplot_months, rr_series, df["trade_date"])
 
-    return {
-        "Total Trades": total_trades,
-        "Total R/R": f"{total_rr:.2f}",
-        "Best Trade": f"{best_trade:.2f}R",
-    }
-
-
-def stats_table_overall(df: pd.DataFrame) -> dict:
-    """Calculate statistics for overall report."""
-    total_trades = len(df)
-    risk_series = clean_numeric_series(df["contracts"])
-    rr_series = clean_numeric_series(df["R/R"])
-    total_rr = rr_series.sum()
-    outcomes = df["outcome"].str.strip()
-    
-    profit_factor_value = profit_factor(rr_series)
-    wr_no_be, _ = winrate(outcomes)
-    wins_count = winning_trades(df)
-    losses_count = losing_trades(df)
-    be_count = breakeven_trades(df)
-    expectancy_rr = expectancy_from_rr(outcomes, rr_series)
-    avg_risk, avg_rr = avg_metrics(risk_series, rr_series)
-    best_trade, _ = best_worst_trade(rr_series)
-    cons_losses, cons_wins = consecutive_wins_and_losses(outcomes, "LOSS", "WIN")
-
-    return {
-        "Total Trades": total_trades,
-        "Total R/R": f"{total_rr:.2f}",
-        "WinRate": f"{wr_no_be * 100:.2f}%",
-        "Winning Trades": f"{wins_count}",
-        "Losing Trades": f"{losses_count}",
-        "Breakeven Trades": f"{be_count}",
-        "Consecutive Losses": f"{cons_losses}",
-        "Consecutive Wins": f"{cons_wins}",
-        "Avg R/R": f"{avg_rr:.2f}",
-        "Avg Risk (contracts)": f"{avg_risk:.0f}",
-        "Profit Factor": f"{profit_factor_value:.2f}",
-        "Expectancy": f"{expectancy_rr:.2f}",
-        "Best Trade": f"{best_trade:.2f}R",
-    }
-
+    return plots
 
 def term_stats(stats: dict) -> None:
     """Print statistics to terminal in formatted way."""
@@ -139,14 +126,14 @@ def term_stats(stats: dict) -> None:
 def export_pdf_report(figure_list: list[tuple], report_type: str = "Report") -> str:
     """Export all figures to a PDF file."""
     pdf_path = f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
-    
+
     with PdfPages(pdf_path) as pdf:
-        for func, args in figure_list:
+        for func, args in tqdm(figure_list, desc="Generating plots", unit="plot"):
             fig = func(*args)
             if fig is not None:
                 pdf.savefig(fig)
             plt.close()
-    
+
     return pdf_path
 
 
@@ -158,25 +145,42 @@ def fetch_and_process(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
         "weekly": generate_plots_weekly,
         "overall": generate_plots_overall,
     }
-    
+    stats_funcs = {
+        "weekly": stats_table_weekly,
+        "overall": stats_table_overall,
+    }
+
     if report_type not in plot_funcs:
         raise ValueError(f"Unknown report type: {report_type}")
 
     steps = plot_funcs[report_type](df)
-
-    for func, args in tqdm(steps, desc="Generating plots", unit="step"):
-        func(*args)
-
     pdf_path = export_pdf_report(steps, report_type=report_type.capitalize())
     print(f"\nReport successfully saved to: {pdf_path}")
-    
+
+    stats = stats_funcs[report_type](df)
+    term_stats(stats)
     return df
 
+
+def load_input_dataframe(report_type: str, input_path: str | None, config_path: str | None) -> pd.DataFrame:
+    """Load data from a local journal or fallback URL, then normalize it."""
+    journal_config = load_journal_config(config_path)
+
+    if input_path or journal_config.get("source", {}).get("path"):
+        raw_df = load_journal_data(input_path, journal_config)
+    else:
+        url_map = {
+            "weekly": DATA_URL_WEEKLY,
+            "overall": DATA_URL_OVERALL,
+        }
+        raw_df = pd.read_csv(url_map[report_type])
+
+    return normalize_journal(raw_df, journal_config)
 
 def main() -> None:
     """Main entry point for the application."""
     parser = argparse.ArgumentParser(
-        description="Generate trading performance reports from Google Sheets data."
+        description="Generate trading performance reports from CSV or Excel journals."
     )
     parser.add_argument(
         "--type",
@@ -185,34 +189,23 @@ def main() -> None:
         required=True,
         help="Type of report to generate (weekly or overall)",
     )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default=None,
+        help="Path to a CSV or Excel journal file",
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to a journal mapping config TOML file",
+    )
     args = parser.parse_args()
-    report_type = args.type
 
-    # URL mapping
-    url_map = {
-        "weekly": DATA_URL_WEEKLY,
-        "overall": DATA_URL_OVERALL,
-    }
-    
-    # Stats function mapping
-    stats_funcs = {
-        "weekly": stats_table_weekly,
-        "overall": stats_table_overall,
-    }
-
-    url = url_map[report_type]
-    stats_func = stats_funcs[report_type]
-
-    # Fetch and validate data
-    df = pd.read_csv(url)
-    df_check(df, REQUIRED_COLUMNS)
-
-    # Generate report
-    fetch_and_process(df, report_type)
-    
-    # Display stats in terminal
-    stats = stats_func(df)
-    term_stats(stats)
+    df = load_input_dataframe(args.type, args.input, args.config)
+    print_detected_mappings(df)
+    fetch_and_process(df, args.type)
 
 
 if __name__ == "__main__":

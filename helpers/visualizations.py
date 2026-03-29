@@ -8,6 +8,22 @@ from config import COLORS, PLOT_DEFAULTS, DAY_ORDER
 from helpers.plot_styling import create_figure, style_axes, finalize_plot
 
 
+def _parse_time_value(time_value):
+    if pd.isna(time_value) or str(time_value).strip() == "":
+        return None
+
+    parsed = pd.to_datetime(time_value, errors="coerce")
+    if pd.notna(parsed):
+        return parsed.time()
+
+    text = str(time_value).strip()
+    for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p"):
+        parsed = pd.to_datetime(text, format=fmt, errors="coerce")
+        if pd.notna(parsed):
+            return parsed.time()
+    return None
+
+
 def rr_curve(
     rr_series: pd.Series,
     title: str = "Performance by (R/R)",
@@ -17,6 +33,7 @@ def rr_curve(
 ) -> Figure:
     """Plot cumulative R/R performance."""
     fig, ax = create_figure(figsize)
+    rr_series = rr_series.dropna()
     
     x = range(len(rr_series))
     sns.lineplot(x=x, y=rr_series.cumsum(), label="R/R", color=COLORS["primary"], ax=ax)
@@ -24,6 +41,33 @@ def rr_curve(
     style_axes(ax, title, xlabel, ylabel)
     ax.legend()
     
+    return finalize_plot(fig)
+
+
+def drawdown_curve(
+    rr_series: pd.Series,
+    title: str = "Drawdown Curve",
+    xlabel: str = "Trades",
+    ylabel: str = "Drawdown (R)",
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Plot running drawdown from cumulative R performance."""
+    fig, ax = create_figure(figsize)
+    rr_series = rr_series.dropna()
+
+    cumulative_rr = rr_series.cumsum()
+    drawdown = cumulative_rr - cumulative_rr.cummax()
+
+    sns.lineplot(
+        x=range(len(drawdown)),
+        y=drawdown,
+        color=COLORS["loss"],
+        linewidth=PLOT_DEFAULTS["linewidth"],
+        ax=ax,
+    )
+
+    ax.axhline(0, color=COLORS["gray"], linestyle="-", linewidth=1)
+    style_axes(ax, title, xlabel, ylabel)
     return finalize_plot(fig)
 
 
@@ -38,6 +82,12 @@ def rr_curve_weekly(
 ) -> Figure:
     """Plot cumulative R/R by day of the week."""
     fig, ax = create_figure(figsize)
+    valid_mask = rr_series.notna()
+    rr_series = rr_series[valid_mask]
+    if days is not None:
+        days = days[valid_mask]
+    if dates is not None:
+        dates = dates[valid_mask]
 
     # Determine x values
     if days is not None:
@@ -81,6 +131,12 @@ def rr_barplot(
 ) -> Figure:
     """Create bar plot of total R/R by day."""
     fig, ax = create_figure(figsize)
+    valid_mask = rr_series.notna()
+    rr_series = rr_series[valid_mask]
+    if days is not None:
+        days = days[valid_mask]
+    if dates is not None:
+        dates = dates[valid_mask]
 
     # Get day labels
     if days is not None:
@@ -120,6 +176,8 @@ def rr_barplot_months(
 ) -> Figure:
     """Create bar plot of R/R by month."""
     # Validation
+    rr_series = rr_series.dropna()
+    dates = dates.loc[rr_series.index]
     if rr_series.empty or dates.empty:
         raise ValueError("Input series cannot be empty")
     if len(rr_series) != len(dates):
@@ -159,6 +217,37 @@ def rr_barplot_months(
     style_axes(ax, title, xlabel, ylabel, rotation=45)
     ax.legend()
     
+    return finalize_plot(fig)
+
+
+def asset_performance_bar(
+    asset_series: pd.Series,
+    rr_series: pd.Series,
+    title: str = "R/R by Asset",
+    xlabel: str = "",
+    ylabel: str = "Total R/R",
+    figsize: tuple = PLOT_DEFAULTS["figsize"],
+) -> Figure:
+    """Create bar plot of total R/R by traded asset."""
+    fig, ax = create_figure(figsize)
+
+    asset_df = pd.DataFrame({"asset": asset_series.astype(str).str.strip(), "rr": rr_series})
+    asset_df = asset_df.dropna(subset=["rr"])
+    asset_df = asset_df[asset_df["asset"].ne("")]
+    grouped = asset_df.groupby("asset", as_index=False)["rr"].sum().sort_values("rr", ascending=False)
+    grouped = grouped.head(12)
+
+    sns.barplot(
+        data=grouped,
+        x="asset",
+        y="rr",
+        color=COLORS["secondary"],
+        errorbar=None,
+        ax=ax,
+    )
+
+    ax.axhline(0, color=COLORS["gray"], linestyle="-", linewidth=1)
+    style_axes(ax, title, xlabel, ylabel, rotation=30)
     return finalize_plot(fig)
 
 
@@ -274,27 +363,20 @@ def heatmap_rr(
     figsize: tuple = PLOT_DEFAULTS["figsize"],
 ) -> Figure:
     """Create heatmap of R/R by day and entry hour."""
-    
-    def parse_time(time_str):
-        if pd.isna(time_str) or str(time_str).strip() == "":
-            return pd.to_datetime("00:00", format="%H:%M").time()
-        try:
-            return pd.to_datetime(time_str, format="%H:%M:%S").time()
-        except ValueError:
-            try:
-                return pd.to_datetime(str(time_str) + ":00", format="%H:%M:%S").time()
-            except ValueError:
-                return pd.to_datetime("00:00", format="%H:%M").time()
 
     fig, ax = create_figure(figsize)
 
     temp_df = pd.DataFrame({
         "rr": rr_series,
         "day": days.str.strip().str.lower(),
-        "hour": entry_time.apply(parse_time).apply(lambda x: x.hour if pd.notna(x) else None),
+        "hour": entry_time.apply(_parse_time_value).apply(lambda x: x.hour if pd.notna(x) else None),
     })
     
     temp_df = temp_df.dropna(subset=["rr", "hour", "day"])
+    if temp_df.empty:
+        style_axes(ax, title, xlabel, ylabel)
+        ax.text(0.5, 0.5, "No valid day/time data", ha="center", va="center", color=COLORS["text"])
+        return finalize_plot(fig)
     matrix = pd.pivot_table(temp_df, values="rr", index="hour", columns="day", aggfunc="sum")
     
     sns.heatmap(matrix, annot=True, cmap="RdBu_r", ax=ax)
@@ -319,8 +401,13 @@ def bar_outcomes_by_custom_ranges(
 
     df = pd.DataFrame({
         "outcome": outcome,
-        "entry_time": pd.to_datetime(entry_time, format="%H:%M:%S").dt.time,
+        "entry_time": entry_time.apply(_parse_time_value),
     })
+    df = df.dropna(subset=["entry_time"])
+    if df.empty:
+        style_axes(ax, title, xlabel, ylabel)
+        ax.text(0.5, 0.5, "No valid time data", ha="center", va="center", color=COLORS["text"])
+        return finalize_plot(fig)
 
     parsed_ranges = [
         (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
@@ -372,15 +459,19 @@ def rr_vs_hour_range_bubble_scatter(
     """Bubble scatter plot of R/R vs hour range."""
     fig, ax = create_figure(figsize)
 
-    hour_ints = entry_time.apply(
-        lambda t: pd.to_datetime(t).hour if isinstance(t, str) else t.hour
-    )
+    hour_ints = entry_time.apply(_parse_time_value).dropna().apply(lambda t: t.hour)
+    if hour_ints.empty:
+        style_axes(ax, title, xlabel, ylabel)
+        ax.text(0.5, 0.5, "No valid entry times", ha="center", va="center", color=COLORS["text"])
+        return finalize_plot(fig)
+    aligned_rr = rr_series.loc[hour_ints.index]
+    aligned_outcome = outcome.loc[hour_ints.index]
     hour_ranges = hour_ints.apply(lambda h: f"{h:02d}:00–{(h + 1) % 24:02d}:00")
 
     df = pd.DataFrame({
         "hour_range": hour_ranges,
-        "rr": rr_series,
-        "outcome": outcome,
+        "rr": aligned_rr,
+        "outcome": aligned_outcome,
     })
 
     df["count"] = df.groupby(["hour_range", "rr", "outcome"])["rr"].transform("count")

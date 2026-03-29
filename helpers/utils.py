@@ -1,32 +1,40 @@
 import numpy as np
 import pandas as pd
 
-
-def df_check(df: pd.DataFrame, required_columns: list[str]) -> None:
-    if df is None or df.empty:
-        raise ValueError("DataFrame is None or empty.")
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"Missing required columns: {', '.join(missing_columns)}")
+from helpers.data_cleaning import clean_numeric_series
 
 
-def fix_csv_format(input_file, output_file):
-    """
-    Converts a poorly formatted CSV (with spaces/tabs) into proper comma-separated format.
-    Keeps timestamps (date + time) together as one field.
-    """
-    with open(input_file, "r") as infile, open(output_file, "w") as outfile:
-        for line in infile:
-            parts = line.strip().split()
+def normalize_label(value: str) -> str:
+    """Normalize labels for resilient column matching."""
+    return (
+        str(value)
+        .strip()
+        .lower()
+        .replace("/", "_")
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
 
-            if not parts:
-                continue
 
-            if len(parts) >= 8:
-                timestamp = f"{parts[0]} {parts[1]}"
-                rest = parts[2:]
-                clean_line = ",".join([timestamp] + rest)
-            else:
-                clean_line = ",".join(parts)
+def has_non_empty(df: pd.DataFrame, column: str) -> bool:
+    """Check whether a DataFrame column exists and contains non-empty values."""
+    return column in df.columns and df[column].dropna().astype(str).str.strip().ne("").any()
 
-            outfile.write(clean_line + "\n")
+
+def series_or_none(df: pd.DataFrame, column: str) -> pd.Series | None:
+    """Return a cleaned numeric series when the column exists and has values."""
+    if column not in df.columns:
+        return None
+    series = clean_numeric_series(df[column], return_nan=True)
+    return None if not series.notna().any() else series
+
+
+def weekly_day_labels(df: pd.DataFrame) -> pd.Series | None:
+    """Return normalized weekday labels from trade_day or trade_date."""
+    if has_non_empty(df, "trade_day"):
+        return df["trade_day"].astype(str).str.strip().str.lower()
+    if has_non_empty(df, "trade_date"):
+        dates = pd.to_datetime(df["trade_date"], errors="coerce")
+        if dates.notna().any():
+            return dates.dt.day_name().str.strip().str.lower()
+    return None
