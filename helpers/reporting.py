@@ -138,4 +138,34 @@ def build_report(df: pd.DataFrame, report_type: str) -> tuple[list[tuple], dict]
     if report_type not in plot_funcs:
         raise ValueError(f"Unknown report type: {report_type}")
 
-    return plot_funcs[report_type](df), stats_funcs[report_type](df)
+    report_df = _prepare_report_dataframe(df, report_type)
+    return plot_funcs[report_type](report_df), stats_funcs[report_type](report_df)
+
+
+def _prepare_report_dataframe(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
+    if report_type != "weekly":
+        return df
+    return _latest_week_slice(df)
+
+
+def _latest_week_slice(df: pd.DataFrame) -> pd.DataFrame:
+    """Restrict weekly reports to the latest calendar week found in trade_date."""
+    if "trade_date" not in df.columns:
+        return df
+
+    trade_dates = pd.to_datetime(df["trade_date"], errors="coerce")
+    valid_mask = trade_dates.notna()
+    if not valid_mask.any():
+        return df
+
+    iso_calendar = trade_dates[valid_mask].dt.isocalendar()
+    latest_year = int(iso_calendar["year"].iloc[-1])
+    latest_week = int(iso_calendar["week"].iloc[-1])
+
+    latest_mask = valid_mask.copy()
+    latest_mask.loc[valid_mask] = (
+        (iso_calendar["year"] == latest_year) & (iso_calendar["week"] == latest_week)
+    ).to_numpy()
+
+    weekly_df = df.loc[latest_mask].copy()
+    return weekly_df if not weekly_df.empty else df
