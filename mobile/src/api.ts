@@ -27,7 +27,7 @@ export async function analyzeJournal(
     });
   } catch (error) {
     console.error("[api] analyze_request_network_error", { endpoint, error });
-    throw new ApiError("Network request failed. Check backend URL, Wi-Fi, and local HTTP access.", {
+    throw new ApiError("Network request failed. Check backend availability and HTTPS app configuration.", {
       debugMessage: error instanceof Error ? error.message : String(error),
     });
   }

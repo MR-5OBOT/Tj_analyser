@@ -75,23 +75,102 @@ Example weird journal headers that can be mapped:
 
 ## Android App Setup
 
+Install dependencies once:
+
 ```bash
 cd mobile
 npm install
-npm run android
 ```
 
-Inside the app you set:
+The mobile app no longer lets you type the backend URL in Settings.
+The backend URL now comes from build config.
 
-- backend URL
-- report type
-- optional sheet index
-- optional manual column mappings
-
-The production app now expects an HTTPS backend URL, for example:
+Example public mobile env file:
+[mobile/.env.example](/home/ys/repos/Tj_analyser/mobile/.env.example)
 
 ```text
-https://your-backend.koyeb.app
+EXPO_PUBLIC_API_BASE_URL=https://your-backend.koyeb.app
+```
+
+For local development you can create:
+[mobile/.env.local](/home/ys/repos/Tj_analyser/mobile/.env.local)
+
+```text
+EXPO_PUBLIC_API_BASE_URL=https://your-backend.koyeb.app
+```
+
+That file is ignored by git.
+
+## Mobile Build Steps
+
+### Build Once For Local Testing
+
+1. Edit or create [mobile/.env.local](/home/ys/repos/Tj_analyser/mobile/.env.local)
+2. Put your backend URL in it:
+
+```text
+EXPO_PUBLIC_API_BASE_URL=https://your-backend.koyeb.app
+```
+
+3. Build the APK:
+
+```bash
+cd mobile
+eas build -p android --profile preview
+```
+
+4. Install the APK on your phone
+
+### Build Again Later
+
+Each time you want a new APK:
+
+1. If backend URL changed, update:
+   [mobile/.env.local](/home/ys/repos/Tj_analyser/mobile/.env.local)
+2. Run:
+
+```bash
+cd mobile
+eas build -p android --profile preview
+```
+
+### Production / Play Build
+
+For Google Play you should build an AAB, not the preview APK:
+
+```bash
+cd mobile
+eas build -p android --profile production
+```
+
+That uses the `production` profile from [mobile/eas.json](/home/ys/repos/Tj_analyser/mobile/eas.json).
+
+### Production APK Without Google Play
+
+If you want a release-style APK for direct install on your phone without Google Play:
+
+```bash
+cd mobile
+eas build -p android --profile production-apk
+```
+
+That uses the `production-apk` profile from [mobile/eas.json](/home/ys/repos/Tj_analyser/mobile/eas.json).
+
+## EAS Environment Variables
+
+For production builds, the better setup is to use Expo/EAS environment variables instead of a local file.
+
+Set this in Expo/EAS:
+
+```text
+EXPO_PUBLIC_API_BASE_URL=https://your-backend.koyeb.app
+```
+
+Then build:
+
+```bash
+cd mobile
+eas build -p android --profile production
 ```
 
 ## Backend Setup
@@ -155,13 +234,13 @@ Official docs:
 7. Add environment variables from [.env.example](/home/ys/repos/Tj_analyser/.env.example).
 8. Deploy.
 9. Copy the generated HTTPS URL, which should look like `https://your-app-org-hash.koyeb.app`.
-10. Put that URL into the Android app backend field.
+10. Use that URL as the mobile build config value for `EXPO_PUBLIC_API_BASE_URL`.
 
 ## Production Deployment Checklist
 
 - backend deploys successfully and `GET /api/health` returns `{"status":"ok"}`
 - backend public URL is HTTPS, not HTTP
-- Android app backend field uses the HTTPS Koyeb URL
+- mobile build config uses the HTTPS Koyeb URL
 - file upload works from the APK
 - remote CSV/Excel URL import works
 - PDF download works from the APK
