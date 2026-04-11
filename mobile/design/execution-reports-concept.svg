@@ -1,0 +1,213 @@
+<svg width="1600" height="2400" viewBox="0 0 1600 2400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="188" y1="124" x2="1412" y2="2276" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08110F"/>
+      <stop offset="0.45" stop-color="#030404"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1220 320) rotate(140) scale(540 420)">
+      <stop offset="0" stop-color="#466963" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#466963" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 2050) rotate(12) scale(620 460)">
+      <stop offset="0" stop-color="#1C8A73" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#1C8A73" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accentGradient" x1="463" y1="150" x2="1115" y2="2250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5F8C84"/>
+      <stop offset="1" stop-color="#2C413D"/>
+    </linearGradient>
+    <linearGradient id="cardAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#79B0A6"/>
+      <stop offset="1" stop-color="#3A5853"/>
+    </linearGradient>
+    <pattern id="gridPattern" width="56" height="56" patternUnits="userSpaceOnUse">
+      <path d="M56 0H0V56" stroke="#101615" stroke-width="1"/>
+    </pattern>
+    <filter id="phoneShadow" x="370" y="80" width="860" height="2260" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="26" stdDeviation="34" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+    <filter id="paperShadow" x="784" y="1710" width="338" height="412" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="screenClip">
+      <rect x="455" y="150" width="690" height="2100" rx="54"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1600" height="2400" fill="url(#bgGradient)"/>
+  <rect width="1600" height="2400" fill="url(#gridPattern)" opacity="0.45"/>
+  <rect width="1600" height="2400" fill="url(#glowTop)"/>
+  <rect width="1600" height="2400" fill="url(#glowBottom)"/>
+
+  <text x="120" y="170" fill="#80948F" font-family="Arial, Helvetica, sans-serif" font-size="24" letter-spacing="6">TJ ANALYSER / CONCEPT PREVIEW</text>
+  <text x="120" y="244" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700">Execution Reports</text>
+  <text x="120" y="302" fill="#AAB4B1" font-family="Arial, Helvetica, sans-serif" font-size="28">
+    New mobile page for logging trades, sizing/risk, and exporting a polished daily PDF.
+  </text>
+
+  <g opacity="0.96">
+    <rect x="120" y="410" width="240" height="150" rx="26" fill="#050707" stroke="#19201F" stroke-width="2"/>
+    <text x="150" y="464" fill="#7F918C" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="3">INPUT BLOCK</text>
+    <text x="150" y="514" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Account</text>
+    <text x="150" y="548" fill="#C4CBCA" font-family="Arial, Helvetica, sans-serif" font-size="22">cycle, type, size, risk</text>
+  </g>
+
+  <g opacity="0.96">
+    <rect x="1240" y="580" width="240" height="150" rx="26" fill="#050707" stroke="#19201F" stroke-width="2"/>
+    <text x="1270" y="634" fill="#7F918C" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="3">TRADE LOG</text>
+    <text x="1270" y="684" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Rows per fill</text>
+    <text x="1270" y="718" fill="#C4CBCA" font-family="Arial, Helvetica, sans-serif" font-size="22">entry, exit, result, notes</text>
+  </g>
+
+  <g opacity="0.96">
+    <rect x="1220" y="1860" width="260" height="170" rx="26" fill="#050707" stroke="#19201F" stroke-width="2"/>
+    <text x="1250" y="1914" fill="#7F918C" font-family="Arial, Helvetica, sans-serif" font-size="20" letter-spacing="3">EXPORT</text>
+    <text x="1250" y="1964" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Trader-grade PDF</text>
+    <text x="1250" y="2000" fill="#C4CBCA" font-family="Arial, Helvetica, sans-serif" font-size="22">daily summary + executions</text>
+  </g>
+
+  <g filter="url(#phoneShadow)">
+    <rect x="420" y="100" width="760" height="2200" rx="82" fill="#060606" stroke="#1A1A1A" stroke-width="4"/>
+  </g>
+  <rect x="642" y="122" width="316" height="28" rx="14" fill="#111111"/>
+  <rect x="455" y="150" width="690" height="2100" rx="54" fill="#000000"/>
+
+  <g clip-path="url(#screenClip)">
+    <rect x="455" y="150" width="690" height="2100" fill="#000000"/>
+    <rect x="455" y="150" width="690" height="2100" fill="url(#gridPattern)" opacity="0.18"/>
+    <ellipse cx="1026" cy="318" rx="220" ry="160" fill="#466963" opacity="0.16"/>
+    <ellipse cx="612" cy="2100" rx="250" ry="160" fill="#2D6B5E" opacity="0.14"/>
+
+    <text x="514" y="244" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="18" letter-spacing="4">ANDROID + CLOUD</text>
+    <text x="514" y="304" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700">Execution Reports</text>
+    <text x="514" y="350" fill="#B7B7B7" font-family="Arial, Helvetica, sans-serif" font-size="22">
+      Log fills fast, lock risk context, then export the daily PDF.
+    </text>
+
+    <rect x="944" y="230" width="146" height="48" rx="18" fill="#111111" stroke="#1F1F1F" stroke-width="2"/>
+    <text x="987" y="261" fill="#F3F3F3" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">Back</text>
+
+    <rect x="514" y="404" width="170" height="100" rx="22" fill="#050505" stroke="#161616" stroke-width="2"/>
+    <rect x="704" y="404" width="170" height="100" rx="22" fill="#050505" stroke="#161616" stroke-width="2"/>
+    <rect x="894" y="404" width="170" height="100" rx="22" fill="#050505" stroke="#161616" stroke-width="2"/>
+
+    <rect x="514" y="404" width="8" height="100" rx="4" fill="url(#cardAccent)"/>
+    <rect x="704" y="404" width="8" height="100" rx="4" fill="#3A4E4A"/>
+    <rect x="894" y="404" width="8" height="100" rx="4" fill="#25433E"/>
+
+    <text x="540" y="438" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">NET PNL</text>
+    <text x="540" y="484" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">+$1,240</text>
+
+    <text x="730" y="438" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">TRADES</text>
+    <text x="730" y="484" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">07</text>
+
+    <text x="920" y="438" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">WIN RATE</text>
+    <text x="920" y="484" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">62%</text>
+
+    <rect x="514" y="540" width="550" height="356" rx="28" fill="#050505" stroke="#141414" stroke-width="2"/>
+    <text x="544" y="590" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Session Setup</text>
+    <text x="544" y="624" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="19">
+      Capture the report header before entering each execution.
+    </text>
+
+    <rect x="544" y="660" width="236" height="72" rx="18" fill="#0B0B0B" stroke="#1F1F1F" stroke-width="2"/>
+    <rect x="800" y="660" width="236" height="72" rx="18" fill="#0B0B0B" stroke="#1F1F1F" stroke-width="2"/>
+    <rect x="544" y="748" width="236" height="72" rx="18" fill="#0B0B0B" stroke="#1F1F1F" stroke-width="2"/>
+    <rect x="800" y="748" width="236" height="72" rx="18" fill="#0B0B0B" stroke="#1F1F1F" stroke-width="2"/>
+
+    <text x="568" y="688" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="15">ACCOUNT</text>
+    <text x="568" y="715" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">FTMO 100K</text>
+
+    <text x="824" y="688" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="15">CYCLE</text>
+    <text x="824" y="715" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">Cycle 04</text>
+
+    <text x="568" y="776" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="15">ACCOUNT TYPE</text>
+    <text x="568" y="803" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">Prop Challenge</text>
+
+    <text x="824" y="776" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="15">RISK PLAN</text>
+    <text x="824" y="803" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">0.50% / trade</text>
+
+    <rect x="544" y="836" width="492" height="40" rx="14" fill="#0C1211" stroke="#22312E" stroke-width="2"/>
+    <text x="568" y="862" fill="#D1D9D7" font-family="Arial, Helvetica, sans-serif" font-size="18">
+      Session: London / 8:30 AM / Balance $102,640 / Daily cap 2.0%
+    </text>
+
+    <rect x="514" y="930" width="550" height="650" rx="28" fill="#050505" stroke="#141414" stroke-width="2"/>
+    <text x="544" y="980" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Trade Tickets</text>
+    <text x="544" y="1014" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="19">
+      Each row stores size, risk, prices, and outcome.
+    </text>
+    <rect x="918" y="950" width="118" height="42" rx="16" fill="#466963"/>
+    <text x="948" y="977" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700">+ Add</text>
+
+    <rect x="544" y="1048" width="492" height="146" rx="24" fill="#090909" stroke="#1B1B1B" stroke-width="2"/>
+    <rect x="566" y="1070" width="74" height="30" rx="15" fill="#10211E"/>
+    <text x="585" y="1090" fill="#8FE2C9" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">LONG</text>
+    <text x="664" y="1092" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">BTCUSDT</text>
+    <text x="566" y="1138" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Size 0.75</text>
+    <text x="684" y="1138" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Risk $320</text>
+    <text x="820" y="1138" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Setup Breakout</text>
+    <text x="566" y="1174" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Entry 69,820</text>
+    <text x="760" y="1174" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Exit 70,410</text>
+    <text x="930" y="1174" fill="#95E7D0" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">+1.8R</text>
+
+    <rect x="544" y="1212" width="492" height="146" rx="24" fill="#090909" stroke="#1B1B1B" stroke-width="2"/>
+    <rect x="566" y="1234" width="78" height="30" rx="15" fill="#211616"/>
+    <text x="584" y="1254" fill="#F0A4A4" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">SHORT</text>
+    <text x="670" y="1256" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">NAS100</text>
+    <text x="566" y="1302" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Size 2.00</text>
+    <text x="684" y="1302" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Risk $250</text>
+    <text x="820" y="1302" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Setup VWAP fade</text>
+    <text x="566" y="1338" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Entry 18,422</text>
+    <text x="760" y="1338" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Exit 18,466</text>
+    <text x="924" y="1338" fill="#F1B0B0" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">-0.6R</text>
+
+    <rect x="544" y="1376" width="492" height="146" rx="24" fill="#090909" stroke="#1B1B1B" stroke-width="2"/>
+    <rect x="566" y="1398" width="74" height="30" rx="15" fill="#10211E"/>
+    <text x="585" y="1418" fill="#8FE2C9" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">LONG</text>
+    <text x="664" y="1420" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">XAUUSD</text>
+    <text x="566" y="1466" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Size 1.20</text>
+    <text x="684" y="1466" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Risk $280</text>
+    <text x="820" y="1466" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="16">Setup NY reversal</text>
+    <text x="566" y="1502" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Entry 2,331.4</text>
+    <text x="760" y="1502" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="20">Exit 2,346.0</text>
+    <text x="924" y="1502" fill="#95E7D0" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700">+1.4R</text>
+
+    <rect x="514" y="1616" width="550" height="480" rx="28" fill="#050505" stroke="#141414" stroke-width="2"/>
+    <text x="544" y="1666" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">PDF Export</text>
+    <text x="544" y="1700" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="18">
+      Export a clean report with summary, executions, and notes.
+    </text>
+
+    <rect x="544" y="1740" width="186" height="44" rx="18" fill="#10211E" stroke="#29433F" stroke-width="2"/>
+    <text x="578" y="1768" fill="#8FE2C9" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">Ready for export</text>
+
+    <text x="544" y="1828" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="21">Date: 10 Apr 2026</text>
+    <text x="544" y="1864" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="21">Account: FTMO / Cycle 04</text>
+    <text x="544" y="1900" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="21">Result: 7 trades / +2.6R</text>
+    <text x="544" y="1936" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="21">Sections: overview / executions / notes</text>
+
+    <rect x="544" y="1982" width="214" height="58" rx="20" fill="#466963"/>
+    <text x="590" y="2018" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">Generate PDF</text>
+
+    <rect x="776" y="1982" width="158" height="58" rx="20" fill="#111111" stroke="#1F1F1F" stroke-width="2"/>
+    <text x="832" y="2018" fill="#F2F2F2" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">Share</text>
+
+    <g filter="url(#paperShadow)">
+      <rect x="816" y="1748" width="220" height="300" rx="18" fill="#F6F7F7"/>
+    </g>
+    <rect x="838" y="1774" width="176" height="20" rx="10" fill="#D7DDDB"/>
+    <rect x="838" y="1812" width="128" height="16" rx="8" fill="#B5C3C0"/>
+    <rect x="838" y="1852" width="176" height="86" rx="18" fill="#E8F0EE"/>
+    <path d="M858 1910L892 1884L928 1894L962 1862L994 1876" stroke="url(#accentGradient)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="838" y="1960" width="82" height="12" rx="6" fill="#AAB6B3"/>
+    <rect x="838" y="1986" width="118" height="12" rx="6" fill="#CBD4D2"/>
+    <rect x="838" y="2012" width="146" height="12" rx="6" fill="#CBD4D2"/>
+
+    <rect x="514" y="2128" width="550" height="86" rx="26" fill="#050505" stroke="#141414" stroke-width="2"/>
+    <text x="544" y="2178" fill="#8D8D8D" font-family="Arial, Helvetica, sans-serif" font-size="17">
+      New page for fast trade capture and clean execution-report export.
+    </text>
+  </g>
+</svg>

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { ApiError, analyzeJournal } from "./api";
+import { ExecutionReportScreen } from "./components/ExecutionReportScreen";
 import { MappingEditor } from "./components/MappingEditor";
 import { StatList } from "./components/StatList";
 import { INITIAL_MAPPINGS, CanonicalColumn } from "./constants";
@@ -25,7 +26,7 @@ const BACKEND_URL =
   "https://your-backend.koyeb.app";
 
 export default function AppRoot() {
-  const [screen, setScreen] = useState<"main" | "settings">("main");
+  const [screen, setScreen] = useState<"main" | "settings" | "executionReports">("main");
   const [reportType, setReportType] = useState<"overall" | "weekly">("overall");
   const [csvLink, setCsvLink] = useState("");
   const [sheetName, setSheetName] = useState("0");
@@ -180,6 +181,9 @@ export default function AppRoot() {
                   </Text>
                 </View>
                 <View style={styles.headerActions}>
+                  <Pressable style={styles.ghostButton} onPress={() => setScreen("executionReports")}>
+                    <Text style={styles.ghostButtonText}>Execution</Text>
+                  </Pressable>
                   <Pressable style={styles.ghostButton} onPress={() => setScreen("settings")}>
                     <Text style={styles.ghostButtonText}>Settings</Text>
                   </Pressable>
@@ -238,7 +242,7 @@ export default function AppRoot() {
               </>
             ) : null}
           </>
-        ) : (
+        ) : screen === "settings" ? (
           <>
             <View style={styles.hero}>
               <View style={styles.screenHeader}>
@@ -305,6 +309,8 @@ export default function AppRoot() {
               </View>
             ) : null}
           </>
+        ) : (
+          <ExecutionReportScreen backendUrl={BACKEND_URL} onBack={() => setScreen("main")} />
         )}
       </ScrollView>
     </SafeAreaView>

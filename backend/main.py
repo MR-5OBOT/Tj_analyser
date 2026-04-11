@@ -4,12 +4,18 @@ from fastapi.responses import FileResponse
 from pydantic import ValidationError
 
 from backend.logging_utils import get_logger
-from backend.models import AnalyzeRequestForm, AnalyzeResponse
+from backend.models import (
+    AnalyzeRequestForm,
+    AnalyzeResponse,
+    ExecutionReportRequest,
+    ExecutionReportResponse,
+)
 from backend.settings import settings
 from backend.files import cleanup_expired_reports, report_pdf_path
 from config import CANONICAL_COLUMNS
 from backend.service import (
     analyze_journal,
+    generate_execution_report,
     load_dataframe_from_request,
     parse_optional_json,
 )
@@ -79,6 +85,30 @@ async def analyze(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("analyze_unhandled_failure error=%s", exc)
+        raise HTTPException(status_code=500, detail="Unexpected server error. Check backend logs.") from exc
+
+
+@app.post("/api/execution-reports")
+async def execution_report(payload: ExecutionReportRequest) -> ExecutionReportResponse:
+    try:
+        logger.info(
+            "execution_report_request account=%s trade_count=%s report_date=%s",
+            payload.account_name,
+            len(payload.trades),
+            payload.report_date,
+        )
+        response = generate_execution_report(payload)
+        logger.info(
+            "execution_report_success report_id=%s rows=%s",
+            response.report_id,
+            response.rows_processed,
+        )
+        return response
+    except ValueError as exc:
+        logger.warning("execution_report_user_error detail=%s", exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("execution_report_unhandled_failure error=%s", exc)
         raise HTTPException(status_code=500, detail="Unexpected server error. Check backend logs.") from exc
 
 

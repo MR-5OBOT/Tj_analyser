@@ -1,4 +1,4 @@
-import { AnalysisResponse } from "./types";
+import { AnalysisResponse, ExecutionReportPayload, ExecutionReportResponse } from "./types";
 
 export class ApiError extends Error {
   status?: number;
@@ -32,6 +32,44 @@ export async function analyzeJournal(
     });
   }
 
+  return parseJsonResponse<AnalysisResponse>(response, endpoint, "Analysis failed.");
+}
+
+export async function generateExecutionReport(
+  backendUrl: string,
+  payload: ExecutionReportPayload,
+): Promise<ExecutionReportResponse> {
+  const endpoint = `${backendUrl.replace(/\/$/, "")}/api/execution-reports`;
+  console.info("[api] execution_report_request_started", {
+    endpoint,
+    tradeCount: payload.trades.length,
+    reportDate: payload.report_date,
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("[api] execution_report_network_error", { endpoint, error });
+    throw new ApiError("Network request failed. Check backend availability and HTTPS app configuration.", {
+      debugMessage: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  return parseJsonResponse<ExecutionReportResponse>(response, endpoint, "Execution report generation failed.");
+}
+
+async function parseJsonResponse<T>(
+  response: Response,
+  endpoint: string,
+  fallbackDetail: string,
+): Promise<T> {
   const responseText = await response.text();
   let payload: unknown = null;
 
@@ -56,8 +94,8 @@ export async function analyzeJournal(
     const detail =
       payload && typeof payload === "object" && "detail" in payload && typeof payload.detail === "string"
         ? payload.detail
-        : "Analysis failed.";
-    console.error("[api] analyze_request_failed", {
+        : fallbackDetail;
+    console.error("[api] request_failed", {
       endpoint,
       status: response.status,
       detail,
@@ -69,6 +107,6 @@ export async function analyzeJournal(
     });
   }
 
-  console.info("[api] analyze_request_finished", { endpoint, status: response.status });
-  return payload as AnalysisResponse;
+  console.info("[api] request_finished", { endpoint, status: response.status });
+  return payload as T;
 }

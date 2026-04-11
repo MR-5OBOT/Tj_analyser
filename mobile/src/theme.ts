@@ -42,8 +42,9 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
   headerActions: {
-    width: 110,
-    alignItems: "flex-end",
+    width: 132,
+    alignItems: "stretch",
+    gap: 10,
   },
   titleBlock: {
     flex: 1,
