@@ -19,6 +19,7 @@ class AnalyzeResponse(BaseModel):
     detected_mappings: dict[str, str]
     rows_processed: int
     download_url: str
+    image_url: str | None = None
 
 
 class ExecutionTrade(BaseModel):
@@ -58,3 +59,4 @@ class ExecutionReportResponse(BaseModel):
     stats: dict[str, Any]
     rows_processed: int
     download_url: str
+    image_url: str | None = None

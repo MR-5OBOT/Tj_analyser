@@ -6,6 +6,7 @@ export type GeneratedReportResponse = {
   stats: Record<string, ReportStatValue>;
   rows_processed: number;
   download_url: string;
+  image_url?: string | null;
 };
 
 export type AnalysisResponse = GeneratedReportResponse & {

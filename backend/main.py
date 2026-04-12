@@ -11,7 +11,7 @@ from backend.models import (
     ExecutionReportResponse,
 )
 from backend.settings import settings
-from backend.files import cleanup_expired_reports, report_pdf_path
+from backend.files import cleanup_expired_reports, report_image_path, report_pdf_path
 from config import CANONICAL_COLUMNS
 from backend.service import (
     analyze_journal,
@@ -121,3 +121,14 @@ def download_report(report_id: str) -> FileResponse:
         raise HTTPException(status_code=404, detail="Report not found.")
     logger.info("report_download report_id=%s", report_id)
     return FileResponse(report_path, media_type="application/pdf", filename=report_path.name)
+
+
+@app.get("/api/reports/{report_id}/image")
+def download_report_image(report_id: str) -> FileResponse:
+    cleanup_expired_reports()
+    report_path = report_image_path(report_id)
+    if not report_path.exists():
+        logger.warning("report_image_not_found report_id=%s", report_id)
+        raise HTTPException(status_code=404, detail="Report image not found.")
+    logger.info("report_image_download report_id=%s", report_id)
+    return FileResponse(report_path, media_type="image/png", filename=report_path.name)

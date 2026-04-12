@@ -10,7 +10,7 @@ import pandas as pd
 from fastapi import UploadFile
 from pandas.errors import EmptyDataError, ParserError
 
-from backend.files import cleanup_expired_reports, report_pdf_path
+from backend.files import cleanup_expired_reports, report_image_path, report_pdf_path
 from backend.logging_utils import get_logger
 from backend.models import (
     AnalyzeRequestForm,
@@ -22,6 +22,7 @@ from backend.settings import settings
 from config import CANONICAL_COLUMNS, OUTCOME_VALUE_MAP
 from helpers.execution_reporting import (
     build_execution_report_summary,
+    export_execution_report_image,
     export_execution_report_pdf,
     prepare_execution_trades,
 )
@@ -149,10 +150,17 @@ def generate_execution_report(form: ExecutionReportRequest) -> ExecutionReportRe
 
     summary = build_execution_report_summary(form, trades)
     report_id = uuid4().hex
-    output_path = report_pdf_path(report_id)
-    logger.info("execution_pdf_generation_started report_id=%s output_path=%s", report_id, output_path)
-    export_execution_report_pdf(form, trades, summary, output_path=output_path)
-    logger.info("execution_pdf_generation_finished report_id=%s", report_id)
+    pdf_output_path = report_pdf_path(report_id)
+    image_output_path = report_image_path(report_id)
+    logger.info(
+        "execution_assets_generation_started report_id=%s pdf_output_path=%s image_output_path=%s",
+        report_id,
+        pdf_output_path,
+        image_output_path,
+    )
+    export_execution_report_pdf(form, trades, summary, output_path=pdf_output_path)
+    export_execution_report_image(form, trades, summary, output_path=image_output_path)
+    logger.info("execution_assets_generation_finished report_id=%s", report_id)
 
     return ExecutionReportResponse(
         report_id=report_id,
@@ -160,6 +168,7 @@ def generate_execution_report(form: ExecutionReportRequest) -> ExecutionReportRe
         rows_processed=len(trades),
         stats=_to_json_safe(summary["stats"]),
         download_url=f"/api/reports/{report_id}",
+        image_url=f"/api/reports/{report_id}/image",
     )
 
 
