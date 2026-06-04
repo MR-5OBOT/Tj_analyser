@@ -9,7 +9,7 @@ type Props = {
 
 export function StatList({ stats }: Props) {
   return (
-    <View>
+    <View style={styles.statList}>
       {Object.entries(stats).map(([label, value]) => (
         <View key={label} style={styles.statRow}>
           <Text style={styles.statLabel}>{label}</Text>

@@ -2,7 +2,7 @@ import React from "react";
 import { Switch, Text, TextInput, View } from "react-native";
 
 import { CANONICAL_COLUMNS, CanonicalColumn } from "../constants";
-import { styles } from "../theme";
+import { palette, styles } from "../theme";
 
 type Props = {
   value: Record<CanonicalColumn, string>;
@@ -15,14 +15,17 @@ export function MappingEditor({ value, open, onToggle, onChange }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.toggleRow}>
-        <Text style={styles.sectionTitle}>Column Mapping</Text>
-        <Switch value={open} onValueChange={onToggle} trackColor={{ true: "#466963" }} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionKicker}>Mapping</Text>
+          <Text style={styles.sectionTitle}>Manual columns</Text>
+        </View>
+        <Switch value={open} onValueChange={onToggle} trackColor={{ true: palette.accent }} />
       </View>
       <Text style={styles.helperText}>
-        Leave fields empty to let the backend auto-detect names like `date`, `asset`, `risk`, `reward`, and `win_loss`.
+        Use this only if auto-detect misses your headers.
       </Text>
 
-      {open && (
+      {open ? (
         <View style={styles.mappingGrid}>
           {CANONICAL_COLUMNS.map((column) => (
             <View key={column} style={styles.mappingRow}>
@@ -32,12 +35,12 @@ export function MappingEditor({ value, open, onToggle, onChange }: Props) {
                 value={value[column]}
                 onChangeText={(text) => onChange(column, text)}
                 placeholder="Exact journal column name"
-                placeholderTextColor="#7e8783"
+                placeholderTextColor="#5E5E5E"
               />
             </View>
           ))}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

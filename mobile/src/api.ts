@@ -1,4 +1,4 @@
-import { AnalysisResponse, ExecutionReportPayload, ExecutionReportResponse } from "./types";
+import { AnalysisResponse } from "./types";
 
 export class ApiError extends Error {
   status?: number;
@@ -33,36 +33,6 @@ export async function analyzeJournal(
   }
 
   return parseJsonResponse<AnalysisResponse>(response, endpoint, "Analysis failed.");
-}
-
-export async function generateExecutionReport(
-  backendUrl: string,
-  payload: ExecutionReportPayload,
-): Promise<ExecutionReportResponse> {
-  const endpoint = `${backendUrl.replace(/\/$/, "")}/api/execution-reports`;
-  console.info("[api] execution_report_request_started", {
-    endpoint,
-    tradeCount: payload.trades.length,
-    reportDate: payload.report_date,
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    console.error("[api] execution_report_network_error", { endpoint, error });
-    throw new ApiError("Network request failed. Check backend availability and HTTPS app configuration.", {
-      debugMessage: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  return parseJsonResponse<ExecutionReportResponse>(response, endpoint, "Execution report generation failed.");
 }
 
 async function parseJsonResponse<T>(

@@ -7,15 +7,12 @@ from backend.logging_utils import get_logger
 from backend.models import (
     AnalyzeRequestForm,
     AnalyzeResponse,
-    ExecutionReportRequest,
-    ExecutionReportResponse,
 )
 from backend.settings import settings
-from backend.files import cleanup_expired_reports, report_image_path, report_pdf_path
+from backend.files import cleanup_expired_reports, report_pdf_path
 from config import CANONICAL_COLUMNS
 from backend.service import (
     analyze_journal,
-    generate_execution_report,
     load_dataframe_from_request,
     parse_optional_json,
 )
@@ -88,30 +85,6 @@ async def analyze(
         raise HTTPException(status_code=500, detail="Unexpected server error. Check backend logs.") from exc
 
 
-@app.post("/api/execution-reports")
-async def execution_report(payload: ExecutionReportRequest) -> ExecutionReportResponse:
-    try:
-        logger.info(
-            "execution_report_request account=%s trade_count=%s report_date=%s",
-            payload.account_name,
-            len(payload.trades),
-            payload.report_date,
-        )
-        response = generate_execution_report(payload)
-        logger.info(
-            "execution_report_success report_id=%s rows=%s",
-            response.report_id,
-            response.rows_processed,
-        )
-        return response
-    except ValueError as exc:
-        logger.warning("execution_report_user_error detail=%s", exc)
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        logger.exception("execution_report_unhandled_failure error=%s", exc)
-        raise HTTPException(status_code=500, detail="Unexpected server error. Check backend logs.") from exc
-
-
 @app.get("/api/reports/{report_id}")
 def download_report(report_id: str) -> FileResponse:
     cleanup_expired_reports()
@@ -121,14 +94,3 @@ def download_report(report_id: str) -> FileResponse:
         raise HTTPException(status_code=404, detail="Report not found.")
     logger.info("report_download report_id=%s", report_id)
     return FileResponse(report_path, media_type="application/pdf", filename=report_path.name)
-
-
-@app.get("/api/reports/{report_id}/image")
-def download_report_image(report_id: str) -> FileResponse:
-    cleanup_expired_reports()
-    report_path = report_image_path(report_id)
-    if not report_path.exists():
-        logger.warning("report_image_not_found report_id=%s", report_id)
-        raise HTTPException(status_code=404, detail="Report image not found.")
-    logger.info("report_image_download report_id=%s", report_id)
-    return FileResponse(report_path, media_type="image/png", filename=report_path.name)

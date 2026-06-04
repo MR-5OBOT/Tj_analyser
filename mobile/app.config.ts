@@ -1,4 +1,5 @@
-const backendUrl = process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://your-backend.koyeb.app";
+const defaultBackendUrl = "https://zippy-magda-fsocietyt-17e28cd0.koyeb.app";
+const backendUrl = (process.env.EXPO_PUBLIC_API_BASE_URL ?? defaultBackendUrl).replace(/\s+/g, "");
 
 export default {
   expo: {
@@ -6,8 +7,25 @@ export default {
     slug: "tj-analyser-mobile",
     version: "0.1.0",
     orientation: "portrait",
+    userInterfaceStyle: "dark",
+    scheme: "tjanalyser",
+    backgroundColor: "#000000",
     icon: "./assets/icon.png",
+    splash: {
+      image: "./assets/icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#000000",
+    },
     platforms: ["android"],
+    androidStatusBar: {
+      backgroundColor: "#000000",
+      barStyle: "light-content",
+      translucent: false,
+    },
+    androidNavigationBar: {
+      backgroundColor: "#000000",
+      barStyle: "light-content",
+    },
     android: {
       package: "com.tjanalyser.mobile",
       adaptiveIcon: {
