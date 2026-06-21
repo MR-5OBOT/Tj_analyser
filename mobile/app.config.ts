@@ -6,6 +6,10 @@ export default {
     name: "TJ Analyser",
     slug: "tj-analyser-mobile",
     version: "0.1.0",
+    runtimeVersion: { policy: "appVersion" },
+    updates: {
+      url: "https://u.expo.dev/1ce6a3a2-e219-4022-a7e8-a49fa82d6d39",
+    },
     orientation: "portrait",
     userInterfaceStyle: "dark",
     scheme: "tjanalyser",
