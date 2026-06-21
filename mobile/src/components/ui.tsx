@@ -14,17 +14,27 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, font, radius, spacing } from "../theme/tokens";
 
-export function Screen({ children, scroll = true }: { children: React.ReactNode; scroll?: boolean }) {
+export function Screen({
+  children,
+  scroll = true,
+  bottomSpace = 0,
+}: {
+  children: React.ReactNode;
+  scroll?: boolean;
+  bottomSpace?: number;
+}) {
+  const padBottom = bottomSpace ? { paddingBottom: bottomSpace } : null;
   const body = scroll ? (
     <ScrollView
       style={s.flex}
-      contentContainerStyle={s.scrollContent}
+      contentContainerStyle={[s.scrollContent, padBottom]}
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
     >
       {children}
     </ScrollView>
   ) : (
-    <View style={[s.flex, s.scrollContent]}>{children}</View>
+    <View style={[s.flex, s.scrollContent, padBottom]}>{children}</View>
   );
   return (
     <SafeAreaView style={s.safeArea} edges={["top", "left", "right"]}>
@@ -74,6 +84,27 @@ export function SectionHeader({ title, hint }: { title: string; hint?: string })
 
 export function Subtle({ children }: { children: React.ReactNode }) {
   return <Text style={s.hint}>{children}</Text>;
+}
+
+export function PageHeader({
+  eyebrow,
+  title,
+  subtitle,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <View style={s.pageHeader}>
+      <View style={s.eyebrowRow}>
+        <View style={s.eyebrowTick} />
+        <Text style={s.eyebrow}>{eyebrow}</Text>
+      </View>
+      <Text style={s.title}>{title}</Text>
+      {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+    </View>
+  );
 }
 
 type ButtonProps = {
@@ -160,9 +191,16 @@ export function Chip({ label }: { label: string }) {
 export function StatCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "positive" | "negative" }) {
   const valueColor =
     tone === "positive" ? colors.positive : tone === "negative" ? colors.danger : colors.text;
+  const dotColor =
+    tone === "positive" ? colors.positive : tone === "negative" ? colors.danger : colors.borderSoft;
   return (
     <View style={s.statCard}>
-      <Text style={s.statLabel}>{label}</Text>
+      <View style={s.statHead}>
+        <View style={[s.statDot, { backgroundColor: dotColor }]} />
+        <Text style={s.statLabel} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
       <Text style={[s.statValue, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
@@ -206,6 +244,10 @@ const s = StyleSheet.create({
   },
   eyebrow: { ...font.eyebrow, color: colors.textSubtle },
   title: { ...font.title, color: colors.text },
+  pageHeader: { gap: spacing.sm, marginBottom: spacing.xs },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  eyebrowTick: { width: 16, height: 3, borderRadius: radius.pill, backgroundColor: colors.accent },
+  subtitle: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
   sectionHeader: { gap: spacing.xs },
   sectionTitle: { ...font.section, color: colors.text },
   hint: { color: colors.textSubtle, fontSize: 13, lineHeight: 19 },
@@ -266,8 +308,10 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  statLabel: { ...font.label, color: colors.textSubtle, fontSize: 11 },
-  statValue: { fontSize: 22, fontWeight: "800" },
+  statHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  statDot: { width: 7, height: 7, borderRadius: radius.pill },
+  statLabel: { ...font.label, color: colors.textSubtle, fontSize: 11, flexShrink: 1 },
+  statValue: { fontSize: 25, fontWeight: "800", marginTop: spacing.xs },
   empty: {
     borderRadius: radius.lg,
     padding: spacing.lg,

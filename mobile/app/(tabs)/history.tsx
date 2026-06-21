@@ -6,10 +6,10 @@ import {
   Card,
   Chip,
   EmptyState,
-  Eyebrow,
+  PageHeader,
   Screen,
-  Title,
 } from "../../src/components/ui";
+import { FLOATING_TAB_SPACE } from "../../src/components/FloatingTabBar";
 import { sharePdf } from "../../src/lib/pdf";
 import { useStore } from "../../src/state/store";
 import { colors, spacing } from "../../src/theme/tokens";
@@ -30,22 +30,16 @@ export default function HistoryScreen() {
 
   if (history.length === 0) {
     return (
-      <Screen>
-        <View style={{ gap: spacing.sm }}>
-          <Eyebrow>Saved runs</Eyebrow>
-          <Title>History</Title>
-        </View>
+      <Screen bottomSpace={FLOATING_TAB_SPACE}>
+        <PageHeader eyebrow="Saved runs" title="History" />
         <EmptyState title="No reports yet" text="Each analysis you run is saved here on this device." />
       </Screen>
     );
   }
 
   return (
-    <Screen>
-      <View style={{ gap: spacing.sm }}>
-        <Eyebrow>{history.length} saved runs</Eyebrow>
-        <Title>History</Title>
-      </View>
+    <Screen bottomSpace={FLOATING_TAB_SPACE}>
+      <PageHeader eyebrow={`${history.length} saved runs`} title="History" />
       {history.map((item) => (
         <HistoryRow key={`${item.id}-${item.createdAt}`} item={item} />
       ))}

@@ -4,13 +4,13 @@ import { Alert, Text, View } from "react-native";
 import {
   AppButton,
   Card,
-  Eyebrow,
+  PageHeader,
   Screen,
   SectionHeader,
   Segmented,
   Subtle,
-  Title,
 } from "../../src/components/ui";
+import { FLOATING_TAB_SPACE } from "../../src/components/FloatingTabBar";
 import { API_BASE_URL } from "../../src/lib/config";
 import { useStore } from "../../src/state/store";
 import { colors, radius, spacing } from "../../src/theme/tokens";
@@ -33,11 +33,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <Screen>
-      <View style={{ gap: spacing.sm }}>
-        <Eyebrow>Preferences</Eyebrow>
-        <Title>Settings</Title>
-      </View>
+    <Screen bottomSpace={FLOATING_TAB_SPACE}>
+      <PageHeader eyebrow="Preferences" title="Settings" />
 
       <Card>
         <SectionHeader title="Default report type" />

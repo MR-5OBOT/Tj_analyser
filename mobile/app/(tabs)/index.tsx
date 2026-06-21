@@ -6,15 +6,15 @@ import { Alert, Text, View } from "react-native";
 import {
   AppButton,
   Card,
-  Eyebrow,
   ErrorBanner,
   Field,
+  PageHeader,
   Screen,
   SectionHeader,
   Segmented,
   Subtle,
-  Title,
 } from "../../src/components/ui";
+import { FLOATING_TAB_SPACE } from "../../src/components/FloatingTabBar";
 import { useStore } from "../../src/state/store";
 import { colors, radius, spacing } from "../../src/theme/tokens";
 
@@ -108,12 +108,12 @@ export default function AnalyzeScreen() {
     source?.kind === "file" ? source.name : source?.kind === "link" ? source.url : "No source selected";
 
   return (
-    <Screen>
-      <View style={{ gap: spacing.sm }}>
-        <Eyebrow>Trading Journal</Eyebrow>
-        <Title>TJ Analyser</Title>
-        <Subtle>Upload a journal or paste a link, then generate a stats report and PDF.</Subtle>
-      </View>
+    <Screen bottomSpace={FLOATING_TAB_SPACE}>
+      <PageHeader
+        eyebrow="Trading Journal"
+        title="TJ Analyser"
+        subtitle="Upload a journal or paste a link, then generate a stats report and PDF."
+      />
 
       <Card>
         <SectionHeader title="Source" hint="A CSV / Excel file, or a CSV / Google Sheets link." />

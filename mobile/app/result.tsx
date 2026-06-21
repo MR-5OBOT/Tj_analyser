@@ -7,12 +7,11 @@ import {
   Card,
   Chip,
   EmptyState,
-  Eyebrow,
+  PageHeader,
   Screen,
   SectionHeader,
   StatCard,
   Subtle,
-  Title,
   TopBar,
 } from "../src/components/ui";
 import { openPdf, sharePdf } from "../src/lib/pdf";
@@ -61,10 +60,10 @@ export default function ResultScreen() {
     <Screen>
       <TopBar title="Report" onBack={() => router.back()} />
 
-      <View style={{ gap: spacing.sm }}>
-        <Eyebrow>{result.report_type.toUpperCase()} · {result.rows_processed} TRADES</Eyebrow>
-        <Title>Your stats</Title>
-      </View>
+      <PageHeader
+        eyebrow={`${result.report_type.toUpperCase()} · ${result.rows_processed} TRADES`}
+        title="Your stats"
+      />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.md }}>
         {statEntries.map(([label, value]) => (
