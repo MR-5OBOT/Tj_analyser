@@ -15,10 +15,12 @@ from backend.logging_utils import get_logger
 from backend.models import (
     AnalyzeRequestForm,
     AnalyzeResponse,
+    InspectResponse,
 )
 from backend.settings import settings
+from backend.url_utils import normalize_source_url
 from config import CANONICAL_COLUMNS, OUTCOME_VALUE_MAP
-from helpers.journal_normalization import normalize_journal
+from helpers.journal_normalization import detect_column_mappings, normalize_journal
 from helpers.reporting import build_report, export_pdf_report
 
 logger = get_logger("backend.service")
@@ -57,6 +59,8 @@ async def load_dataframe_from_request(
             filename=upload.filename or "journal.csv",
             sheet_name=sheet_name,
         )
+
+    file_url = normalize_source_url(file_url)
 
     async with httpx.AsyncClient(
         timeout=settings.request_timeout_seconds,
@@ -117,14 +121,53 @@ def analyze_journal(
     export_pdf_report(plots, report_type=form.report_type.capitalize(), output_path=output_path)
     logger.info("pdf_generation_finished report_id=%s", report_id)
 
+    detected_mappings = normalized_df.attrs.get("detected_mappings", {})
+    source_columns = [str(column) for column in raw_df.columns]
     return AnalyzeResponse(
         report_id=report_id,
         report_type=form.report_type,
         rows_processed=int(len(normalized_df)),
-        detected_mappings=_to_json_safe(normalized_df.attrs.get("detected_mappings", {})),
+        detected_mappings=_to_json_safe(detected_mappings),
+        source_columns=source_columns,
+        unmapped_columns=_unmapped_columns(source_columns, detected_mappings),
         stats=_to_json_safe(stats),
         download_url=f"/api/reports/{report_id}",
     )
+
+
+def inspect_columns(raw_df: pd.DataFrame, *, column_mappings: dict | None = None) -> InspectResponse:
+    """Preview how a journal's headers map to the internal schema, without analyzing it."""
+    source_columns = [str(column) for column in raw_df.columns]
+    detected_mappings = detect_column_mappings(raw_df, column_mappings)
+    missing_required = _missing_required(detected_mappings)
+    logger.info(
+        "inspect_columns source_count=%s detected=%s missing_required=%s",
+        len(source_columns),
+        ",".join(detected_mappings.keys()),
+        ",".join(missing_required),
+    )
+    return InspectResponse(
+        source_columns=source_columns,
+        detected_mappings=_to_json_safe(detected_mappings),
+        unmapped_columns=_unmapped_columns(source_columns, detected_mappings),
+        missing_required=missing_required,
+    )
+
+
+def _unmapped_columns(source_columns: list[str], detected_mappings: dict) -> list[str]:
+    mapped = {str(value) for value in detected_mappings.values()}
+    return [column for column in source_columns if column not in mapped]
+
+
+def _missing_required(detected_mappings: dict) -> list[str]:
+    """Report 'outcome' as missing only when it can't be derived from rr or reward+risk."""
+    detected = set(detected_mappings.keys())
+    outcome_satisfiable = (
+        "outcome" in detected
+        or "rr" in detected
+        or {"reward_amount", "risk_amount"}.issubset(detected)
+    )
+    return [] if outcome_satisfiable else ["outcome"]
 
 
 def parse_optional_json(raw_value: str | None) -> dict:
@@ -144,18 +187,18 @@ def parse_optional_json(raw_value: str | None) -> dict:
 
 def _load_dataframe_from_bytes(content: bytes, *, filename: str, sheet_name: int = 0) -> pd.DataFrame:
     suffix = Path(filename).suffix.lower()
-    buffer = BytesIO(content)
     logger.info("dataframe_load_attempt filename=%s suffix=%s sheet_name=%s", filename, suffix, sheet_name)
 
+    is_excel = suffix in {".xlsx", ".xls", ".xlsm"}
     try:
-        if suffix == ".csv":
-            df = pd.read_csv(buffer)
-            logger.info("dataframe_loaded_csv rows=%s columns=%s", len(df), list(df.columns))
-            return df
-        if suffix in {".xlsx", ".xls", ".xlsm"}:
-            df = pd.read_excel(buffer, sheet_name=sheet_name)
+        if is_excel:
+            df = pd.read_excel(BytesIO(content), sheet_name=sheet_name)
             logger.info("dataframe_loaded_excel rows=%s columns=%s", len(df), list(df.columns))
-            return df
+        else:
+            # Default to CSV for .csv and for unknown/extension-less sources (e.g. Google
+            # Sheets export links). utf-8-sig transparently strips a leading BOM.
+            df = pd.read_csv(BytesIO(content), encoding="utf-8-sig", skip_blank_lines=True)
+            logger.info("dataframe_loaded_csv suffix=%s rows=%s columns=%s", suffix, len(df), list(df.columns))
     except EmptyDataError as exc:
         logger.exception("dataframe_empty_file filename=%s", filename)
         raise ValueError("The file is empty.") from exc
@@ -169,8 +212,21 @@ def _load_dataframe_from_bytes(content: bytes, *, filename: str, sheet_name: int
         logger.exception("dataframe_unexpected_error filename=%s suffix=%s", filename, suffix)
         raise ValueError("Unexpected file parsing error.") from exc
 
-    logger.error("unsupported_file_type filename=%s suffix=%s", filename, suffix)
-    raise ValueError(f"Unsupported file type: {suffix}")
+    return _tidy_raw_dataframe(df)
+
+
+def _tidy_raw_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop fully-blank rows and the empty trailing columns that spreadsheet exports add."""
+    # Spreadsheet exports often include empty trailing columns rendered as "Unnamed: N".
+    blank_unnamed = [
+        column
+        for column in df.columns
+        if str(column).startswith("Unnamed:") and df[column].isna().all()
+    ]
+    if blank_unnamed:
+        df = df.drop(columns=blank_unnamed)
+
+    return df.dropna(how="all").reset_index(drop=True)
 
 
 def _resolve_remote_filename(file_url: str, content_type: str | None) -> str:

@@ -33,6 +33,7 @@ export default {
         backgroundColor: "#000000",
       },
     },
+    plugins: ["expo-router"],
     extra: {
       apiBaseUrl: backendUrl,
       eas: {

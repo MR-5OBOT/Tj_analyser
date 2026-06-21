@@ -7,12 +7,14 @@ from backend.logging_utils import get_logger
 from backend.models import (
     AnalyzeRequestForm,
     AnalyzeResponse,
+    InspectResponse,
 )
 from backend.settings import settings
 from backend.files import cleanup_expired_reports, report_pdf_path
 from config import CANONICAL_COLUMNS
 from backend.service import (
     analyze_journal,
+    inspect_columns,
     load_dataframe_from_request,
     parse_optional_json,
 )
@@ -44,6 +46,25 @@ def health() -> dict:
 def schema() -> dict:
     logger.info("schema_request")
     return {"canonical_columns": CANONICAL_COLUMNS}
+
+
+@app.post("/api/inspect")
+async def inspect(
+    sheet_name: int = Form(0),
+    file_url: str | None = Form(None),
+    column_mappings: str | None = Form(None),
+    upload: UploadFile | None = File(None),
+) -> InspectResponse:
+    try:
+        logger.info("inspect_request has_upload=%s has_url=%s sheet_name=%s", upload is not None, bool(file_url), sheet_name)
+        raw_df = await load_dataframe_from_request(upload, file_url, sheet_name=sheet_name)
+        return inspect_columns(raw_df, column_mappings=parse_optional_json(column_mappings))
+    except ValueError as exc:
+        logger.warning("inspect_user_error detail=%s", exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("inspect_unhandled_failure error=%s", exc)
+        raise HTTPException(status_code=500, detail="Unexpected server error. Check backend logs.") from exc
 
 
 @app.post("/api/analyze")

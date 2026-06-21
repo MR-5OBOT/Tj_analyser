@@ -29,6 +29,15 @@ def series_or_none(df: pd.DataFrame, column: str) -> pd.Series | None:
     return None if not series.notna().any() else series
 
 
+def column_or_none(df: pd.DataFrame, column: str) -> pd.Series | None:
+    """Return the raw column when present, else None — without numeric coercion.
+
+    Used to build plot arguments safely: a journal may omit any column, and the
+    plot's guard decides whether it is actually used.
+    """
+    return df[column] if column in df.columns else None
+
+
 def weekly_day_labels(df: pd.DataFrame) -> pd.Series | None:
     """Return normalized weekday labels from trade_day or trade_date."""
     if has_non_empty(df, "trade_day"):

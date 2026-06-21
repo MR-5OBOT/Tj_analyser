@@ -27,12 +27,29 @@ def normalize_journal(df: pd.DataFrame, journal_config: dict) -> pd.DataFrame:
         column for column in MINIMUM_REQUIRED_COLUMNS if column not in normalized.columns
     ]
     if missing_required:
+        # "outcome" can be derived from an R-multiple column, or from reward+risk columns,
+        # so reaching here means none of those were found. Give the user an actionable hint.
         raise ValueError(
-            f"Missing minimum required columns after normalization: {', '.join(missing_required)}"
+            "Could not find trade results in this file. Map a column to one of: "
+            "'outcome' (WIN/LOSS/BE), 'rr' (R-multiple), or both 'reward_amount' and "
+            "'risk_amount'."
         )
 
     normalized.attrs["detected_mappings"] = detected_mappings
     return normalized
+
+
+def detect_column_mappings(
+    df: pd.DataFrame, configured_columns: dict[str, str | None] | None = None
+) -> dict[str, str]:
+    """Return {canonical_column: source_column} without mutating or cleaning the data.
+
+    Used by the ``/api/inspect`` endpoint so the app can preview how a journal's headers
+    map before running the full analysis.
+    """
+    columns = {column: None for column in CANONICAL_COLUMNS} | (configured_columns or {})
+    _, detected_mappings = _rename_columns(df, columns)
+    return detected_mappings
 
 
 def _rename_columns(

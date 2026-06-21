@@ -16,5 +16,14 @@ class AnalyzeResponse(BaseModel):
     report_type: str
     stats: dict[str, Any]
     detected_mappings: dict[str, str]
+    source_columns: list[str] = Field(default_factory=list)
+    unmapped_columns: list[str] = Field(default_factory=list)
     rows_processed: int
     download_url: str
+
+
+class InspectResponse(BaseModel):
+    source_columns: list[str] = Field(default_factory=list)
+    detected_mappings: dict[str, str] = Field(default_factory=dict)
+    unmapped_columns: list[str] = Field(default_factory=list)
+    missing_required: list[str] = Field(default_factory=list)

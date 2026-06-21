@@ -7,7 +7,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from tqdm import tqdm
 
 from helpers.calculations import stats_table_overall, stats_table_weekly
-from helpers.utils import has_non_empty, series_or_none
+from helpers.utils import column_or_none, has_non_empty, series_or_none
 from helpers.visualizations import (
     asset_performance_bar,
     bar_outcomes_by_custom_ranges,
@@ -68,26 +68,29 @@ def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
     rr_series = series_or_none(df, "rr")
     stop_loss_points = series_or_none(df, "stop_loss_points")
     position_size = series_or_none(df, "position_size")
-    date_series = df["trade_date"] if "trade_date" in df.columns else None
-    day_series = df["trade_day"] if "trade_day" in df.columns else None
+    date_series = column_or_none(df, "trade_date")
+    day_series = column_or_none(df, "trade_day")
+    outcome_series = column_or_none(df, "outcome")
+    entry_series = column_or_none(df, "entry_time")
+    asset_series = column_or_none(df, "asset")
 
     add_plot(plots, rr_series is not None and not rr_series.empty, rr_curve, rr_series)
     add_plot(plots, rr_series is not None and not rr_series.empty, drawdown_curve, rr_series)
-    add_plot(plots, rr_series is not None and has_non_empty(df, "asset"), asset_performance_bar, df["asset"], rr_series)
+    add_plot(plots, rr_series is not None and has_non_empty(df, "asset"), asset_performance_bar, asset_series, rr_series)
     add_plot(
         plots,
         has_non_empty(df, "outcome") and (has_non_empty(df, "trade_day") or has_non_empty(df, "trade_date")),
         outcome_by_day,
-        df["outcome"],
+        outcome_series,
         date_series,
         day_series,
         "WIN",
         "LOSS",
         "BE",
     )
-    add_plot(plots, rr_series is not None and has_columns(df, "trade_day", "entry_time"), heatmap_rr, rr_series, df["trade_day"], df["entry_time"])
-    add_plot(plots, has_columns(df, "outcome", "entry_time"), bar_outcomes_by_custom_ranges, df["outcome"], df["entry_time"], time_ranges)
-    add_plot(plots, rr_series is not None and has_columns(df, "entry_time", "outcome"), rr_vs_hour_range_bubble_scatter, df["entry_time"], rr_series, df["outcome"])
+    add_plot(plots, rr_series is not None and has_columns(df, "trade_day", "entry_time"), heatmap_rr, rr_series, day_series, entry_series)
+    add_plot(plots, has_columns(df, "outcome", "entry_time"), bar_outcomes_by_custom_ranges, outcome_series, entry_series, time_ranges)
+    add_plot(plots, rr_series is not None and has_columns(df, "entry_time", "outcome"), rr_vs_hour_range_bubble_scatter, entry_series, rr_series, outcome_series)
     add_plot(plots, stop_loss_points is not None and not stop_loss_points.empty, distribution_plot, stop_loss_points, "Distribution of Stop-Loss points", "Stop-Loss Points")
     add_plot(
         plots,
@@ -95,13 +98,13 @@ def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
         risk_vs_reward_scatter,
         position_size,
         rr_series,
-        df["outcome"],
+        outcome_series,
         "Position Size vs R/R",
         "Position Size",
         "R/R",
     )
-    add_plot(plots, stop_loss_points is not None and rr_series is not None and has_non_empty(df, "outcome"), rr_vs_sl_points, stop_loss_points, rr_series, df["outcome"])
-    add_plot(plots, rr_series is not None and has_non_empty(df, "trade_date"), rr_barplot_months, rr_series, df["trade_date"])
+    add_plot(plots, stop_loss_points is not None and rr_series is not None and has_non_empty(df, "outcome"), rr_vs_sl_points, stop_loss_points, rr_series, outcome_series)
+    add_plot(plots, rr_series is not None and has_non_empty(df, "trade_date"), rr_barplot_months, rr_series, date_series)
 
     return plots
 

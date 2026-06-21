@@ -10,40 +10,61 @@ This repo is now focused on two parts only:
 ## What The App Does
 
 - upload CSV or Excel journals from Android
-- paste a remote CSV/Excel link instead of uploading
-- map weird journal column names to a universal internal schema
-- auto-detect common column names when mapping is empty
+- paste a remote CSV/Excel link, or a normal **Google Sheets share link** (auto-converted to CSV)
+- auto-detect a wide range of journal column names, with a manual **column mapping** screen for odd headers
+- accept almost any column layout (a single results column is enough)
 - run weekly or overall analysis in the backend
-- generate a PDF report in the cloud
-- return detected mappings, stats, and a PDF download link
+- show a **stats dashboard** in the app and generate a full **PDF report** (charts) in the cloud
+- keep a local **history** of past runs on the device
 - auto-delete old generated PDFs after a configurable time
+
+## Mobile App (Expo Router)
+
+The app is a React Native / Expo app using Expo Router (file-based navigation), with three
+tabs plus two pushed screens:
+
+- **Analyze** tab — pick a file or paste a link, choose report type + sheet index, run.
+  Handles free-host cold starts with a "Waking the server…" state.
+- **Report** screen — stat cards from the analysis, detected-column chips, and Open / Share PDF.
+- **Map Columns** screen — bind your file's headers to internal fields when auto-detect misses.
+- **History** tab — saved runs (device-local), reopen any report's PDF.
+- **Settings** tab — default report type, backend URL (read-only), clear history.
 
 ## Project Structure
 
-- [mobile/App.tsx](/home/ys/repos/Tj_analyser/mobile/App.tsx)
-- [mobile/src/AppRoot.tsx](/home/ys/repos/Tj_analyser/mobile/src/AppRoot.tsx)
-- [backend/main.py](/home/ys/repos/Tj_analyser/backend/main.py)
-- [backend/service.py](/home/ys/repos/Tj_analyser/backend/service.py)
+Backend:
+- [backend/main.py](/home/ys/repos/Tj_analyser/backend/main.py) — FastAPI routes
+- [backend/service.py](/home/ys/repos/Tj_analyser/backend/service.py) — load / inspect / analyze
+- [backend/url_utils.py](/home/ys/repos/Tj_analyser/backend/url_utils.py) — Google Sheets link → CSV
 - [backend/models.py](/home/ys/repos/Tj_analyser/backend/models.py)
-- [backend/settings.py](/home/ys/repos/Tj_analyser/backend/settings.py)
-- [backend/files.py](/home/ys/repos/Tj_analyser/backend/files.py)
 - [helpers/reporting.py](/home/ys/repos/Tj_analyser/helpers/reporting.py)
+
+Mobile (Expo Router):
+- `mobile/app/_layout.tsx`, `mobile/app/(tabs)/*` — root stack + tabs
+- `mobile/app/result.tsx`, `mobile/app/mapping.tsx` — dashboard + column mapping
+- `mobile/src/lib/api.ts` — typed API client (health / inspect / analyze, cold-start warmup)
+- `mobile/src/state/store.ts` — zustand store (session + history)
+- `mobile/src/components/ui.tsx`, `mobile/src/theme/tokens.ts` — design system
 
 ## Backend API
 
 - `GET /api/health`
 - `GET /api/schema`
+- `POST /api/inspect` — preview a file's columns + auto-detected mappings (no analysis/PDF)
 - `POST /api/analyze`
 - `GET /api/reports/{report_id}`
 
-`POST /api/analyze` supports:
+`POST /api/analyze` and `POST /api/inspect` support:
 
 - multipart file upload
-- remote file URL
-- report type: `weekly` or `overall`
+- remote file URL (incl. Google Sheets share links, auto-converted to CSV export)
+- report type: `weekly` or `overall` (analyze only)
 - Excel sheet index
 - manual column mappings
-- custom outcome mappings
+- custom outcome mappings (analyze only)
+
+`POST /api/analyze` returns `stats`, `detected_mappings`, `source_columns`,
+`unmapped_columns`, `rows_processed`, and a `download_url`.
 
 ## Universal Internal Fields
 
@@ -75,11 +96,17 @@ Example weird journal headers that can be mapped:
 
 ## Android App Setup
 
-Install dependencies once:
+Install dependencies once (Expo's internal peer pins need legacy resolution):
 
 ```bash
 cd mobile
-npm install
+npm install --legacy-peer-deps
+```
+
+Run it in development with Expo Go or a dev build:
+
+```bash
+npx expo start
 ```
 
 The mobile app no longer lets you type the backend URL in Settings.
@@ -225,7 +252,7 @@ Official docs:
 
 ## Koyeb Deployment Steps
 
-1. Push the `android-cloud-app` branch to GitHub.
+1. Push the `mobile-app` branch to GitHub.
 2. Create a Koyeb account.
 3. Create a new app from your GitHub repo.
 4. Choose Docker deployment.
@@ -282,8 +309,22 @@ The app does one job:
 
 ## Validation
 
-Python code can be checked with:
+Backend:
 
 ```bash
 python -m compileall helpers backend config.py
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+# then: curl the /api/health, /api/inspect, /api/analyze endpoints
+```
+
+PDF generation runs headlessly (matplotlib is forced to the `Agg` backend in
+[helpers/plot_styling.py](/home/ys/repos/Tj_analyser/helpers/plot_styling.py)), so no
+display/Tcl is required on the server.
+
+Mobile:
+
+```bash
+cd mobile
+npx tsc --noEmit                 # type-check
+npx expo export --platform android   # full bundle check (routes + imports)
 ```

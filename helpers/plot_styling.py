@@ -1,5 +1,11 @@
 """Modern plot styling utilities for consistent visualization aesthetics."""
 
+import matplotlib
+
+# Render PDFs headlessly: never select an interactive GUI backend (e.g. TkAgg), which
+# requires a display/Tcl and crashes on servers. Must run before any figure is created.
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
