@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, time
 
-from config import DAY_ORDER
-from helpers.utils import has_non_empty, series_or_none, weekly_day_labels
+from helpers.utils import has_non_empty, series_or_none
 
 
 def winrate(
@@ -260,21 +259,6 @@ def consecutive_wins_and_losses(
     return (max_loss_streak, max_win_streak)
 
 
-
-
-def daily_rr_summary(rr_series: pd.Series, day_series: pd.Series) -> pd.Series:
-    """Aggregate total R by weekday."""
-    valid_mask = rr_series.notna() & day_series.notna()
-    rr_series = rr_series[valid_mask]
-    day_series = day_series[valid_mask]
-    if rr_series.empty or day_series.empty:
-        return pd.Series(dtype=float)
-
-    return rr_series.groupby(day_series).sum().reindex(
-        [day for day in DAY_ORDER if day in day_series.values]
-    ).dropna()
-
-
 def max_drawdown_r(rr_series: pd.Series) -> float:
     """Calculate max drawdown from cumulative R as a positive R value."""
     rr_series = rr_series.dropna()
@@ -284,38 +268,6 @@ def max_drawdown_r(rr_series: pd.Series) -> float:
     cumulative_rr = rr_series.cumsum()
     drawdown = cumulative_rr - cumulative_rr.cummax()
     return abs(float(drawdown.min()))
-
-
-def stats_table_weekly(df: pd.DataFrame) -> dict:
-    """Calculate summary statistics for the weekly report."""
-    stats: dict[str, str | int] = {"Total Trades": len(df)}
-    rr_series = series_or_none(df, "rr")
-    outcomes = df["outcome"].astype(str).str.strip() if "outcome" in df.columns else None
-    day_series = weekly_day_labels(df)
-
-    if rr_series is not None and not rr_series.empty:
-        stats["Total R/R"] = f"{rr_series.sum():.2f}"
-
-        if day_series is not None:
-            daily_rr = daily_rr_summary(rr_series, day_series)
-            if not daily_rr.empty:
-                stats["Best Day"] = f"{daily_rr.idxmax().title()} ({daily_rr.max():.2f}R)"
-                stats["Worst Day"] = f"{daily_rr.idxmin().title()} ({daily_rr.min():.2f}R)"
-
-    if has_non_empty(df, "trade_date"):
-        valid_dates = pd.to_datetime(df["trade_date"], errors="coerce").dropna()
-        if not valid_dates.empty:
-            stats["Week Range"] = (
-                f"{valid_dates.min().strftime('%Y-%m-%d')} to "
-                f"{valid_dates.max().strftime('%Y-%m-%d')}"
-            )
-
-    if outcomes is not None and not outcomes.empty:
-        stats["Winning Trades"] = winning_trades(df, outcome_col="outcome", win_str="WIN")
-        stats["Losing Trades"] = losing_trades(df, outcome_col="outcome", loss_str="LOSS")
-        stats["Breakeven Trades"] = breakeven_trades(df, outcome_col="outcome", breakeven_str="BE")
-
-    return stats
 
 
 def stats_table_overall(df: pd.DataFrame) -> dict:

@@ -38,12 +38,3 @@ def column_or_none(df: pd.DataFrame, column: str) -> pd.Series | None:
     return df[column] if column in df.columns else None
 
 
-def weekly_day_labels(df: pd.DataFrame) -> pd.Series | None:
-    """Return normalized weekday labels from trade_day or trade_date."""
-    if has_non_empty(df, "trade_day"):
-        return df["trade_day"].astype(str).str.strip().str.lower()
-    if has_non_empty(df, "trade_date"):
-        dates = pd.to_datetime(df["trade_date"], errors="coerce")
-        if dates.notna().any():
-            return dates.dt.day_name().str.strip().str.lower()
-    return None

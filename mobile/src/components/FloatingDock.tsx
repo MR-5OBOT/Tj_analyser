@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: 30,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     ...Platform.select({
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   item: {
     width: 58,
     height: 58,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceAlt,

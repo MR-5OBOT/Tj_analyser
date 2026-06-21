@@ -100,7 +100,7 @@ def analyze_journal(
 ) -> AnalyzeResponse:
     """Normalize the journal, generate a PDF report, and return the API response payload."""
     cleanup_expired_reports()
-    logger.info("analysis_started report_type=%s rows=%s", form.report_type, len(raw_df))
+    logger.info("analysis_started rows=%s", len(raw_df))
     runtime_config = build_runtime_config(
         column_mappings=form.column_mappings,
         outcome_map=form.outcome_map,
@@ -113,21 +113,20 @@ def analyze_journal(
         ",".join(normalized_df.attrs.get("detected_mappings", {}).keys()),
     )
     if normalized_df.empty:
-        logger.warning("journal_empty_after_normalization report_type=%s", form.report_type)
+        logger.warning("journal_empty_after_normalization")
         raise ValueError("No valid journal rows remained after cleaning.")
-    plots, stats = build_report(normalized_df, form.report_type)
+    plots, stats = build_report(normalized_df)
 
     report_id = uuid4().hex
     output_path = report_pdf_path(report_id)
     logger.info("pdf_generation_started report_id=%s output_path=%s", report_id, output_path)
-    export_pdf_report(plots, report_type=form.report_type.capitalize(), output_path=output_path)
+    export_pdf_report(plots, report_type="Overall", output_path=output_path)
     logger.info("pdf_generation_finished report_id=%s", report_id)
 
     detected_mappings = normalized_df.attrs.get("detected_mappings", {})
     source_columns = [str(column) for column in raw_df.columns]
     return AnalyzeResponse(
         report_id=report_id,
-        report_type=form.report_type,
         rows_processed=int(len(normalized_df)),
         detected_mappings=_to_json_safe(detected_mappings),
         source_columns=source_columns,

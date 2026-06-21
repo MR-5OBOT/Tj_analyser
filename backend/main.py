@@ -70,7 +70,6 @@ async def inspect(
 
 @app.post("/api/analyze")
 async def analyze(
-    report_type: str = Form("overall"),
     sheet_name: int = Form(0),
     file_url: str | None = Form(None),
     column_mappings: str | None = Form(None),
@@ -79,14 +78,12 @@ async def analyze(
 ) -> AnalyzeResponse:
     try:
         logger.info(
-            "analyze_request report_type=%s has_upload=%s has_url=%s sheet_name=%s",
-            report_type,
+            "analyze_request has_upload=%s has_url=%s sheet_name=%s",
             upload is not None,
             bool(file_url),
             sheet_name,
         )
         form = AnalyzeRequestForm(
-            report_type=report_type,
             sheet_name=sheet_name,
             file_url=file_url,
             column_mappings=parse_optional_json(column_mappings),

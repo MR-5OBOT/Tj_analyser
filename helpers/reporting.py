@@ -6,7 +6,7 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 from tqdm import tqdm
 
-from helpers.calculations import stats_table_overall, stats_table_weekly
+from helpers.calculations import stats_table_overall
 from helpers.utils import column_or_none, has_non_empty, series_or_none
 from helpers.visualizations import (
     asset_performance_bar,
@@ -17,7 +17,6 @@ from helpers.visualizations import (
     heatmap_rr,
     outcome_by_day,
     risk_vs_reward_scatter,
-    rr_barplot,
     rr_barplot_months,
     rr_curve,
     rr_vs_hour_range_bubble_scatter,
@@ -33,28 +32,6 @@ def add_plot(plots: list[tuple], enabled: bool, func, *args) -> None:
     """Append a plot only when its data requirements are satisfied."""
     if enabled:
         plots.append((func, args))
-
-
-def generate_plots_weekly(df: pd.DataFrame) -> list[tuple]:
-    """Generate plot functions and arguments for weekly reports."""
-    plots: list[tuple] = [(create_stats_table, (stats_table_weekly(df),))]
-
-    rr_series = series_or_none(df, "rr")
-    days = df["trade_day"] if "trade_day" in df.columns else None
-    dates = df["trade_date"] if "trade_date" in df.columns else None
-    add_plot(
-        plots,
-        rr_series is not None and (has_non_empty(df, "trade_day") or has_non_empty(df, "trade_date")),
-        rr_barplot,
-        rr_series,
-        days,
-        dates,
-        "Weekly R by Day",
-        "",
-        "Total R",
-    )
-
-    return plots
 
 
 def generate_plots_overall(df: pd.DataFrame) -> list[tuple]:
@@ -127,48 +104,8 @@ def export_pdf_report(
     return pdf_path
 
 
-def build_report(df: pd.DataFrame, report_type: str) -> tuple[list[tuple], dict]:
-    """Build plots and stats for a report type."""
-    plot_funcs = {
-        "weekly": generate_plots_weekly,
-        "overall": generate_plots_overall,
-    }
-    stats_funcs = {
-        "weekly": stats_table_weekly,
-        "overall": stats_table_overall,
-    }
-
-    if report_type not in plot_funcs:
-        raise ValueError(f"Unknown report type: {report_type}")
-
-    report_df = _prepare_report_dataframe(df, report_type)
-    return plot_funcs[report_type](report_df), stats_funcs[report_type](report_df)
+def build_report(df: pd.DataFrame) -> tuple[list[tuple], dict]:
+    """Build the overall report: its plots and summary stats."""
+    return generate_plots_overall(df), stats_table_overall(df)
 
 
-def _prepare_report_dataframe(df: pd.DataFrame, report_type: str) -> pd.DataFrame:
-    if report_type != "weekly":
-        return df
-    return _latest_week_slice(df)
-
-
-def _latest_week_slice(df: pd.DataFrame) -> pd.DataFrame:
-    """Restrict weekly reports to the latest calendar week found in trade_date."""
-    if "trade_date" not in df.columns:
-        return df
-
-    trade_dates = pd.to_datetime(df["trade_date"], errors="coerce")
-    valid_mask = trade_dates.notna()
-    if not valid_mask.any():
-        return df
-
-    iso_calendar = trade_dates[valid_mask].dt.isocalendar()
-    latest_year = int(iso_calendar["year"].iloc[-1])
-    latest_week = int(iso_calendar["week"].iloc[-1])
-
-    latest_mask = valid_mask.copy()
-    latest_mask.loc[valid_mask] = (
-        (iso_calendar["year"] == latest_year) & (iso_calendar["week"] == latest_week)
-    ).to_numpy()
-
-    weekly_df = df.loc[latest_mask].copy()
-    return weekly_df if not weekly_df.empty else df
