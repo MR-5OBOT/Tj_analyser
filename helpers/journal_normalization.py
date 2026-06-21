@@ -59,6 +59,7 @@ def _rename_columns(
     rename_map: dict[str, str] = {}
     detected_mappings: dict[str, str] = {}
 
+    # Explicit user-provided mappings win over everything.
     for canonical_name, explicit_source in configured_columns.items():
         if not explicit_source:
             continue
@@ -68,6 +69,7 @@ def _rename_columns(
             rename_map[source_column] = canonical_name
             detected_mappings[canonical_name] = source_column
 
+    # Match each column against its short list of accepted names (case/spacing-insensitive).
     for canonical_name, aliases in COLUMN_ALIASES.items():
         if canonical_name in rename_map.values():
             continue

@@ -8,12 +8,13 @@ from backend.models import (
     AnalyzeRequestForm,
     AnalyzeResponse,
     InspectResponse,
+    SchemaResponse,
 )
 from backend.settings import settings
 from backend.files import cleanup_expired_reports, report_pdf_path
-from config import CANONICAL_COLUMNS
 from backend.service import (
     analyze_journal,
+    build_schema,
     inspect_columns,
     load_dataframe_from_request,
     parse_optional_json,
@@ -43,9 +44,9 @@ def health() -> dict:
 
 
 @app.get("/api/schema")
-def schema() -> dict:
+def schema() -> SchemaResponse:
     logger.info("schema_request")
-    return {"canonical_columns": CANONICAL_COLUMNS}
+    return build_schema()
 
 
 @app.post("/api/inspect")

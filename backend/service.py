@@ -16,10 +16,12 @@ from backend.models import (
     AnalyzeRequestForm,
     AnalyzeResponse,
     InspectResponse,
+    SchemaColumn,
+    SchemaResponse,
 )
 from backend.settings import settings
 from backend.url_utils import normalize_source_url
-from config import CANONICAL_COLUMNS, OUTCOME_VALUE_MAP
+from config import CANONICAL_COLUMNS, COLUMN_ALIASES, FIELD_LABELS, OUTCOME_VALUE_MAP
 from helpers.journal_normalization import detect_column_mappings, normalize_journal
 from helpers.reporting import build_report, export_pdf_report
 
@@ -132,6 +134,32 @@ def analyze_journal(
         unmapped_columns=_unmapped_columns(source_columns, detected_mappings),
         stats=_to_json_safe(stats),
         download_url=f"/api/reports/{report_id}",
+    )
+
+
+def build_schema() -> SchemaResponse:
+    """Describe every accepted field, its 3 accepted names, and the result requirement.
+
+    Powers the upload screen so the app shows users exactly how to name their columns
+    without hardcoding the list.
+    """
+    columns = [
+        SchemaColumn(
+            field=field,
+            label=FIELD_LABELS.get(field, field.replace("_", " ").title()),
+            description=CANONICAL_COLUMNS.get(field, ""),
+            accepted_names=COLUMN_ALIASES.get(field, []),
+        )
+        for field in CANONICAL_COLUMNS
+    ]
+    return SchemaResponse(
+        columns=columns,
+        required_one_of=["outcome", "rr"],
+        note=(
+            "Name each column one of its accepted names (capitalization and spacing don't "
+            "matter). You must include at least an 'outcome' or an 'rr' column — without one, "
+            "analysis can't run. Every other field is optional and unlocks more charts."
+        ),
     )
 
 
