@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, radius, spacing } from "../theme/tokens";
+import { colors, spacing } from "../theme/tokens";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -11,6 +11,9 @@ export type DockItem = { key: string; icon: IconName };
 
 /** Vertical space the dock occupies, so page content can pad clear of it. */
 export const DOCK_SPACE = 112;
+
+const ACTIVE_COLOR = "#005f00";
+const BOX_RADIUS = 18;
 
 export function FloatingDock({
   items,
@@ -36,7 +39,7 @@ export function FloatingDock({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
-              <Ionicons name={item.icon} size={24} color={active ? colors.accent : colors.textSubtle} />
+              <Ionicons name={item.icon} size={24} color={active ? colors.text : colors.textSubtle} />
             </Pressable>
           );
         })}
@@ -58,31 +61,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: 24,
-    borderWidth: 1,
+    borderRadius: BOX_RADIUS,
+    borderWidth: 2,
     borderColor: colors.borderSoft,
-    ...Platform.select({
-      android: { elevation: 16 },
-      default: {
-        shadowColor: "#000",
-        shadowOpacity: 0.55,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 10 },
-      },
-    }),
   },
   item: {
     width: 58,
     height: 58,
-    borderRadius: radius.md,
+    borderRadius: BOX_RADIUS,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.borderSoft,
   },
   itemActive: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+    backgroundColor: ACTIVE_COLOR,
+    borderColor: colors.borderSoft,
   },
 });

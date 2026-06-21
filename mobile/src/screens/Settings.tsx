@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { colors, font, radius, spacing } from "../theme/tokens";
+import { colors, font, spacing } from "../theme/tokens";
 
 const JOURNALS_KEY = "tj.journals";
 
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...font.label, color: colors.textSubtle, marginBottom: spacing.sm },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xs,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   tableScroll: {
-    borderRadius: radius.xs,
+    borderRadius: 0,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
