@@ -81,7 +81,7 @@ COLUMN_ALIASES: Final[dict[str, list[str]]] = {
     "exit_time": ["exit_time", "exit", "time_out"],
     "position_size": ["size", "position_size", "contracts"],
     "outcome": ["outcome", "result", "win_loss"],
-    "rr": ["rr", "r", "r_multiple"],
+    "rr": ["rr", "r", "r/r", "r_multiple"],
     "risk_amount": ["risk", "risk_amount", "risked"],
     "reward_amount": ["reward", "reward_amount", "gain"],
     "stop_loss_points": ["sl", "stop_loss", "sl_points"],

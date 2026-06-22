@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
 import { MenuAction, TopHeader } from "../src/components/ui";
+import { PdfReportScreen } from "../src/screens/PdfReport";
 import { SettingsScreen } from "../src/screens/Settings";
 import { colors } from "../src/theme/tokens";
 
@@ -92,7 +93,11 @@ export default function Home() {
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
         <TopHeader title={page.title} canGoBack={history.length > 1} onBack={goBack} menu={menu} />
-        {active === "settings" ? <SettingsScreen /> : null}
+        {active === "settings" ? (
+          <SettingsScreen />
+        ) : active === "report" ? (
+          <PdfReportScreen />
+        ) : null}
       </SafeAreaView>
 
       <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
