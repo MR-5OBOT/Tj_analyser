@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Updates from "expo-updates";
@@ -81,9 +80,6 @@ function ExampleTable() {
 export function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      <Text style={styles.eyebrow}>Preferences</Text>
-      <Text style={styles.title}>Settings</Text>
-
       <ColumnGuide />
       <DataAndAbout />
     </ScrollView>
@@ -100,7 +96,7 @@ function ColumnGuide() {
   );
 }
 
-/* ------------------------------ Data & about ------------------------------ */
+/* --------------------------------- Data ----------------------------------- */
 
 function DataAndAbout() {
   const [storedCount, setStoredCount] = useState(0);
@@ -182,12 +178,9 @@ function DataAndAbout() {
     }
   }, []);
 
-  const version = Constants.expoConfig?.version ?? "—";
-  const runtime = Updates.runtimeVersion ?? "—";
-
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Data & about</Text>
+      <Text style={styles.sectionTitle}>Data</Text>
       <View style={styles.card}>
         <Row
           icon="download-outline"
@@ -210,15 +203,6 @@ function DataAndAbout() {
           onPress={checkUpdates}
           divider
         />
-        <View style={[styles.row, styles.divider]}>
-          <View style={styles.rowIcon}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
-          </View>
-          <View style={styles.rowBody}>
-            <Text style={styles.rowLabel}>Version</Text>
-            <Text style={styles.rowSub}>app {version} · runtime {runtime}</Text>
-          </View>
-        </View>
       </View>
     </View>
   );
@@ -259,8 +243,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: DOCK_SPACE,
   },
-  eyebrow: { ...font.eyebrow, color: colors.accent, marginBottom: spacing.xs },
-  title: { ...font.title, color: colors.text, marginBottom: spacing.xl },
   section: { marginBottom: spacing.xl },
   sectionTitle: { ...font.label, color: colors.textSubtle, marginBottom: spacing.sm },
   card: {

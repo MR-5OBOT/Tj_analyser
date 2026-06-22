@@ -1,6 +1,8 @@
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +12,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, font, radius, spacing } from "../theme/tokens";
 
@@ -103,6 +105,74 @@ export function PageHeader({
       </View>
       <Text style={s.title}>{title}</Text>
       {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+export type MenuAction = {
+  label: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  danger?: boolean;
+};
+
+/**
+ * Shared top app bar used on every page: back button (left), centered page name,
+ * 3-dots overflow menu (right) holding Settings / About / etc. Back is dimmed and
+ * read-only on the root (Home) page where there is nowhere to go back to.
+ */
+export function TopHeader({
+  title,
+  canGoBack,
+  onBack,
+  menu,
+}: {
+  title: string;
+  canGoBack?: boolean;
+  onBack?: () => void;
+  menu?: MenuAction[];
+}) {
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={s.topHeader}>
+      <Pressable
+        onPress={canGoBack ? onBack : undefined}
+        disabled={!canGoBack}
+        style={[s.headerBtn, !canGoBack && s.headerBtnDim]}
+        hitSlop={8}
+      >
+        <Ionicons name="chevron-back" size={22} color={canGoBack ? colors.textMuted : colors.textSubtle} />
+      </Pressable>
+      <Text style={s.headerTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <Pressable onPress={() => setOpen(true)} style={s.headerBtn} hitSlop={8}>
+        <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
+          <View style={[s.menu, { marginTop: insets.top + 52 }]}>
+            {menu?.map((item, i) => (
+              <Pressable
+                key={item.label}
+                style={[s.menuItem, i > 0 && s.menuItemBorder]}
+                onPress={() => {
+                  setOpen(false);
+                  item.onPress();
+                }}
+              >
+                {item.icon ? (
+                  <Ionicons name={item.icon} size={18} color={item.danger ? colors.danger : colors.textMuted} />
+                ) : null}
+                <Text style={[s.menuLabel, item.danger && { color: colors.danger }]}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -244,6 +314,44 @@ const s = StyleSheet.create({
   },
   eyebrow: { ...font.eyebrow, color: colors.textSubtle },
   title: { ...font.title, color: colors.text },
+  topHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+  },
+  headerBtnDim: { opacity: 0.4 },
+  headerTitle: { color: colors.text, fontSize: 16, fontWeight: "700", letterSpacing: 0.5 },
+  menuOverlay: { flex: 1, alignItems: "flex-end", paddingHorizontal: spacing.xl },
+  menu: {
+    minWidth: 184,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    overflow: "hidden",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  menuItemBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  menuLabel: { color: colors.text, fontSize: 15, fontWeight: "600" },
   pageHeader: { gap: spacing.sm, marginBottom: spacing.xs },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   eyebrowTick: { width: 16, height: 3, borderRadius: radius.pill, backgroundColor: colors.accent },

@@ -11,7 +11,7 @@ export const colors = {
   surfaceAlt: "#111111",
   border: "#1C1C1C",
   borderSoft: "#2A2A2A",
-  accent: "#A8FF60",
+  accent: "#A0F25B",
   accentSoft: "#182308",
   onAccent: "#05211C",
   text: "#FFFFFF",
