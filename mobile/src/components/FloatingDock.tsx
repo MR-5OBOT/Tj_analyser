@@ -14,15 +14,18 @@ export const DOCK_SPACE = 110;
 
 // Neo-brutalism: zero radius, bold outlines, and flat hard-offset shadows that the
 // element "pushes into" (collapses) when pressed/selected.
-// Brutalist convention: the hard shadow shares the outline's ink color, so the
-// whole dock is monochrome grey and the lime accent stays special (Add + active).
+// Fully monochrome brutalism: grey outlines + grey hard shadows. Active and Add
+// read as light-grey tiles with a dark icon; no accent color in the dock at all.
 const BRUTAL_BORDER = "#8C8C8C"; // thick grey outline on every element
 const NAV_SHADOW = "#8C8C8C"; // grey hard shadow under idle nav squares
-const ADD_SHADOW = "#8C8C8C"; // grey hard shadow under the lime Add square
-const NAV_SIZE = 56;
-const ADD_SIZE = 58;
-const NAV_OFFSET = 3; // hard-shadow displacement for nav buttons
-const ADD_OFFSET = 4; // larger displacement for the standalone Add button
+const ADD_SHADOW = "#8C8C8C"; // grey hard shadow under the Add square
+const FILL_HERO = "#A8A8A8"; // muted light-grey fill for active + Add tiles
+const ICON_HERO = "#0A0A0A"; // dark icon on the light-grey tiles
+const CONNECTOR_COLOR = "#7E7E7E"; // seam line, ~10% darker than the grey ink
+const NAV_SIZE = 46;
+const ADD_SIZE = 47;
+const NAV_OFFSET = 2; // hard-shadow displacement for nav buttons
+const ADD_OFFSET = 3; // larger displacement for the standalone Add button
 
 export function FloatingDock({
   items,
@@ -122,7 +125,7 @@ function DockButton({
             { transform: [{ translateX: shift }, { translateY: shift }] },
           ]}
         >
-          <Ionicons name={item.icon} size={22} color={active ? colors.accent : colors.textSubtle} />
+          <Ionicons name={item.icon} size={19} color={active ? ICON_HERO : colors.textSubtle} />
         </Animated.View>
       </View>
     </Pressable>
@@ -153,9 +156,13 @@ function ActionButton({
       <View style={styles.addCell}>
         <View style={styles.addShadow} />
         <Animated.View
-          style={[styles.addFace, { transform: [{ translateX: shift }, { translateY: shift }] }]}
+          style={[
+            styles.addFace,
+            active ? styles.addFaceActive : null,
+            { transform: [{ translateX: shift }, { translateY: shift }] },
+          ]}
         >
-          <Ionicons name={item.icon} size={24} color={colors.onAccent} />
+          <Ionicons name={item.icon} size={20} color={active ? ICON_HERO : colors.textSubtle} />
         </Animated.View>
       </View>
     </Pressable>
@@ -175,8 +182,8 @@ const styles = StyleSheet.create({
   dock: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.sm,
+    gap: 6,
+    padding: 6,
     backgroundColor: colors.surface,
     borderRadius: 0,
     borderWidth: 2,
@@ -186,7 +193,7 @@ const styles = StyleSheet.create({
   connector: {
     flex: 1,
     height: 2,
-    backgroundColor: BRUTAL_BORDER,
+    backgroundColor: CONNECTOR_COLOR,
     marginHorizontal: spacing.sm,
   },
   // Nav square — cell reserves room for the offset hard shadow.
@@ -212,8 +219,8 @@ const styles = StyleSheet.create({
     borderColor: BRUTAL_BORDER,
   },
   navFaceActive: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent,
+    backgroundColor: FILL_HERO,
+    borderColor: BRUTAL_BORDER,
   },
   // Add square — bigger offset, white hard shadow under a solid lime face.
   addCell: { width: ADD_SIZE + ADD_OFFSET, height: ADD_SIZE + ADD_OFFSET },
@@ -233,8 +240,11 @@ const styles = StyleSheet.create({
     height: ADD_SIZE,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.accent,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 2,
     borderColor: BRUTAL_BORDER,
+  },
+  addFaceActive: {
+    backgroundColor: FILL_HERO,
   },
 });
