@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, spacing } from "../theme/tokens";
@@ -12,14 +12,17 @@ export type DockItem = { key: string; icon: IconName };
 /** Vertical space the dock occupies, so page content can pad clear of it. */
 export const DOCK_SPACE = 110;
 
-// Dock outline, ~10% dimmer than the button borders (#2A2A2A → #262626).
-const DOCK_BORDER = "#262626";
-// Focused Add-button glow: a darker green than the lime accent (#A8FF60).
-const GLOW_COLOR = "#84C13E";
-// Selected ring around active icon circles: #97D26A reduced ~5% (darker).
-const SELECTED_BORDER = "#8FC865";
-// Dots for the dotted dock→Add connector.
-const CONNECTOR_DOTS = Array.from({ length: 14 }, (_, i) => i);
+// Neo-brutalism: zero radius, bold outlines, and flat hard-offset shadows that the
+// element "pushes into" (collapses) when pressed/selected.
+// Brutalist convention: the hard shadow shares the outline's ink color, so the
+// whole dock is monochrome grey and the lime accent stays special (Add + active).
+const BRUTAL_BORDER = "#8C8C8C"; // thick grey outline on every element
+const NAV_SHADOW = "#8C8C8C"; // grey hard shadow under idle nav squares
+const ADD_SHADOW = "#8C8C8C"; // grey hard shadow under the lime Add square
+const NAV_SIZE = 56;
+const ADD_SIZE = 58;
+const NAV_OFFSET = 3; // hard-shadow displacement for nav buttons
+const ADD_OFFSET = 4; // larger displacement for the standalone Add button
 
 export function FloatingDock({
   items,
@@ -53,11 +56,7 @@ export function FloatingDock({
 
       {action ? (
         <>
-          <View style={styles.connector} pointerEvents="none">
-            {CONNECTOR_DOTS.map((i) => (
-              <View key={i} style={styles.dot} />
-            ))}
-          </View>
+          <View style={styles.connector} pointerEvents="none" />
           <ActionButton
             item={action}
             active={action.key === activeKey}
@@ -70,9 +69,30 @@ export function FloatingDock({
 }
 
 /**
- * A dock nav button. On select it springs up with a small pop — a deliberately
- * different motion from the Add button, which eases down.
+ * Drives the brutalist "push": the face slides into its hard shadow while held
+ * down or while selected, then springs back up. Native-driver transform only.
  */
+function usePressDown(active: boolean) {
+  const [pressed, setPressed] = useState(false);
+  const down = useRef(new Animated.Value(active ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(down, {
+      toValue: active || pressed ? 1 : 0,
+      friction: 7,
+      tension: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [active, pressed, down]);
+
+  return {
+    down,
+    onPressIn: () => setPressed(true),
+    onPressOut: () => setPressed(false),
+  };
+}
+
+/** A dock nav square: white-outlined, casting a flat lime hard shadow. */
 function DockButton({
   item,
   active,
@@ -82,32 +102,34 @@ function DockButton({
   active: boolean;
   onPress: () => void;
 }) {
-  const press = useRef(new Animated.Value(active ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.spring(press, {
-      toValue: active ? 1 : 0,
-      friction: 5,
-      tension: 140,
-      useNativeDriver: true,
-    }).start();
-  }, [active, press]);
-
-  const scale = press.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+  const { down, onPressIn, onPressOut } = usePressDown(active);
+  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, NAV_OFFSET] });
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: active }}>
-      <Animated.View style={[styles.item, active ? styles.itemActive : null, { transform: [{ scale }] }]}>
-        <Ionicons name={item.icon} size={22} color={active ? colors.accent : colors.textSubtle} />
-      </Animated.View>
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
+      <View style={styles.navCell}>
+        <View style={styles.navShadow} />
+        <Animated.View
+          style={[
+            styles.navFace,
+            active ? styles.navFaceActive : null,
+            { transform: [{ translateX: shift }, { translateY: shift }] },
+          ]}
+        >
+          <Ionicons name={item.icon} size={22} color={active ? colors.accent : colors.textSubtle} />
+        </Animated.View>
+      </View>
     </Pressable>
   );
 }
 
-/**
- * Standalone Add button. Looks exactly like a dock icon when idle; when focused
- * it takes the lime active style and a soft glow halo pulses behind it.
- */
+/** Standalone Add button: a solid lime block with a white hard shadow. */
 function ActionButton({
   item,
   active,
@@ -117,66 +139,25 @@ function ActionButton({
   active: boolean;
   onPress: () => void;
 }) {
-  const glow = useRef(new Animated.Value(0)).current;
-  // 0 = idle (full circle), 1 = focused (shrunk). Animated so selection eases.
-  const press = useRef(new Animated.Value(active ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (!active) {
-      glow.stopAnimation();
-      glow.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [active, glow]);
-
-  useEffect(() => {
-    Animated.timing(press, {
-      toValue: active ? 1 : 0,
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [active, press]);
-
-  const haloStyle = {
-    opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.38] }),
-  };
-  // 59 → ~47 (scale 0.8); the icon and glow are separate so they hold their size.
-  const circleStyle = {
-    transform: [{ scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }) }],
-  };
+  const { down, onPressIn, onPressOut } = usePressDown(active);
+  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, ADD_OFFSET] });
 
   return (
     <Pressable
-      style={styles.actionWrap}
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      {active ? <Animated.View pointerEvents="none" style={[styles.halo, haloStyle]} /> : null}
-      <Animated.View
-        pointerEvents="none"
-        style={[styles.actionCircle, active ? styles.itemActive : null, circleStyle]}
-      />
-      <Ionicons name={item.icon} size={24} color={active ? colors.accent : colors.textSubtle} />
+      <View style={styles.addCell}>
+        <View style={styles.addShadow} />
+        <Animated.View
+          style={[styles.addFace, { transform: [{ translateX: shift }, { translateY: shift }] }]}
+        >
+          <Ionicons name={item.icon} size={24} color={colors.onAccent} />
+        </Animated.View>
+      </View>
     </Pressable>
   );
 }
@@ -197,62 +178,63 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: 999,
+    borderRadius: 0,
     borderWidth: 2,
-    borderColor: DOCK_BORDER,
+    borderColor: BRUTAL_BORDER,
   },
-  // Dotted line bridging the dock pill to the Add button at icon-center height,
-  // in the same dark tone as the dock outline.
+  // Thin solid brutalist seam between the dock and the Add button.
   connector: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    overflow: "hidden",
-  },
-  dot: {
-    width: 2,
     height: 2,
-    borderRadius: 999,
-    backgroundColor: DOCK_BORDER,
+    backgroundColor: BRUTAL_BORDER,
+    marginHorizontal: spacing.sm,
   },
-  item: {
-    width: 58,
-    height: 58,
-    borderRadius: 999,
+  // Nav square — cell reserves room for the offset hard shadow.
+  navCell: { width: NAV_SIZE + NAV_OFFSET, height: NAV_SIZE + NAV_OFFSET },
+  navShadow: {
+    position: "absolute",
+    top: NAV_OFFSET,
+    left: NAV_OFFSET,
+    width: NAV_SIZE,
+    height: NAV_SIZE,
+    backgroundColor: NAV_SHADOW,
+  },
+  navFace: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: NAV_SIZE,
+    height: NAV_SIZE,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceAlt,
     borderWidth: 2,
-    borderColor: colors.borderSoft,
+    borderColor: BRUTAL_BORDER,
   },
-  itemActive: {
+  navFaceActive: {
     backgroundColor: colors.accentSoft,
-    borderColor: SELECTED_BORDER,
+    borderColor: colors.accent,
   },
-  actionWrap: {
-    width: 59,
-    height: 59,
+  // Add square — bigger offset, white hard shadow under a solid lime face.
+  addCell: { width: ADD_SIZE + ADD_OFFSET, height: ADD_SIZE + ADD_OFFSET },
+  addShadow: {
+    position: "absolute",
+    top: ADD_OFFSET,
+    left: ADD_OFFSET,
+    width: ADD_SIZE,
+    height: ADD_SIZE,
+    backgroundColor: ADD_SHADOW,
+  },
+  addFace: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: ADD_SIZE,
+    height: ADD_SIZE,
     alignItems: "center",
     justifyContent: "center",
-  },
-  // Soft lime glow that pulses behind the Add button while it is focused.
-  halo: {
-    position: "absolute",
-    width: 66,
-    height: 66,
-    borderRadius: 999,
-    backgroundColor: GLOW_COLOR,
-  },
-  // The Add circle's visual (behind the icon) so it can scale without resizing
-  // the icon. Eases 59 → ~47 when focused; the glow halo stays put.
-  actionCircle: {
-    position: "absolute",
-    width: 59,
-    height: 59,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.accent,
     borderWidth: 2,
-    borderColor: colors.borderSoft,
+    borderColor: BRUTAL_BORDER,
   },
 });
