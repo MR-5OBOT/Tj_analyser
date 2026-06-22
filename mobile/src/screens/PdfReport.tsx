@@ -82,18 +82,6 @@ export function PdfReportScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Intro / rules */}
-      <View style={styles.intro}>
-        <Text style={styles.introTitle}>Generate a PDF report</Text>
-        <Text style={styles.introText}>
-          Turn your trade journal into a PDF performance report — win rate, total R, expectancy,
-          profit factor, equity curve and drawdown. Upload a CSV/Excel file or paste a Google
-          Sheets CSV link. Name your columns as shown below (at least an{" "}
-          <Text style={styles.code}>outcome</Text> or <Text style={styles.code}>rr</Text> column).
-          The PDF saves to your chosen folder — pick Downloads once and it&apos;s remembered.
-        </Text>
-      </View>
-
       {/* Upload method dropdown */}
       <Text style={styles.label}>Upload method</Text>
       <Pressable style={styles.dropdown} onPress={() => setOpen((o) => !o)}>
@@ -166,18 +154,6 @@ export function PdfReportScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE, gap: spacing.sm },
-  intro: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  introTitle: { ...font.section, color: colors.text },
-  introText: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
-  code: { fontFamily: "monospace", color: colors.accent, fontSize: 12 },
   label: { ...font.label, color: colors.textSubtle, marginTop: spacing.sm, marginBottom: spacing.sm },
   guideLabel: { marginTop: spacing.xl },
   dropdown: {
