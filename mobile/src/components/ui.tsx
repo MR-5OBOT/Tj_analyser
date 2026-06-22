@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -145,9 +146,12 @@ export function TopHeader({
       >
         <Ionicons name="chevron-back" size={22} color={canGoBack ? colors.textMuted : colors.textSubtle} />
       </Pressable>
-      <Text style={s.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={s.brand}>
+        <Image source={require("../../assets/TJ-logo.png")} style={s.logo} resizeMode="contain" />
+        <Text style={s.headerTitle} numberOfLines={1}>
+          {title}
+        </Text>
+      </View>
       <Pressable onPress={() => setOpen(true)} style={s.headerBtn} hitSlop={8}>
         <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
       </Pressable>
@@ -321,7 +325,18 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
+  brand: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  logo: { width: 30, height: 30 },
   headerBtn: {
     width: 44,
     height: 44,
