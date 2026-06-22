@@ -1,0 +1,24 @@
+# Keep the backend image small — only ship the Python app
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+
+# Mobile app is not part of the backend image
+mobile
+
+# Local data / generated reports
+backend/storage
+*.pdf
+
+# Env files (set these in Koyeb instead)
+.env
+.env.*
+!.env.example
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
