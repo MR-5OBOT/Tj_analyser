@@ -4,6 +4,7 @@ import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, spacing } from "../theme/tokens";
+import { SketchBorder } from "./ui";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -47,6 +48,7 @@ export function FloatingDock({
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
     >
       <View style={styles.dock}>
+        <SketchBorder seed={991} />
         {items.map((item) => (
           <DockButton
             key={item.key}
@@ -59,7 +61,11 @@ export function FloatingDock({
 
       {action ? (
         <>
-          <View style={styles.connector} pointerEvents="none" />
+          <View style={styles.connector} pointerEvents="none">
+            <View style={[styles.connSeg, { transform: [{ rotate: "2deg" }] }]} />
+            <View style={[styles.connSeg, { transform: [{ rotate: "-2.5deg" }] }]} />
+            <View style={[styles.connSeg, { transform: [{ rotate: "1.5deg" }] }]} />
+          </View>
           <ActionButton
             item={action}
             active={action.key === activeKey}
@@ -186,15 +192,18 @@ const styles = StyleSheet.create({
     padding: 6,
     backgroundColor: colors.surface,
     borderRadius: 0,
-    borderWidth: 2,
-    borderColor: BRUTAL_BORDER,
   },
-  // Thin solid brutalist seam between the dock and the Add button.
+  // Hand-drawn seam: three slightly-rotated segments so the line waves.
   connector: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: spacing.sm,
+  },
+  connSeg: {
     flex: 1,
     height: 2,
     backgroundColor: CONNECTOR_COLOR,
-    marginHorizontal: spacing.sm,
   },
   // Nav square — cell reserves room for the offset hard shadow.
   navCell: { width: NAV_SIZE + NAV_OFFSET, height: NAV_SIZE + NAV_OFFSET },

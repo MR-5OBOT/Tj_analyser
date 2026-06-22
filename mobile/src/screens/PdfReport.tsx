@@ -6,9 +6,14 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 
 import { ColumnGuide } from "../components/ColumnGuide";
 import { DOCK_SPACE } from "../components/FloatingDock";
+import { SketchBorder } from "../components/ui";
 import { analyze, AnalyzeInput, ApiError, getBaseUrl } from "../lib/api";
 import { downloadReport, reportBaseName } from "../lib/report";
-import { colors, font, radius, spacing } from "../theme/tokens";
+import { colors, font, fontFamily, spacing } from "../theme/tokens";
+
+// Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
+const HERO_FILL = "#A8A8A8";
+const HERO_TEXT = "#0A0A0A";
 
 type Method = "file" | "url";
 type PickedFile = { uri: string; name: string; mimeType?: string };
@@ -85,12 +90,14 @@ export function PdfReportScreen() {
       {/* Upload method dropdown */}
       <Text style={styles.label}>Upload method</Text>
       <Pressable style={styles.dropdown} onPress={() => setOpen((o) => !o)}>
+        <SketchBorder seed={211} straight />
         <Ionicons name={current.icon} size={18} color={colors.textMuted} />
         <Text style={styles.dropdownText}>{current.label}</Text>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color={colors.textSubtle} />
       </Pressable>
       {open ? (
         <View style={styles.dropList}>
+          <SketchBorder seed={733} straight />
           {METHODS.map((m, i) => {
             const active = m.value === method;
             return (
@@ -103,9 +110,9 @@ export function PdfReportScreen() {
                   setError(null);
                 }}
               >
-                <Ionicons name={m.icon} size={18} color={active ? colors.accent : colors.textMuted} />
-                <Text style={[styles.dropItemText, active && { color: colors.accent }]}>{m.label}</Text>
-                {active ? <Ionicons name="checkmark" size={16} color={colors.accent} /> : null}
+                <Ionicons name={m.icon} size={18} color={active ? colors.text : colors.textMuted} />
+                <Text style={[styles.dropItemText, active && { color: colors.text }]}>{m.label}</Text>
+                {active ? <Ionicons name="checkmark" size={16} color={colors.textMuted} /> : null}
               </Pressable>
             );
           })}
@@ -116,30 +123,35 @@ export function PdfReportScreen() {
       <View style={styles.inputArea}>
         {method === "file" ? (
           <Pressable style={styles.fileBtn} onPress={pickFile}>
-            <Ionicons name="cloud-upload-outline" size={20} color={colors.accent} />
+            <SketchBorder seed={319} straight />
+            <Ionicons name="cloud-upload-outline" size={20} color={colors.textMuted} />
             <Text style={[styles.fileBtnText, !file && { color: colors.textSubtle }]} numberOfLines={1}>
               {file ? file.name : "Choose CSV / Excel file"}
             </Text>
           </Pressable>
         ) : (
-          <TextInput
-            style={styles.input}
-            value={url}
-            onChangeText={setUrl}
-            placeholder="https://docs.google.com/spreadsheets/.../export?format=csv"
-            placeholderTextColor={colors.textSubtle}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={url}
+              onChangeText={setUrl}
+              placeholder="https://docs.google.com/spreadsheets/.../export?format=csv"
+              placeholderTextColor={colors.textSubtle}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+            <SketchBorder seed={877} straight />
+          </View>
         )}
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable style={[styles.generate, busy && styles.generateBusy]} onPress={generate} disabled={busy}>
+        <SketchBorder seed={455} straight />
         {busy ? (
-          <ActivityIndicator color={colors.onAccent} />
+          <ActivityIndicator color={HERO_TEXT} />
         ) : (
           <Text style={styles.generateText}>Generate report</Text>
         )}
@@ -161,57 +173,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radius.md,
+    borderRadius: 0,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
   },
-  dropdownText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
+  dropdownText: { flex: 1, color: colors.text, fontSize: 15, fontFamily: fontFamily.medium },
   dropList: {
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radius.md,
-    overflow: "hidden",
+    borderRadius: 0,
   },
   dropItem: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2 },
   dropSep: { borderTopWidth: 1, borderTopColor: colors.border },
-  dropItemText: { flex: 1, color: colors.text, fontSize: 15 },
+  dropItemText: { flex: 1, color: colors.text, fontSize: 15, fontFamily: fontFamily.regular },
   inputArea: { marginTop: spacing.sm },
   fileBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
     backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderStyle: "dashed",
-    borderRadius: radius.md,
+    borderRadius: 0,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
-  fileBtnText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: "600" },
+  fileBtnText: { flex: 1, color: colors.text, fontSize: 14, fontFamily: fontFamily.medium },
+  inputWrap: { position: "relative" },
   input: {
     backgroundColor: colors.surfaceAlt,
     color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    borderRadius: radius.md,
+    borderRadius: 0,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
     fontSize: 14,
+    fontFamily: fontFamily.regular,
   },
-  error: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
+  error: { color: colors.danger, fontSize: 13, marginTop: spacing.sm, fontFamily: fontFamily.regular },
   generate: {
     marginTop: spacing.lg,
     minHeight: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.accent,
+    borderRadius: 0,
+    backgroundColor: HERO_FILL,
     alignItems: "center",
     justifyContent: "center",
   },
   generateBusy: { opacity: 0.7 },
-  generateText: { color: colors.onAccent, fontSize: 16, fontWeight: "800" },
+  generateText: { color: HERO_TEXT, fontSize: 16, fontFamily: fontFamily.bold },
 });

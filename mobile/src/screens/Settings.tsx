@@ -7,8 +7,13 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
+import { SketchBorder } from "../components/ui";
 import { getBaseUrl, setBaseUrl } from "../lib/api";
-import { colors, font, spacing } from "../theme/tokens";
+import { colors, font, fontFamily, spacing } from "../theme/tokens";
+
+// Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
+const HERO_FILL = "#A8A8A8";
+const HERO_TEXT = "#0A0A0A";
 
 const JOURNALS_KEY = "tj.journals";
 
@@ -41,23 +46,28 @@ function ServerSettings() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Server</Text>
       <View style={styles.card}>
+        <SketchBorder seed={123} straight />
         <View style={styles.serverBody}>
           <Text style={styles.serverLabel}>Backend URL</Text>
-          <TextInput
-            style={styles.serverInput}
-            value={url}
-            onChangeText={setUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            placeholder="https://your-backend.example.com"
-            placeholderTextColor={colors.textSubtle}
-            onSubmitEditing={save}
-            returnKeyType="done"
-          />
+          <View style={styles.serverInputWrap}>
+            <TextInput
+              style={styles.serverInput}
+              value={url}
+              onChangeText={setUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder="https://your-backend.example.com"
+              placeholderTextColor={colors.textSubtle}
+              onSubmitEditing={save}
+              returnKeyType="done"
+            />
+            <SketchBorder seed={321} straight />
+          </View>
           <View style={styles.serverActions}>
             <Text style={styles.serverHint}>Used by the PDF report generator.</Text>
             <Pressable style={styles.serverSave} onPress={save}>
+              <SketchBorder seed={567} straight />
               <Text style={styles.serverSaveText}>{saved ? "Saved ✓" : "Save"}</Text>
             </Pressable>
           </View>
@@ -153,6 +163,7 @@ function DataAndAbout() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Data</Text>
       <View style={styles.card}>
+        <SketchBorder seed={789} straight />
         <Row
           icon="download-outline"
           label="Export journals (CSV)"
@@ -219,26 +230,22 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 0,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
   },
   serverBody: { padding: spacing.lg, gap: spacing.sm },
-  serverLabel: { ...font.body, color: colors.text, fontWeight: "600" },
+  serverLabel: { ...font.body, color: colors.text, fontFamily: fontFamily.medium },
+  serverInputWrap: { position: "relative" },
   serverInput: {
     backgroundColor: colors.surfaceAlt,
     color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontFamily: "monospace",
     fontSize: 13,
   },
-  serverActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  serverHint: { flex: 1, fontSize: 12, color: colors.textSubtle },
-  serverSave: { backgroundColor: colors.accent, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  serverSaveText: { color: colors.onAccent, fontWeight: "800", fontSize: 13 },
+  serverActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.xs },
+  serverHint: { flex: 1, fontSize: 12, color: colors.textSubtle, fontFamily: fontFamily.regular },
+  serverSave: { backgroundColor: HERO_FILL, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  serverSaveText: { color: HERO_TEXT, fontFamily: fontFamily.bold, fontSize: 13 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -247,7 +254,7 @@ const styles = StyleSheet.create({
   },
   rowIcon: { width: 24, alignItems: "center" },
   rowBody: { flex: 1 },
-  rowLabel: { ...font.body, color: colors.text, fontWeight: "600" },
-  rowSub: { fontSize: 12, color: colors.textSubtle, marginTop: 2 },
+  rowLabel: { ...font.body, color: colors.text, fontFamily: fontFamily.medium },
+  rowSub: { fontSize: 12, color: colors.textSubtle, marginTop: 2, fontFamily: fontFamily.regular },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
 });

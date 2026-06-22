@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "../theme/tokens";
+import { colors, fontFamily, spacing } from "../theme/tokens";
 
 // Each displayed column accepts any of 3 names. The table shows all 3 naming variants as
 // alternating rows: a names row (one variant) followed by a row of sample values.
@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 1,
+    fontFamily: fontFamily.medium,
   },
   tableScroll: {
     borderRadius: 0,
@@ -105,6 +106,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
   },
-  footnote: { fontSize: 12, color: colors.textSubtle, marginTop: spacing.sm, lineHeight: 18 },
+  footnote: { fontSize: 12, color: colors.textSubtle, marginTop: spacing.sm, lineHeight: 18, fontFamily: fontFamily.regular },
   mono: { fontFamily: "monospace", color: colors.textMuted },
 });

@@ -1,4 +1,4 @@
-const defaultBackendUrl = "https://zippy-magda-fsocietyt-17e28cd0.koyeb.app";
+const defaultBackendUrl = "https://inquisitive-lottie-fsocietyt-f7a26bff.koyeb.app";
 const backendUrl = (process.env.EXPO_PUBLIC_API_BASE_URL ?? defaultBackendUrl).replace(/\s+/g, "");
 
 export default {

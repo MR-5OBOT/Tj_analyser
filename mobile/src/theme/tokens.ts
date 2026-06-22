@@ -42,10 +42,18 @@ export const radius = {
   pill: 999,
 };
 
+// Space Grotesk — a neo-brutalism staple. Each weight is its own family name
+// (loaded in app/_layout.tsx); fontWeight doesn't switch them, so set the family.
+export const fontFamily = {
+  regular: "SpaceGrotesk_400Regular",
+  medium: "SpaceGrotesk_500Medium",
+  bold: "SpaceGrotesk_700Bold",
+};
+
 export const font = {
-  eyebrow: { fontSize: 11, letterSpacing: 1.8, textTransform: "uppercase" as const },
-  label: { fontSize: 12, letterSpacing: 1.1, textTransform: "uppercase" as const },
-  body: { fontSize: 15, lineHeight: 22 },
-  title: { fontSize: 28, fontWeight: "800" as const },
-  section: { fontSize: 19, fontWeight: "700" as const },
+  eyebrow: { fontFamily: fontFamily.medium, fontSize: 11, letterSpacing: 1.8, textTransform: "uppercase" as const },
+  label: { fontFamily: fontFamily.medium, fontSize: 12, letterSpacing: 1.1, textTransform: "uppercase" as const },
+  body: { fontFamily: fontFamily.regular, fontSize: 15, lineHeight: 22 },
+  title: { fontFamily: fontFamily.bold, fontSize: 28 },
+  section: { fontFamily: fontFamily.bold, fontSize: 19 },
 };

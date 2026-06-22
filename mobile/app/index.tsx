@@ -48,8 +48,6 @@ export default function Home() {
     setHistory((h) => [...h.filter((k) => k !== key), key]);
   };
 
-  const goBack = () => setHistory((h) => (h.length > 1 ? h.slice(0, -1) : h));
-
   // Android hardware back button: step back through the in-app tab stack first,
   // and only let the OS close the app once we're at the Home root.
   const historyRef = useRef(history);
@@ -92,7 +90,7 @@ export default function Home() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
-        <TopHeader title={page.title} canGoBack={history.length > 1} onBack={goBack} menu={menu} />
+        <TopHeader title={page.title} onLogoPress={() => select("home")} menu={menu} />
         {active === "settings" ? (
           <SettingsScreen />
         ) : active === "report" ? (
