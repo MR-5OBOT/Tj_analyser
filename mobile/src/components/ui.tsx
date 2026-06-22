@@ -269,7 +269,6 @@ export function TopHeader({
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
           <View style={[s.menu, { marginTop: insets.top + 52 }]}>
-            <SketchBorder seed={4517} straight />
             {menu?.map((item, i) => (
               <Pressable
                 key={item.label}
@@ -286,6 +285,7 @@ export function TopHeader({
                 <Text style={[s.menuLabel, item.danger && { color: colors.danger }]}>{item.label}</Text>
               </Pressable>
             ))}
+            <SketchBorder seed={4517} straight />
           </View>
         </Pressable>
       </Modal>

@@ -164,7 +164,6 @@ function DataAndAbout() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Data</Text>
       <View style={styles.card}>
-        <SketchBorder seed={789} straight />
         <Row
           icon="download-outline"
           label="Export journals (CSV)"
@@ -186,6 +185,7 @@ function DataAndAbout() {
           onPress={checkUpdates}
           divider
         />
+        <SketchBorder seed={789} straight />
       </View>
     </View>
   );
