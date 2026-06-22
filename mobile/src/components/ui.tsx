@@ -269,16 +269,17 @@ export function TopHeader({
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
           <View style={[s.menu, { marginTop: insets.top + 52 }]}>
-            <SketchBorder seed={4517} />
+            <SketchBorder seed={4517} straight />
             {menu?.map((item, i) => (
               <Pressable
                 key={item.label}
-                style={[s.menuItem, i > 0 && s.menuItemBorder]}
+                style={s.menuItem}
                 onPress={() => {
                   setOpen(false);
                   item.onPress();
                 }}
               >
+                {i > 0 ? <View style={s.menuDivider} pointerEvents="none" /> : null}
                 {item.icon ? (
                   <Ionicons name={item.icon} size={18} color={item.danger ? colors.danger : colors.textMuted} />
                 ) : null}
@@ -473,7 +474,6 @@ const s = StyleSheet.create({
     color: HEADER_TITLE_COLOR,
     fontFamily: HEADER_FONT,
     fontSize: 19,
-    fontWeight: "700",
     letterSpacing: 0.8,
   },
   menuOverlay: { flex: 1, alignItems: "flex-end", paddingHorizontal: spacing.xl },
@@ -489,8 +489,9 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  menuItemBorder: { borderTopWidth: 1, borderTopColor: colors.border },
-  menuLabel: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 16, fontWeight: "700" },
+  // Same cross-line divider as the data card: overshoots into the menu frame.
+  menuDivider: { position: "absolute", top: 0, left: -6, right: -6, height: 2, backgroundColor: "#5A5A5A" },
+  menuLabel: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 16 },
   pageHeader: { gap: spacing.sm, marginBottom: spacing.xs },
   eyebrowRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   eyebrowTick: { width: 16, height: 3, borderRadius: radius.pill, backgroundColor: colors.accent },

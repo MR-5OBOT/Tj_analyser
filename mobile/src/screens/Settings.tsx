@@ -14,6 +14,7 @@ import { colors, font, fontFamily, spacing } from "../theme/tokens";
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
 const HERO_FILL = "#A8A8A8";
 const HERO_TEXT = "#0A0A0A";
+const DIVIDER_COLOR = "#5A5A5A"; // row separator: cross-line style, darker than the frame
 
 const JOURNALS_KEY = "tj.journals";
 
@@ -206,7 +207,8 @@ function Row({
   divider?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.row, divider && styles.divider]}>
+    <Pressable onPress={onPress} style={styles.row}>
+      {divider ? <View style={styles.rowDivider} pointerEvents="none" /> : null}
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={20} color={danger ? colors.danger : colors.textMuted} />
       </View>
@@ -256,5 +258,5 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1 },
   rowLabel: { ...font.body, color: colors.text, fontFamily: fontFamily.medium },
   rowSub: { fontSize: 12, color: colors.textSubtle, marginTop: 2, fontFamily: fontFamily.regular },
-  divider: { borderTopWidth: 1, borderTopColor: colors.border },
+  rowDivider: { position: "absolute", top: 0, left: -6, right: -6, height: 2, backgroundColor: DIVIDER_COLOR },
 });

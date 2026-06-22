@@ -158,8 +158,9 @@ export function PdfReportScreen() {
       </Pressable>
 
       {/* Column naming rules */}
-      <Text style={[styles.label, styles.guideLabel]}>Column naming</Text>
-      <ColumnGuide />
+      <View style={styles.guideWrap}>
+        <ColumnGuide />
+      </View>
     </ScrollView>
   );
 }
@@ -167,7 +168,7 @@ export function PdfReportScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE, gap: spacing.sm },
   label: { ...font.label, color: colors.textSubtle, marginTop: spacing.sm, marginBottom: spacing.sm },
-  guideLabel: { marginTop: spacing.xl },
+  guideWrap: { marginTop: spacing.lg },
   dropdown: {
     flexDirection: "row",
     alignItems: "center",
