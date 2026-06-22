@@ -33,7 +33,7 @@ export default {
     android: {
       package: "com.tjanalyser.mobile",
       adaptiveIcon: {
-        foregroundImage: "./assets/icon.png",
+        foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#000000",
       },
     },
