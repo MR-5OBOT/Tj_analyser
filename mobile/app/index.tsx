@@ -1,14 +1,12 @@
-import Constants from "expo-constants";
-import * as Updates from "expo-updates";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, BackHandler, Linking, StyleSheet, View } from "react-native";
+import { BackHandler, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
 import { TopHeader } from "../src/components/ui";
 import { AddTradeScreen, Draft, INITIAL_DRAFT } from "../src/screens/AddTrade";
 import { HomeScreen } from "../src/screens/Home";
-import { PdfReportScreen } from "../src/screens/PdfReport";
+import { ReportsScreen } from "../src/screens/Reports";
 import { SettingsScreen } from "../src/screens/Settings";
 import { TradesLogsScreen } from "../src/screens/TradesLogs";
 import { colors } from "../src/theme/tokens";
@@ -18,7 +16,7 @@ type Page = { key: string; icon: DockItem["icon"]; title: string };
 // All routable pages (Settings lives in the header ⋮ menu, not the dock).
 const PAGES: Page[] = [
   { key: "home", icon: "home-outline", title: "Home" },
-  { key: "report", icon: "stats-chart-outline", title: "PDF Report" },
+  { key: "report", icon: "stats-chart-outline", title: "Reports" },
   { key: "add", icon: "create-outline", title: "Add trade" },
   { key: "journals", icon: "server-outline", title: "Trades Logs" },
   { key: "settings", icon: "settings-outline", title: "Settings" },
@@ -72,32 +70,14 @@ export default function Home() {
     return () => sub.remove();
   }, []);
 
-  const showAbout = () => {
-    const version = Constants.expoConfig?.version ?? "—";
-    const build = Updates.runtimeVersion ?? "—";
-    Alert.alert(
-      "TJ Analyser",
-      "A personal trading journal that turns your own trade records into clean stats and a " +
-        "shareable PDF report — win rate, total R, expectancy, profit factor, equity curve and drawdown.\n\n" +
-        "Privacy: your journals stay on this device. No account, no sign-up, no ads, no tracking.\n\n" +
-        "This is a personal record-keeping and self-analysis tool only. It is not financial, " +
-        "investment, or trading advice and provides no buy/sell signals or recommendations.\n\n" +
-        `Version ${version} · build ${build}`,
-      [
-        { text: "🌐  Author's website", onPress: () => Linking.openURL("https://mr-5obot.github.io/") },
-        { text: "Close", style: "cancel" },
-      ],
-    );
-  };
-
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
-        <TopHeader title={page.title} onSettings={() => select("settings")} onAbout={showAbout} />
+        <TopHeader title={page.title} onSettings={() => select("settings")} />
         {active === "settings" ? (
           <SettingsScreen />
         ) : active === "report" ? (
-          <PdfReportScreen />
+          <ReportsScreen />
         ) : active === "add" ? (
           <AddTradeScreen step={addStep} setStep={setAddStep} draft={addDraft} setDraft={setAddDraft} />
         ) : active === "journals" ? (

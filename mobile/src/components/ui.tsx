@@ -1,9 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "—";
+const APP_BUILD = Updates.runtimeVersion ?? "—";
+const AUTHOR_URL = "https://mr-5obot.github.io/";
+const ABOUT_TEXT =
+  "A personal trading journal that turns your own trade records into clean stats and a shareable PDF report — win rate, total R, expectancy, profit factor, equity curve and drawdown.\n\n" +
+  "Privacy: your journals stay on this device. No account, no sign-up, no ads, no tracking.\n\n" +
+  "A personal record-keeping and self-analysis tool only — not financial, investment, or trading advice, and no buy/sell signals.";
 
 // Neo-brutalist header tokens, matched to the dock: zero radius, bold grey ink,
 // flat hard-offset shadow the button pushes into on tap.
@@ -123,15 +133,14 @@ const R_MANIFESTO =
 export function TopHeader({
   title,
   onSettings,
-  onAbout,
 }: {
   title: string;
   onSettings: () => void;
-  onAbout: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false); // left "!" menu
   const [disc, setDisc] = useState(false); // disclaimer modal
+  const [about, setAbout] = useState(false); // about modal
   const press = useRef(new Animated.Value(0)).current;
   const springPress = (to: number) =>
     Animated.spring(press, { toValue: to, friction: 6, tension: 240, useNativeDriver: true }).start();
@@ -182,7 +191,7 @@ export function TopHeader({
               style={s.menuItem}
               onPress={() => {
                 setOpen(false);
-                onAbout();
+                setAbout(true);
               }}
             >
               <View style={s.menuDivider} pointerEvents="none" />
@@ -204,6 +213,27 @@ export function TopHeader({
             </ScrollView>
             <Pressable style={s.discClose} onPress={() => setDisc(false)}>
               <Text style={s.discCloseText}>GOT IT</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={about} transparent animationType="fade" onRequestClose={() => setAbout(false)}>
+        <Pressable style={s.discOverlay} onPress={() => setAbout(false)}>
+          <Pressable style={s.discCard} onPress={() => {}}>
+            <SketchBorder seed={1314} straight />
+            <Text style={s.discTitle}>ABOUT</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={s.discScroll}>
+              <Text style={s.discBody}>{ABOUT_TEXT}</Text>
+            </ScrollView>
+            <Text style={s.aboutVersion}>
+              Version {APP_VERSION} · build {APP_BUILD}
+            </Text>
+            <Pressable style={s.aboutLink} onPress={() => Linking.openURL(AUTHOR_URL)}>
+              <Text style={s.aboutLinkText}>🌐  Author's website</Text>
+            </Pressable>
+            <Pressable style={s.discClose} onPress={() => setAbout(false)}>
+              <Text style={s.discCloseText}>CLOSE</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -277,4 +307,7 @@ const s = StyleSheet.create({
   discBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 21 },
   discClose: { marginTop: spacing.lg, backgroundColor: colors.text, height: 46, alignItems: "center", justifyContent: "center" },
   discCloseText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },
+  aboutVersion: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.md },
+  aboutLink: { marginTop: spacing.sm, alignSelf: "flex-start" },
+  aboutLinkText: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 14 },
 });

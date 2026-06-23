@@ -18,9 +18,15 @@ import {
   View,
 } from "react-native";
 
+import Svg, { Path, Text as SvgText } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { SketchBorder } from "../components/ui";
-import { CSV_REQUIRED, csvToTrades, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { BrutalLoader, SketchBorder } from "../components/ui";
+import { analyze, getBaseUrl } from "../lib/api";
+import { csvToTrades, deleteTrade, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
 type Align = "left" | "center" | "right";
@@ -52,7 +58,11 @@ export function TradesLogsScreen() {
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [warning, setWarning] = useState(false);
+  const [menuTrade, setMenuTrade] = useState<Trade | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const headerRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   const reload = useCallback(() => {
     loadTrades().then((t) => setTrades([...t].reverse()));
@@ -78,6 +88,37 @@ export function TradesLogsScreen() {
     }
   };
 
+  // Build a PDF report straight from the in-app journal (no file picking).
+  const reportFromLogs = async () => {
+    const all = await loadTrades();
+    if (all.length === 0) {
+      Alert.alert("No trades", "Log some trades first.");
+      return;
+    }
+    setReporting(true);
+    try {
+      const uri = `${FileSystem.cacheDirectory}trades.csv`;
+      await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
+      const res = await analyze({ kind: "file", uri, name: "trades.csv", mimeType: "text/csv" });
+      const base = await getBaseUrl();
+      const { cacheUri } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
+      // Auto-open is best-effort — the report is already saved to Downloads.
+      try {
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(cacheUri, { mimeType: "application/pdf", dialogTitle: "Open report" });
+        } else {
+          Alert.alert("Report ready", `${res.rows_processed} trades analysed and saved to Downloads.`);
+        }
+      } catch {
+        Alert.alert("Report ready", "Saved to Downloads — close any open share dialog to open it.");
+      }
+    } catch (e) {
+      Alert.alert("Report failed", e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setReporting(false);
+    }
+  };
+
   const onCsv = async (csv: string) => {
     let parsed: Trade[];
     try {
@@ -95,6 +136,24 @@ export function TradesLogsScreen() {
     );
   };
 
+  const deleteRow = (t: Trade) => {
+    Alert.alert("Delete trade?", `${t.instrument || "—"} · ${fmtDate(t.date)}`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deleteTrade(t.id);
+          setMenuTrade(null);
+          reload();
+        },
+      },
+    ]);
+  };
+
+  // ponytail: share is stubbed — wire up the actual share later.
+  const shareRow = () => setMenuTrade(null);
+
   const list = trades ?? [];
   const totalR = list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0);
 
@@ -108,12 +167,11 @@ export function TradesLogsScreen() {
             {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}
           </Text>
         </View>
-        <View style={styles.actions}>
-          <Pressable hitSlop={8} onPress={() => setWarning(true)}>
-            <Ionicons name="cloud-download-outline" size={22} color={colors.textMuted} />
-          </Pressable>
-          <Pressable hitSlop={8} onPress={exportCsv}>
-            <Ionicons name="cloud-upload-outline" size={22} color={colors.textMuted} />
+        <View style={styles.actionsWrap}>
+          <Pressable style={styles.actionsBtn} onPress={() => setActionsOpen(true)}>
+            <SketchBorder seed={771} straight />
+            <Text style={styles.actionsBtnText}>ACTIONS</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
           </Pressable>
         </View>
       </View>
@@ -152,6 +210,7 @@ export function TradesLogsScreen() {
                   <Pressable
                     key={t.id}
                     onPress={() => setActive(t)}
+                    onLongPress={() => setMenuTrade(t)}
                     onPressIn={() => setPressedId(t.id)}
                     onPressOut={() => setPressedId(null)}
                     style={[styles.dateCell, { width: DATE_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
@@ -168,6 +227,7 @@ export function TradesLogsScreen() {
                     <Pressable
                       key={t.id}
                       onPress={() => setActive(t)}
+                      onLongPress={() => setMenuTrade(t)}
                       onPressIn={() => setPressedId(t.id)}
                       onPressOut={() => setPressedId(null)}
                       style={[styles.row, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
@@ -184,8 +244,9 @@ export function TradesLogsScreen() {
         )}
       </View>
 
-      <ImportWarning
+      <ColumnsWarning
         visible={warning}
+        note="Rows are added to your existing journal."
         onClose={() => setWarning(false)}
         onContinue={() => {
           setWarning(false);
@@ -193,38 +254,84 @@ export function TradesLogsScreen() {
         }}
       />
       <ImportModal visible={importing} onClose={() => setImporting(false)} onCsv={onCsv} />
+      <Modal visible={actionsOpen} transparent animationType="fade" onRequestClose={() => setActionsOpen(false)}>
+        <Pressable style={styles.actOverlay} onPress={() => setActionsOpen(false)}>
+          <View style={[styles.actMenu, { marginTop: insets.top + 96 }]}>
+            <SketchBorder seed={914} straight />
+            <Pressable
+              style={styles.actItem}
+              onPress={() => {
+                setActionsOpen(false);
+                reportFromLogs();
+              }}
+            >
+              <PdfIcon size={18} color={colors.textMuted} />
+              <Text style={styles.actItemText}>Generate PDF report</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actItem, styles.actDivider]}
+              onPress={() => {
+                setActionsOpen(false);
+                setWarning(true);
+              }}
+            >
+              <Ionicons name="cloud-download-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.actItemText}>Import CSV</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actItem, styles.actDivider]}
+              onPress={() => {
+                setActionsOpen(false);
+                exportCsv();
+              }}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.actItemText}>Export CSV</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      <RowMenu trade={menuTrade} onClose={() => setMenuTrade(null)} onShare={shareRow} onDelete={deleteRow} />
       <TradeDetail trade={active} onClose={() => setActive(null)} />
+
+      <Modal visible={reporting} transparent animationType="fade">
+        <View style={styles.reportOverlay}>
+          <BrutalLoader color={colors.text} label="GENERATING REPORT" />
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function ImportWarning({ visible, onClose, onContinue }: { visible: boolean; onClose: () => void; onContinue: () => void }) {
-  const pairs: [string, string][] = [];
-  for (let i = 0; i < CSV_REQUIRED.length; i += 2) pairs.push([CSV_REQUIRED[i], CSV_REQUIRED[i + 1] ?? ""]);
+function RowMenu({
+  trade,
+  onClose,
+  onShare,
+  onDelete,
+}: {
+  trade: Trade | null;
+  onClose: () => void;
+  onShare: (t: Trade) => void;
+  onDelete: (t: Trade) => void;
+}) {
+  if (!trade) return null;
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.warnCard} onPress={() => {}}>
-          <SketchBorder seed={912} straight />
-          <Text style={styles.detailTitle}>IMPORT CSV</Text>
-          <Text style={styles.warnText}>Name your CSV columns exactly like this:</Text>
-          <View style={styles.colGrid}>
-            {pairs.map(([a, b], i) => (
-              <View key={i} style={styles.colRow}>
-                <Text style={styles.colCell}>{a}</Text>
-                <Text style={styles.colCell}>{b}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.warnNote}>Rows are added to your existing journal.</Text>
-          <View style={styles.warnBtns}>
-            <Pressable hitSlop={8} onPress={onClose}>
-              <Text style={styles.warnCancelText}>CANCEL</Text>
-            </Pressable>
-            <Pressable style={styles.warnContinue} onPress={onContinue}>
-              <Text style={styles.warnContinueText}>CONTINUE</Text>
-            </Pressable>
-          </View>
+        <Pressable style={styles.rmCard} onPress={() => {}}>
+          <SketchBorder seed={913} straight />
+          <Text style={styles.rmHeading}>
+            {trade.instrument || "—"} · {fmtDate(trade.date)}
+          </Text>
+          <Pressable style={styles.rmItem} onPress={() => onShare(trade)}>
+            <Ionicons name="share-outline" size={18} color={colors.textMuted} />
+            <Text style={styles.rmItemText}>Share trade</Text>
+          </Pressable>
+          <Pressable style={[styles.rmItem, styles.rmDivider]} onPress={() => onDelete(trade)}>
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            <Text style={[styles.rmItemText, { color: colors.danger }]}>Delete trade</Text>
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -318,6 +425,18 @@ function ImportModal({ visible, onClose, onCsv }: { visible: boolean; onClose: (
   );
 }
 
+function PdfIcon({ size = 20, color }: { size?: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M5 2 H14 L19 7 V22 H5 Z" fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+      <Path d="M14 2 V7 H19" fill="none" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+      <SvgText x="12" y="18" fontSize="7" fontWeight="bold" fill={color} textAnchor="middle">
+        PDF
+      </SvgText>
+    </Svg>
+  );
+}
+
 function Cell({ col, trade }: { col: Col; trade: Trade }) {
   const base = [styles.cell, { width: col.w, alignItems: textAlign(col.align) }];
   if (col.key === "direction") {
@@ -345,7 +464,7 @@ function Cell({ col, trade }: { col: Col; trade: Trade }) {
     return (
       <View style={base}>
         <View style={[styles.chip, { borderColor: color }]}>
-          <Text style={[styles.chipText, { color }]}>{o.toUpperCase()}</Text>
+          <Text style={[styles.chipText, { color }]}>{o ? o.toUpperCase() : "—"}</Text>
         </View>
       </View>
     );
@@ -358,7 +477,7 @@ function Cell({ col, trade }: { col: Col; trade: Trade }) {
     );
   }
   if (col.key === "link") {
-    const has = trade.tradeLink.trim() !== "";
+    const has = (trade.tradeLink ?? "").trim() !== "";
     return (
       <View style={base}>
         <Text style={[styles.cellText, styles.bold, { color: has ? colors.positive : colors.textSubtle }]}>{has ? "↗" : "—"}</Text>
@@ -389,16 +508,16 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
   const rows: [string, string][] = [
     ["DATE", fmtDate(trade.date)],
     ["SYMBOL", trade.instrument || "—"],
-    ["DIRECTION", trade.direction.toUpperCase()],
+    ["DIRECTION", trade.direction?.toUpperCase() ?? "—"],
     ["ENTRY TIME", trade.entryTime || "—"],
     ["SL SIZE", `${trade.slSize ?? "—"}`],
     ["POSITION SIZE", `${trade.positionSize ?? "—"}`],
-    ["OUTCOME", trade.outcome.toUpperCase()],
+    ["OUTCOME", trade.outcome?.toUpperCase() ?? "—"],
     ["R-R", trade.rr == null ? "—" : `${trade.rr > 0 ? "+" : ""}${trade.rr}R`],
     ["TAG", trade.tag ? `#${trade.tag}` : "—"],
     ["NOTES", trade.notes || "—"],
   ];
-  const hasLink = trade.tradeLink.trim() !== "";
+  const hasLink = (trade.tradeLink ?? "").trim() !== "";
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -406,7 +525,7 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
           <Pressable style={styles.card} onPress={() => {}}>
             <SketchBorder seed={808} straight />
             <Text style={styles.detailTitle}>
-              {trade.instrument} · {trade.direction.toUpperCase()}
+              {trade.instrument} · {trade.direction?.toUpperCase() ?? "—"}
             </Text>
             {rows.map(([k, v], i) => (
               <View key={k} style={[styles.detailRow, i > 0 && styles.detailDivider]}>
@@ -433,7 +552,14 @@ const styles = StyleSheet.create({
 
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
   titleLeft: { gap: 1 },
-  actions: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
+  actionsWrap: { marginRight: spacing.md, transform: [{ rotate: "-1deg" }] },
+  actionsBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  actionsBtnText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 12, letterSpacing: 1 },
+  actOverlay: { flex: 1, alignItems: "flex-end", paddingHorizontal: spacing.xl },
+  actMenu: { minWidth: 210, backgroundColor: colors.surface },
+  actItem: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  actDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  actItemText: { color: colors.text, fontFamily: fontFamily.medium, fontSize: 14 },
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
   titleSub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 11 },
 
@@ -458,21 +584,17 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderWidth: 1 },
   chipText: { fontFamily: fontFamily.bold, fontSize: 9.5, letterSpacing: 0.5 },
 
+  reportOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center" },
   emptyInFrame: { paddingVertical: spacing.xxl, alignItems: "center" },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },
 
-  // Import warning modal (column-name guide)
-  warnCard: { width: "100%", maxWidth: 360, backgroundColor: colors.surface, padding: spacing.lg },
-  warnText: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13, marginBottom: spacing.md },
-  colGrid: { backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
-  colRow: { flexDirection: "row" },
-  colCell: { flex: 1, color: colors.text, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
-  warnNote: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.md },
-  warnBtns: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: spacing.xl, marginTop: spacing.lg },
-  warnCancelText: { color: colors.textMuted, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
-  warnContinue: { backgroundColor: colors.text, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
-  warnContinueText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
+  // Row long-press menu
+  rmCard: { width: "100%", maxWidth: 300, backgroundColor: colors.surface, padding: spacing.md },
+  rmHeading: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 12, letterSpacing: 0.5, paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
+  rmItem: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.sm },
+  rmDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  rmItemText: { color: colors.text, fontFamily: fontFamily.medium, fontSize: 15 },
 
   // Import modal
   importCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surface, padding: spacing.lg },

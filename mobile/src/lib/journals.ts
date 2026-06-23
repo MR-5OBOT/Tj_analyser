@@ -57,6 +57,11 @@ export async function addTrade(t: Trade): Promise<void> {
   await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(dedupe([...trades, t])));
 }
 
+export async function deleteTrade(id: string): Promise<void> {
+  const trades = await loadTrades();
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades.filter((t) => t.id !== id)));
+}
+
 // CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).
 // `optional` columns (tag/link) aren't needed for a valid import.
 const CSV_COLUMNS: { header: string; get: (t: Trade) => string | number | null; optional?: boolean }[] = [
