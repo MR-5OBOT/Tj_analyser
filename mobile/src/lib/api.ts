@@ -1,15 +1,7 @@
-import Constants from "expo-constants";
-
-// Hardcoded backend home. JS-level so it ships via OTA even on builds whose
-// embedded app.config predates this URL. Mirrors app.config.ts's default.
-const HARDCODED_DEFAULT = "https://inquisitive-lottie-fsocietyt-f7a26bff.koyeb.app";
-
-// Fixed backend URL — no in-app override (drops the old Settings field and any
-// stale value previously saved on the device).
-const BASE_URL = (
-  String((Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ?? "").trim() ||
-  HARDCODED_DEFAULT
-).replace(/\/+$/, "");
+// Backend home, hardcoded in JS only — NOT read from expoConfig.extra, because
+// that value is baked into the build and OTA can't change it (an old build could
+// pin a stale URL and 404). This constant is the single source, so OTA controls it.
+const BASE_URL = "https://inquisitive-lottie-fsocietyt-f7a26bff.koyeb.app".replace(/\/+$/, "");
 
 /** The backend URL (fixed). Async so existing callers don't change. */
 export async function getBaseUrl(): Promise<string> {
