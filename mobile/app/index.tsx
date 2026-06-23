@@ -18,7 +18,7 @@ const PAGES: Page[] = [
   { key: "home", icon: "home-outline", title: "Home" },
   { key: "report", icon: "stats-chart-outline", title: "PDF Report" },
   { key: "add", icon: "create-outline", title: "Add trade" },
-  { key: "journals", icon: "file-tray-stacked-outline", title: "Journals" },
+  { key: "journals", icon: "grid-outline", title: "Trades Logs" },
   { key: "settings", icon: "settings-outline", title: "Settings" },
 ];
 

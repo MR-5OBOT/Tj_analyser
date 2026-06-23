@@ -17,16 +17,16 @@ export const DOCK_SPACE = 110;
 // element "pushes into" (collapses) when pressed/selected.
 // Fully monochrome brutalism: grey outlines + grey hard shadows. Active and Add
 // read as light-grey tiles with a dark icon; no accent color in the dock at all.
-const BRUTAL_BORDER = "#8C8C8C"; // thick grey outline on every element
-const NAV_SHADOW = "#8C8C8C"; // grey hard shadow under idle nav squares
-const ADD_SHADOW = "#8C8C8C"; // grey hard shadow under the Add square
+const BRUTAL_BORDER = "#111111"; // outline on every element (matches idle face)
+const NAV_SHADOW = "#505050"; // grey hard shadow under idle nav squares
+const ADD_SHADOW = "#000000"; // black hard shadow under the Add square
 const FILL_HERO = "#A8A8A8"; // muted light-grey fill for active + Add tiles
 const ICON_HERO = "#0A0A0A"; // dark icon on the light-grey tiles
-const CONNECTOR_COLOR = "#7E7E7E"; // seam line, ~10% darker than the grey ink
-const NAV_SIZE = 46;
-const ADD_SIZE = 47;
-const NAV_OFFSET = 2; // hard-shadow displacement for nav buttons
-const ADD_OFFSET = 3; // larger displacement for the standalone Add button
+const CONNECTOR_COLOR = "#000000"; // seam line, black over the grey bg
+const NAV_SIZE = 44;
+const ADD_SIZE = 45;
+const NAV_OFFSET = 4; // hard-shadow displacement for nav buttons
+const ADD_OFFSET = 4; // displacement for the standalone Add button
 
 export function FloatingDock({
   items,
@@ -44,11 +44,10 @@ export function FloatingDock({
 
   return (
     <View
-      pointerEvents="box-none"
-      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
+      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
     >
       <View style={styles.dock}>
-        <SketchBorder seed={991} />
+        <SketchBorder seed={991} color="#000000" />
         {items.map((item) => (
           <DockButton
             key={item.key}
@@ -131,7 +130,7 @@ function DockButton({
             { transform: [{ translateX: shift }, { translateY: shift }] },
           ]}
         >
-          <Ionicons name={item.icon} size={19} color={active ? ICON_HERO : colors.textSubtle} />
+          <Ionicons name={item.icon} size={18} color={active ? ICON_HERO : colors.textMuted} />
         </Animated.View>
       </View>
     </Pressable>
@@ -168,7 +167,7 @@ function ActionButton({
             { transform: [{ translateX: shift }, { translateY: shift }] },
           ]}
         >
-          <Ionicons name={item.icon} size={20} color={active ? ICON_HERO : colors.textSubtle} />
+          <Ionicons name={item.icon} size={19} color={active ? ICON_HERO : colors.textMuted} />
         </Animated.View>
       </View>
     </Pressable>
@@ -178,19 +177,22 @@ function ActionButton({
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+    // Inset the wrapper itself so the black bg shrinks with the dock (not full-width).
+    left: 30,
+    right: 30,
+    bottom: "2%", // lifted off the bottom edge
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    backgroundColor: "#505050",
   },
   dock: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    padding: 6,
-    backgroundColor: colors.surface,
+    gap: 5,
+    padding: 13, // grey layer between the black sketch frame and the buttons
+    backgroundColor: "#A8A8A8",
     borderRadius: 0,
   },
   // Hand-drawn seam: three slightly-rotated segments so the line waves.
@@ -228,7 +230,7 @@ const styles = StyleSheet.create({
     borderColor: BRUTAL_BORDER,
   },
   navFaceActive: {
-    backgroundColor: FILL_HERO,
+    backgroundColor: "#505050",
     borderColor: BRUTAL_BORDER,
   },
   // Add square — bigger offset, white hard shadow under a solid lime face.

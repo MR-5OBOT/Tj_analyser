@@ -8,11 +8,14 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 
 type Tone = "neutral" | "positive" | "negative";
 type Stat = { label: string; value: string; tone: Tone };
+type CalDay = { day: number; r: number; trades: number };
+type Calendar = { monthLabel: string; year: number; firstWeekday: number; days: CalDay[]; monthR: number };
 type Dashboard = {
   stats: Stat[];
   equity: number[];
   monthly: { label: string; value: number }[];
   scatter: { risk: number; reward: number }[];
+  calendar: Calendar;
 };
 
 // ponytail: mock dashboard data. Swap this one function for the real `charts`
@@ -47,7 +50,27 @@ function buildMock(): Dashboard {
     { label: "TRADES", value: `${100 + ((Math.random() * 150) | 0)}`, tone: "neutral" },
     { label: "MAX DD", value: `${dd.toFixed(1)}R`, tone: "negative" },
   ];
-  return { stats, equity, monthly, scatter };
+
+  // Calendar for the current month: weekdays get trades ~half the time.
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days: CalDay[] = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const dow = new Date(year, month, day).getDay();
+    if (dow === 0 || dow === 6 || Math.random() < 0.5) return { day, r: 0, trades: 0 };
+    return { day, r: +(Math.random() * 6 - 2.2).toFixed(1), trades: 1 + ((Math.random() * 4) | 0) };
+  });
+  const calendar: Calendar = {
+    monthLabel: now.toLocaleString("en-US", { month: "long" }),
+    year,
+    firstWeekday: new Date(year, month, 1).getDay(),
+    days,
+    monthR: +days.reduce((s, d) => s + d.r, 0).toFixed(1),
+  };
+
+  return { stats, equity, monthly, scatter, calendar };
 }
 
 const toneColor = (t: Tone) => (t === "positive" ? colors.positive : t === "negative" ? colors.danger : colors.text);
@@ -92,6 +115,9 @@ export function HomeScreen() {
         </View>
       ))}
 
+      {/* P&L calendar */}
+      <CalendarCard cal={data.calendar} />
+
       {/* equity curve */}
       <ChartCard title="EQUITY CURVE" right="TOTAL R" rot={-1.0} seed={701}>
         <EquityChart values={data.equity} />
@@ -111,6 +137,70 @@ export function HomeScreen() {
         </ChartCard>
       </View>
     </ScrollView>
+  );
+}
+
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function CalendarCard({ cal }: { cal: Calendar }) {
+  // Leading blanks for the 1st's weekday, then days, padded out to full weeks.
+  const cells: (CalDay | null)[] = [...Array.from({ length: cal.firstWeekday }, () => null), ...cal.days];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
+
+  return (
+    <View style={[styles.chartCard, { transform: [{ rotate: "-0.6deg" }] }]}>
+      <SketchBorder straight seed={704} />
+      <View style={styles.chartHead}>
+        <Text style={styles.chartTitle}>P&L CALENDAR</Text>
+        <Text style={styles.chartRight}>
+          {cal.monthLabel.toUpperCase()} {cal.year}
+        </Text>
+      </View>
+      <View style={styles.calWeek}>
+        {WEEKDAYS.map((d, i) => (
+          <Text key={i} style={styles.calWeekday}>
+            {d}
+          </Text>
+        ))}
+      </View>
+      {weeks.map((week, wi) => (
+        <View key={wi} style={styles.calWeek}>
+          {week.map((c, ci) => (
+            <CalCell key={ci} cell={c} />
+          ))}
+        </View>
+      ))}
+      <View style={styles.calFooter}>
+        <Text style={styles.calFooterLabel}>{cal.monthLabel.toUpperCase()} R</Text>
+        <Text style={[styles.calFooterValue, { color: cal.monthR >= 0 ? colors.positive : colors.danger }]}>
+          {cal.monthR >= 0 ? "+" : ""}
+          {cal.monthR}R
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function CalCell({ cell }: { cell: CalDay | null }) {
+  if (!cell) return <View style={styles.calCellEmpty} />;
+  const traded = cell.trades > 0;
+  const pos = cell.r >= 0;
+  return (
+    <View style={[styles.calCell, traded && (pos ? styles.calCellPos : styles.calCellNeg)]}>
+      <Text style={styles.calDay}>{cell.day < 10 ? `0${cell.day}` : cell.day}</Text>
+      {traded ? (
+        <View>
+          <Text style={[styles.calR, { color: pos ? colors.positive : colors.danger }]} numberOfLines={1} adjustsFontSizeToFit>
+            {pos ? "+" : ""}
+            {cell.r}R
+          </Text>
+          <Text style={styles.calTrades} numberOfLines={1}>
+            {cell.trades}t
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -227,12 +317,12 @@ function ScatterChart({ points }: { points: { risk: number; reward: number }[] }
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: DOCK_SPACE },
-  statRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.md },
-  statCard: { backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, minHeight: 46 },
+  statRow: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.xs + 2 },
+  statCard: { backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 3, minHeight: 37 },
   statHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   dot: { width: 5, height: 5 },
-  statLabel: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9, letterSpacing: 1, flexShrink: 1 },
-  statValue: { fontFamily: fontFamily.bold, fontSize: 18, marginTop: 2 },
+  statLabel: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 7, letterSpacing: 1, flexShrink: 1 },
+  statValue: { fontFamily: fontFamily.bold, fontSize: 14, marginTop: 1 },
   chartCard: { backgroundColor: colors.surface, padding: spacing.md, marginTop: spacing.lg },
   chartRow: { flexDirection: "row", gap: spacing.md },
   half: { flex: 1 },
@@ -241,4 +331,17 @@ const styles = StyleSheet.create({
   chartRight: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 10 },
   axisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
   axisLabel: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 9 },
+  // P&L calendar
+  calWeek: { flexDirection: "row", gap: 3, marginBottom: 3 },
+  calWeekday: { flex: 1, textAlign: "center", color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9, letterSpacing: 0.5 },
+  calCell: { flex: 1, aspectRatio: 0.82, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, padding: 3, justifyContent: "space-between" },
+  calCellEmpty: { flex: 1, aspectRatio: 0.82 },
+  calCellPos: { backgroundColor: "rgba(168,255,96,0.10)", borderColor: "rgba(168,255,96,0.45)" },
+  calCellNeg: { backgroundColor: "rgba(255,122,122,0.10)", borderColor: "rgba(255,122,122,0.45)" },
+  calDay: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 8 },
+  calR: { fontFamily: fontFamily.bold, fontSize: 11 },
+  calTrades: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 7 },
+  calFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.sm },
+  calFooterLabel: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9, letterSpacing: 1 },
+  calFooterValue: { fontFamily: fontFamily.bold, fontSize: 16 },
 });

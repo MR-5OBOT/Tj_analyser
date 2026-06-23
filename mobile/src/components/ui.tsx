@@ -8,11 +8,10 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 // Neo-brutalist header tokens, matched to the dock: zero radius, bold grey ink,
 // flat hard-offset shadow the button pushes into on tap.
 const BRUTAL_BORDER = "#8C8C8C";
-const HEADER_BTN = 38;
+const HEADER_BTN = 34;
 // Header titles + menu use the bold Space Grotesk weight.
 const HEADER_FONT = fontFamily.bold;
 const HEADER_TITLE_COLOR = "#E6E6E6"; // white nudged ~10% toward grey
-const HEADER_OFFSET = 3;
 // "Sketched" border: each edge is two slightly-rotated segments that overshoot the
 // corners by uneven amounts, so the lines look hand-drawn and cross into rough `+`s.
 const SKETCH_W = 2; // line thickness
@@ -50,36 +49,37 @@ function buildSketch(seed: number) {
  * overshoot the corners into rough `+` marks. Jitter comes from `seed`, so each
  * box differs; absolutely fills its parent (drop into any zero-radius container).
  */
-export function SketchBorder({ seed, straight }: { seed?: number; straight?: boolean }) {
+export function SketchBorder({ seed, straight, color }: { seed?: number; straight?: boolean; color?: string }) {
   const e = useMemo(() => buildSketch(seed ?? Math.floor(Math.random() * 1e9)), [seed]);
+  const tint = color ? { backgroundColor: color } : null;
   if (straight) {
     // Clean straight edges that still overshoot into crossed corners — no wave.
     return (
       <>
-        <View style={[s.lineH, { top: 0 }]} pointerEvents="none" />
-        <View style={[s.lineH, { bottom: 0 }]} pointerEvents="none" />
-        <View style={[s.lineV, { left: 0 }]} pointerEvents="none" />
-        <View style={[s.lineV, { right: 0 }]} pointerEvents="none" />
+        <View style={[s.lineH, { top: 0 }, tint]} pointerEvents="none" />
+        <View style={[s.lineH, { bottom: 0 }, tint]} pointerEvents="none" />
+        <View style={[s.lineV, { left: 0 }, tint]} pointerEvents="none" />
+        <View style={[s.lineV, { right: 0 }, tint]} pointerEvents="none" />
       </>
     );
   }
   return (
     <>
       <View style={[s.hEdge, { top: 0, left: e.top.a, right: e.top.b }]} pointerEvents="none">
-        <View style={[s.hSeg, { transform: [{ rotate: e.top.r1 }] }]} />
-        <View style={[s.hSeg, { transform: [{ rotate: e.top.r2 }] }]} />
+        <View style={[s.hSeg, { transform: [{ rotate: e.top.r1 }] }, tint]} />
+        <View style={[s.hSeg, { transform: [{ rotate: e.top.r2 }] }, tint]} />
       </View>
       <View style={[s.hEdge, { bottom: 0, left: e.bottom.a, right: e.bottom.b }]} pointerEvents="none">
-        <View style={[s.hSeg, { transform: [{ rotate: e.bottom.r1 }] }]} />
-        <View style={[s.hSeg, { transform: [{ rotate: e.bottom.r2 }] }]} />
+        <View style={[s.hSeg, { transform: [{ rotate: e.bottom.r1 }] }, tint]} />
+        <View style={[s.hSeg, { transform: [{ rotate: e.bottom.r2 }] }, tint]} />
       </View>
       <View style={[s.vEdge, { left: 0, top: e.left.a, bottom: e.left.b }]} pointerEvents="none">
-        <View style={[s.vSeg, { transform: [{ rotate: e.left.r1 }] }]} />
-        <View style={[s.vSeg, { transform: [{ rotate: e.left.r2 }] }]} />
+        <View style={[s.vSeg, { transform: [{ rotate: e.left.r1 }] }, tint]} />
+        <View style={[s.vSeg, { transform: [{ rotate: e.left.r2 }] }, tint]} />
       </View>
       <View style={[s.vEdge, { right: 0, top: e.right.a, bottom: e.right.b }]} pointerEvents="none">
-        <View style={[s.vSeg, { transform: [{ rotate: e.right.r1 }] }]} />
-        <View style={[s.vSeg, { transform: [{ rotate: e.right.r2 }] }]} />
+        <View style={[s.vSeg, { transform: [{ rotate: e.right.r1 }] }, tint]} />
+        <View style={[s.vSeg, { transform: [{ rotate: e.right.r2 }] }, tint]} />
       </View>
     </>
   );
@@ -114,53 +114,6 @@ export function BrutalLoader({ color = colors.text, label }: { color?: string; l
   );
 }
 
-/** A brutalist header icon button: grey-outlined square over a hard grey shadow. */
-function BrutalIconButton({
-  icon,
-  onPress,
-  disabled,
-  dim,
-  iconColor,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress?: () => void;
-  disabled?: boolean;
-  dim?: boolean;
-  iconColor: string;
-}) {
-  const [pressed, setPressed] = useState(false);
-  const down = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.spring(down, {
-      toValue: pressed ? 1 : 0,
-      friction: 7,
-      tension: 220,
-      useNativeDriver: true,
-    }).start();
-  }, [pressed, down]);
-
-  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, HEADER_OFFSET] });
-
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      hitSlop={8}
-      style={dim ? s.headerBtnDim : null}
-    >
-      <View style={s.hbCell}>
-        <Animated.View style={[s.hbFace, { transform: [{ translateX: shift }, { translateY: shift }] }]}>
-          <SketchBorder />
-          <Ionicons name={icon} size={18} color={iconColor} />
-        </Animated.View>
-      </View>
-    </Pressable>
-  );
-}
-
 /**
  * Shared top app bar used on every page: app logo (left, taps to Home), centered
  * page name, 3-dots overflow menu (right) holding Settings / About / etc.
@@ -176,6 +129,9 @@ export function TopHeader({
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const press = useRef(new Animated.Value(0)).current;
+  const springPress = (to: number) =>
+    Animated.spring(press, { toValue: to, friction: 6, tension: 240, useNativeDriver: true }).start();
 
   return (
     <View style={s.topHeader}>
@@ -187,7 +143,30 @@ export function TopHeader({
           {title}
         </Text>
       </View>
-      <BrutalIconButton icon="ellipsis-vertical" onPress={() => setOpen(true)} iconColor={colors.textMuted} />
+      <Pressable
+        onPress={() => setOpen(true)}
+        onPressIn={() => springPress(1)}
+        onPressOut={() => springPress(0)}
+        hitSlop={12}
+        style={s.menuTrigger}
+      >
+        <Animated.View
+          style={[
+            s.kebab,
+            {
+              opacity: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] }),
+              transform: [
+                { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }) },
+                { rotate: press.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "-8deg"] }) },
+              ],
+            },
+          ]}
+        >
+          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-2.5deg" }] }]} />
+          <View style={[s.kebabBar, { width: 21, marginLeft: 2, transform: [{ rotate: "1.8deg" }] }]} />
+          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-1deg" }] }]} />
+        </Animated.View>
+      </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
@@ -222,8 +201,8 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
-    paddingTop: 6,
-    paddingBottom: 10,
+    paddingTop: 2,
+    paddingBottom: 6,
   },
   brand: {
     flex: 1,
@@ -235,18 +214,10 @@ const s = StyleSheet.create({
   },
   logoSlot: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
   logo: { width: 32, height: 32 },
-  // Sketched header button — no solid shadow; the crossed border carries it.
-  hbCell: { width: HEADER_BTN, height: HEADER_BTN },
-  hbFace: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: HEADER_BTN,
-    height: HEADER_BTN,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceAlt,
-  },
+  // Frameless overflow trigger — 3 hand-drawn lines, sized to the header button slot.
+  menuTrigger: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
+  kebab: { alignItems: "center", justifyContent: "center", gap: 3 },
+  kebabBar: { height: 7, borderRadius: 2, borderWidth: 1.5, borderColor: HEADER_TITLE_COLOR },
   // Each edge: two flex segments inside a container, rotated a few degrees so the
   // line bends; the container overshoots the corners for the crossed `+` marks.
   hEdge: { position: "absolute", height: SKETCH_W, flexDirection: "row" },
@@ -261,7 +232,6 @@ const s = StyleSheet.create({
   loaderLabel: { fontFamily: fontFamily.bold, fontSize: 15, letterSpacing: 1.5 },
   loaderRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   loaderBlock: { width: 9, height: 9 },
-  headerBtnDim: { opacity: 0.4 },
   headerTitle: {
     color: HEADER_TITLE_COLOR,
     fontFamily: HEADER_FONT,
