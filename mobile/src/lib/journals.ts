@@ -29,24 +29,47 @@ export async function loadTrades(): Promise<Trade[]> {
   }
 }
 
+// Two trades are "the same" when their important columns match (tag/link/notes
+// and internal id/createdAt are ignored).
+function tradeKey(t: Trade): string {
+  return [
+    t.date.trim(),
+    t.instrument.trim().toUpperCase(),
+    t.direction,
+    t.entryTime.trim(),
+    t.slSize,
+    t.positionSize,
+    t.outcome,
+    t.rr,
+  ].join("|");
+}
+
+// Collapse duplicates, keeping the LAST occurrence (the newly added/imported one)
+// while preserving each key's original position.
+function dedupe(trades: Trade[]): Trade[] {
+  const byKey = new Map<string, Trade>();
+  for (const t of trades) byKey.set(tradeKey(t), t);
+  return Array.from(byKey.values());
+}
+
 export async function addTrade(t: Trade): Promise<void> {
   const trades = await loadTrades();
-  trades.push(t);
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(dedupe([...trades, t])));
 }
 
 // CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).
-const CSV_COLUMNS: { header: string; get: (t: Trade) => string | number | null }[] = [
+// `optional` columns (tag/link) aren't needed for a valid import.
+const CSV_COLUMNS: { header: string; get: (t: Trade) => string | number | null; optional?: boolean }[] = [
   { header: "DATE", get: (t) => t.date },
   { header: "SYMBOL", get: (t) => t.instrument },
   { header: "DIRECTION", get: (t) => t.direction },
   { header: "ENTRY TIME", get: (t) => t.entryTime },
   { header: "SL SIZE", get: (t) => t.slSize },
   { header: "POSITION SIZE", get: (t) => t.positionSize },
-  { header: "RESULT", get: (t) => t.outcome },
+  { header: "OUTCOME", get: (t) => t.outcome },
   { header: "R-R", get: (t) => t.rr },
-  { header: "TAG", get: (t) => t.tag },
-  { header: "LINK", get: (t) => t.tradeLink },
+  { header: "TAG", get: (t) => t.tag, optional: true },
+  { header: "LINK", get: (t) => t.tradeLink, optional: true },
 ];
 
 export function tradesToCsv(trades: Trade[]): string {
@@ -56,8 +79,9 @@ export function tradesToCsv(trades: Trade[]): string {
   return [head, ...rows].join("\n");
 }
 
-// Required column names for an import (shown in the warning before importing).
-export const CSV_HEADERS = CSV_COLUMNS.map((c) => c.header);
+// Column names shown in the import warning, split by whether they're needed.
+export const CSV_REQUIRED = CSV_COLUMNS.filter((c) => !c.optional).map((c) => c.header);
+export const CSV_OPTIONAL = CSV_COLUMNS.filter((c) => c.optional).map((c) => c.header);
 
 // Minimal RFC-4180-ish CSV parser: handles quoted fields, "" escapes, CRLF.
 function parseCsv(text: string): string[][] {
@@ -80,14 +104,21 @@ function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
+/** Thrown by csvToTrades when the CSV is missing required columns. */
+export class CsvError extends Error {}
+
 export function csvToTrades(csv: string): Trade[] {
   const rows = parseCsv(csv);
-  if (rows.length < 2) return [];
+  if (rows.length < 2) throw new CsvError("The file has no data rows.");
   const head = rows[0].map((h) => h.trim().toUpperCase());
+  const missing = CSV_REQUIRED.filter((h) => !head.includes(h));
+  if (missing.length) {
+    throw new CsvError(`Missing required column${missing.length > 1 ? "s" : ""}:\n${missing.join(", ")}`);
+  }
   const at = (name: string) => head.indexOf(name);
   const i = {
     date: at("DATE"), sym: at("SYMBOL"), dir: at("DIRECTION"), entry: at("ENTRY TIME"),
-    sl: at("SL SIZE"), pos: at("POSITION SIZE"), res: at("RESULT"), rr: at("R-R"),
+    sl: at("SL SIZE"), pos: at("POSITION SIZE"), res: at("OUTCOME"), rr: at("R-R"),
     tag: at("TAG"), link: at("LINK"),
   };
   const get = (r: string[], idx: number) => (idx >= 0 && idx < r.length ? r[idx].trim() : "");
@@ -113,9 +144,11 @@ export function csvToTrades(csv: string): Trade[] {
   });
 }
 
-// Append imported trades to the existing journal (non-destructive).
+// Merge imported trades into the journal, deduped on important columns
+// (imported rows win on conflict). Returns how many NEW unique rows were added.
 export async function importTrades(incoming: Trade[]): Promise<number> {
   const existing = await loadTrades();
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify([...existing, ...incoming]));
-  return incoming.length;
+  const merged = dedupe([...existing, ...incoming]);
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(merged));
+  return merged.length - existing.length;
 }

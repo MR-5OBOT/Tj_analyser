@@ -20,7 +20,7 @@ import {
 
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
-import { CSV_HEADERS, csvToTrades, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { CSV_REQUIRED, csvToTrades, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
 type Align = "left" | "center" | "right";
@@ -36,7 +36,7 @@ const COLS: Col[] = [
   { key: "entryTime", label: "ENTRY TIME", w: 88, align: "center" },
   { key: "slSize", label: "SL SIZE", w: 74, align: "center" },
   { key: "positionSize", label: "POSITION SIZE", w: 104, align: "center" },
-  { key: "outcome", label: "RESULT", w: 80, align: "center" },
+  { key: "outcome", label: "OUTCOME", w: 84, align: "center" },
   { key: "rr", label: "R-R", w: 72, align: "center" },
   { key: "tag", label: "TAG", w: 96, align: "center" },
   { key: "link", label: "LINK", w: 60, align: "center" },
@@ -51,6 +51,7 @@ export function TradesLogsScreen() {
   const [active, setActive] = useState<Trade | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [warning, setWarning] = useState(false);
   const headerRef = useRef<ScrollView>(null);
 
   const reload = useCallback(() => {
@@ -77,27 +78,21 @@ export function TradesLogsScreen() {
     }
   };
 
-  const startImport = () => {
-    Alert.alert(
-      "Import CSV",
-      `Your CSV must use these exact column names:\n\n${CSV_HEADERS.join(", ")}\n\nRows are added to your existing journal.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Continue", onPress: () => setImporting(true) },
-      ],
-    );
-  };
-
   const onCsv = async (csv: string) => {
-    const parsed = csvToTrades(csv);
-    if (parsed.length === 0) {
-      Alert.alert("Nothing imported", "No valid rows found — check the column names.");
-      return;
+    let parsed: Trade[];
+    try {
+      parsed = csvToTrades(csv); // throws CsvError on missing/mismatched columns
+    } catch (e) {
+      Alert.alert("Import failed", e instanceof Error ? e.message : "Could not read the CSV.");
+      return; // keep the modal open so they can pick a corrected file
     }
-    await importTrades(parsed);
+    const added = await importTrades(parsed);
     setImporting(false);
     reload();
-    Alert.alert("Imported", `Added ${parsed.length} trade${parsed.length === 1 ? "" : "s"}.`);
+    Alert.alert(
+      "Imported",
+      added === 0 ? "Those rows are already in your journal." : `Added ${added} new trade${added === 1 ? "" : "s"}.`,
+    );
   };
 
   const list = trades ?? [];
@@ -114,7 +109,7 @@ export function TradesLogsScreen() {
           </Text>
         </View>
         <View style={styles.actions}>
-          <Pressable hitSlop={8} onPress={startImport}>
+          <Pressable hitSlop={8} onPress={() => setWarning(true)}>
             <Ionicons name="cloud-download-outline" size={22} color={colors.textMuted} />
           </Pressable>
           <Pressable hitSlop={8} onPress={exportCsv}>
@@ -189,9 +184,50 @@ export function TradesLogsScreen() {
         )}
       </View>
 
+      <ImportWarning
+        visible={warning}
+        onClose={() => setWarning(false)}
+        onContinue={() => {
+          setWarning(false);
+          setImporting(true);
+        }}
+      />
       <ImportModal visible={importing} onClose={() => setImporting(false)} onCsv={onCsv} />
       <TradeDetail trade={active} onClose={() => setActive(null)} />
     </View>
+  );
+}
+
+function ImportWarning({ visible, onClose, onContinue }: { visible: boolean; onClose: () => void; onContinue: () => void }) {
+  const pairs: [string, string][] = [];
+  for (let i = 0; i < CSV_REQUIRED.length; i += 2) pairs.push([CSV_REQUIRED[i], CSV_REQUIRED[i + 1] ?? ""]);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.warnCard} onPress={() => {}}>
+          <SketchBorder seed={912} straight />
+          <Text style={styles.detailTitle}>IMPORT CSV</Text>
+          <Text style={styles.warnText}>Name your CSV columns exactly like this:</Text>
+          <View style={styles.colGrid}>
+            {pairs.map(([a, b], i) => (
+              <View key={i} style={styles.colRow}>
+                <Text style={styles.colCell}>{a}</Text>
+                <Text style={styles.colCell}>{b}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.warnNote}>Rows are added to your existing journal.</Text>
+          <View style={styles.warnBtns}>
+            <Pressable hitSlop={8} onPress={onClose}>
+              <Text style={styles.warnCancelText}>CANCEL</Text>
+            </Pressable>
+            <Pressable style={styles.warnContinue} onPress={onContinue}>
+              <Text style={styles.warnContinueText}>CONTINUE</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -357,7 +393,7 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
     ["ENTRY TIME", trade.entryTime || "—"],
     ["SL SIZE", `${trade.slSize ?? "—"}`],
     ["POSITION SIZE", `${trade.positionSize ?? "—"}`],
-    ["RESULT", trade.outcome.toUpperCase()],
+    ["OUTCOME", trade.outcome.toUpperCase()],
     ["R-R", trade.rr == null ? "—" : `${trade.rr > 0 ? "+" : ""}${trade.rr}R`],
     ["TAG", trade.tag ? `#${trade.tag}` : "—"],
     ["NOTES", trade.notes || "—"],
@@ -425,6 +461,18 @@ const styles = StyleSheet.create({
   emptyInFrame: { paddingVertical: spacing.xxl, alignItems: "center" },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },
+
+  // Import warning modal (column-name guide)
+  warnCard: { width: "100%", maxWidth: 360, backgroundColor: colors.surface, padding: spacing.lg },
+  warnText: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13, marginBottom: spacing.md },
+  colGrid: { backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
+  colRow: { flexDirection: "row" },
+  colCell: { flex: 1, color: colors.text, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
+  warnNote: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.md },
+  warnBtns: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: spacing.xl, marginTop: spacing.lg },
+  warnCancelText: { color: colors.textMuted, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
+  warnContinue: { backgroundColor: colors.text, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
+  warnContinueText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
 
   // Import modal
   importCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surface, padding: spacing.lg },

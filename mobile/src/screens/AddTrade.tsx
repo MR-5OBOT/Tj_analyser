@@ -267,7 +267,7 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
   const [pickingTime, setPickingTime] = useState(false);
   return (
     <>
-      <Text style={styles.stepTitle}>STEP 2 · RESULT & OUTCOME</Text>
+      <Text style={styles.stepTitle}>STEP 2 · R-R & OUTCOME</Text>
 
       {/* Entry · SL, then Position · R-R — matches the logs column order. */}
       <View style={styles.row2}>
@@ -298,7 +298,7 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
           </View>
         </View>
         <View style={styles.flex1}>
-          <Text style={styles.label}>R-R (RESULT) *</Text>
+          <Text style={styles.label}>R-R *</Text>
           <View style={styles.field}>
             <SketchBorder straight seed={331} />
             <TextInput
@@ -457,7 +457,7 @@ function StepReview({ draft }: { draft: Draft }) {
     ["ENTRY TIME", draft.entryTime.trim() || "—"],
     ["SL SIZE", draft.slSize || "—"],
     ["POSITION SIZE", draft.positionSize || "—"],
-    ["RESULT", draft.outcome ? draft.outcome.toUpperCase() : "—"],
+    ["OUTCOME", draft.outcome ? draft.outcome.toUpperCase() : "—"],
     ["R-R", fmtRR(draft.rr)],
     ["TAG", draft.tag ? `#${draft.tag}` : "—"],
     ["LINK", draft.tradeLink.trim() || "—"],
