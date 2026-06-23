@@ -5,11 +5,12 @@ import { Alert, BackHandler, Linking, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
-import { MenuAction, TopHeader } from "../src/components/ui";
-import { AddTradeScreen } from "../src/screens/AddTrade";
+import { TopHeader } from "../src/components/ui";
+import { AddTradeScreen, Draft, INITIAL_DRAFT } from "../src/screens/AddTrade";
 import { HomeScreen } from "../src/screens/Home";
 import { PdfReportScreen } from "../src/screens/PdfReport";
 import { SettingsScreen } from "../src/screens/Settings";
+import { TradesLogsScreen } from "../src/screens/TradesLogs";
 import { colors } from "../src/theme/tokens";
 
 type Page = { key: string; icon: DockItem["icon"]; title: string };
@@ -38,6 +39,11 @@ export default function Home() {
   // Home is the root: selecting it resets the stack, so Back is disabled there.
   const [history, setHistory] = useState<string[]>(["home"]);
   const active = history[history.length - 1];
+
+  // Add-trade wizard state lives here so switching tabs keeps your place;
+  // it only resets when the app is killed (or after a save).
+  const [addStep, setAddStep] = useState(1);
+  const [addDraft, setAddDraft] = useState<Draft>(INITIAL_DRAFT);
   const page = PAGES.find((p) => p.key === active) ?? PAGES[0];
 
   const select = (key: string) => {
@@ -84,21 +90,18 @@ export default function Home() {
     );
   };
 
-  const menu: MenuAction[] = [
-    { label: "Settings", icon: "settings-outline", onPress: () => select("settings") },
-    { label: "About", icon: "information-circle-outline", onPress: showAbout },
-  ];
-
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
-        <TopHeader title={page.title} onLogoPress={() => select("home")} menu={menu} />
+        <TopHeader title={page.title} onSettings={() => select("settings")} onAbout={showAbout} />
         {active === "settings" ? (
           <SettingsScreen />
         ) : active === "report" ? (
           <PdfReportScreen />
         ) : active === "add" ? (
-          <AddTradeScreen />
+          <AddTradeScreen step={addStep} setStep={setAddStep} draft={addDraft} setDraft={setAddDraft} />
+        ) : active === "journals" ? (
+          <TradesLogsScreen />
         ) : active === "home" ? (
           <HomeScreen />
         ) : null}

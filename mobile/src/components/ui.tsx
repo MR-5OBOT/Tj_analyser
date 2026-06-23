@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -16,13 +16,6 @@ const HEADER_TITLE_COLOR = "#E6E6E6"; // white nudged ~10% toward grey
 // corners by uneven amounts, so the lines look hand-drawn and cross into rough `+`s.
 const SKETCH_W = 2; // line thickness
 
-export type MenuAction = {
-  label: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  onPress: () => void;
-  danger?: boolean;
-};
-
 // Tiny seeded RNG (mulberry32) so each box's jitter is deterministic per seed but
 // different from the next — no two hand-drawn boxes look identical.
 function mulberry32(seed: number) {
@@ -36,10 +29,11 @@ function mulberry32(seed: number) {
   };
 }
 
-function buildSketch(seed: number) {
+function buildSketch(seed: number, tight = false) {
   const rnd = mulberry32(seed);
   const rot = () => `${(rnd() * 6 - 3).toFixed(2)}deg`; // -3°..3°
-  const over = () => -(3 + Math.round(rnd() * 4)); // -3..-7 px overshoot
+  // px the edge pokes past each corner; `tight` keeps the lines closer to the frame.
+  const over = tight ? () => -(1 + Math.round(rnd() * 2)) : () => -(3 + Math.round(rnd() * 4));
   const edge = () => ({ a: over(), b: over(), r1: rot(), r2: rot() });
   return { top: edge(), bottom: edge(), left: edge(), right: edge() };
 }
@@ -49,8 +43,8 @@ function buildSketch(seed: number) {
  * overshoot the corners into rough `+` marks. Jitter comes from `seed`, so each
  * box differs; absolutely fills its parent (drop into any zero-radius container).
  */
-export function SketchBorder({ seed, straight, color }: { seed?: number; straight?: boolean; color?: string }) {
-  const e = useMemo(() => buildSketch(seed ?? Math.floor(Math.random() * 1e9)), [seed]);
+export function SketchBorder({ seed, straight, color, tight }: { seed?: number; straight?: boolean; color?: string; tight?: boolean }) {
+  const e = useMemo(() => buildSketch(seed ?? Math.floor(Math.random() * 1e9), tight), [seed, tight]);
   const tint = color ? { backgroundColor: color } : null;
   if (straight) {
     // Clean straight edges that still overshoot into crossed corners — no wave.
@@ -114,81 +108,104 @@ export function BrutalLoader({ color = colors.text, label }: { color?: string; l
   );
 }
 
+// The whole app measures performance in R only. This is the left-button explainer.
+const R_MANIFESTO =
+  "TJ Analyser speaks one language: R.\n\n" +
+  "1R is what you risk on a trade. A win that returns twice your risk is +2R, a full loss is -1R, break-even is 0R.\n\n" +
+  "No dollars. No percentages. No account size. Strip those away and every trade — across any instrument, any account, any year — sits on the same honest scale. A +3R is a +3R whether you risked $5 or $5,000.\n\n" +
+  "That's the whole system: your edge measured by decisions, not bet size. Win rate is the only percentage here, because it counts trades, not money.\n\n" +
+  "This is a personal performance journal — not financial, investment, or trading advice.";
+
 /**
- * Shared top app bar used on every page: app logo (left, taps to Home), centered
- * page name, 3-dots overflow menu (right) holding Settings / About / etc.
+ * Shared top app bar used on every page: a "!" info button (left, opens the R-R
+ * disclaimer), centered page name, 3-line overflow menu (right).
  */
 export function TopHeader({
   title,
-  onLogoPress,
-  menu,
+  onSettings,
+  onAbout,
 }: {
   title: string;
-  onLogoPress?: () => void;
-  menu?: MenuAction[];
+  onSettings: () => void;
+  onAbout: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); // left "!" menu
+  const [disc, setDisc] = useState(false); // disclaimer modal
   const press = useRef(new Animated.Value(0)).current;
   const springPress = (to: number) =>
     Animated.spring(press, { toValue: to, friction: 6, tension: 240, useNativeDriver: true }).start();
 
   return (
     <View style={s.topHeader}>
-      <Pressable onPress={onLogoPress} disabled={!onLogoPress} style={s.logoSlot} hitSlop={8}>
-        <Image source={require("../../assets/TJ-logo.png")} style={s.logo} resizeMode="contain" />
+      {/* Left "!" → Disclaimer / About menu */}
+      <Pressable onPress={() => setOpen(true)} style={s.logoSlot} hitSlop={8}>
+        <Ionicons name="alert-circle-outline" size={27} color={HEADER_TITLE_COLOR} />
       </Pressable>
       <View style={s.brand}>
         <Text style={s.headerTitle} numberOfLines={1}>
           {title}
         </Text>
       </View>
+      {/* Right → Settings */}
       <Pressable
-        onPress={() => setOpen(true)}
+        onPress={onSettings}
         onPressIn={() => springPress(1)}
         onPressOut={() => springPress(0)}
         hitSlop={12}
         style={s.menuTrigger}
       >
         <Animated.View
-          style={[
-            s.kebab,
-            {
-              opacity: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] }),
-              transform: [
-                { scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }) },
-                { rotate: press.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "-8deg"] }) },
-              ],
-            },
-          ]}
+          style={{
+            opacity: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] }),
+            transform: [{ scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.85] }) }],
+          }}
         >
-          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-2.5deg" }] }]} />
-          <View style={[s.kebabBar, { width: 21, marginLeft: 2, transform: [{ rotate: "1.8deg" }] }]} />
-          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-1deg" }] }]} />
+          <Ionicons name="settings-outline" size={23} color={HEADER_TITLE_COLOR} />
         </Animated.View>
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
           <View style={[s.menu, { marginTop: insets.top + 52 }]}>
-            {menu?.map((item, i) => (
-              <Pressable
-                key={item.label}
-                style={s.menuItem}
-                onPress={() => {
-                  setOpen(false);
-                  item.onPress();
-                }}
-              >
-                {i > 0 ? <View style={s.menuDivider} pointerEvents="none" /> : null}
-                {item.icon ? (
-                  <Ionicons name={item.icon} size={18} color={item.danger ? colors.danger : colors.textMuted} />
-                ) : null}
-                <Text style={[s.menuLabel, item.danger && { color: colors.danger }]}>{item.label}</Text>
-              </Pressable>
-            ))}
+            <Pressable
+              style={s.menuItem}
+              onPress={() => {
+                setOpen(false);
+                setDisc(true);
+              }}
+            >
+              <Ionicons name="alert-circle-outline" size={18} color={colors.textMuted} />
+              <Text style={s.menuLabel}>Disclaimer</Text>
+            </Pressable>
+            <Pressable
+              style={s.menuItem}
+              onPress={() => {
+                setOpen(false);
+                onAbout();
+              }}
+            >
+              <View style={s.menuDivider} pointerEvents="none" />
+              <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+              <Text style={s.menuLabel}>About</Text>
+            </Pressable>
             <SketchBorder seed={4517} straight />
           </View>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={disc} transparent animationType="fade" onRequestClose={() => setDisc(false)}>
+        <Pressable style={s.discOverlay} onPress={() => setDisc(false)}>
+          <Pressable style={s.discCard} onPress={() => {}}>
+            <SketchBorder seed={1313} straight />
+            <Text style={s.discTitle}>MEASURED IN R</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={s.discScroll}>
+              <Text style={s.discBody}>{R_MANIFESTO}</Text>
+            </ScrollView>
+            <Pressable style={s.discClose} onPress={() => setDisc(false)}>
+              <Text style={s.discCloseText}>GOT IT</Text>
+            </Pressable>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -213,11 +230,8 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   logoSlot: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
-  logo: { width: 32, height: 32 },
-  // Frameless overflow trigger — 3 hand-drawn lines, sized to the header button slot.
+  // Right header button slot (Settings).
   menuTrigger: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
-  kebab: { alignItems: "center", justifyContent: "center", gap: 3 },
-  kebabBar: { height: 7, borderRadius: 2, borderWidth: 1.5, borderColor: HEADER_TITLE_COLOR },
   // Each edge: two flex segments inside a container, rotated a few degrees so the
   // line bends; the container overshoots the corners for the crossed `+` marks.
   hEdge: { position: "absolute", height: SKETCH_W, flexDirection: "row" },
@@ -238,7 +252,7 @@ const s = StyleSheet.create({
     fontSize: 19,
     letterSpacing: 0.8,
   },
-  menuOverlay: { flex: 1, alignItems: "flex-end", paddingHorizontal: spacing.xl },
+  menuOverlay: { flex: 1, alignItems: "flex-start", paddingHorizontal: spacing.xl },
   menu: {
     minWidth: 184,
     backgroundColor: colors.surface,
@@ -254,4 +268,13 @@ const s = StyleSheet.create({
   // Same cross-line divider as the data card: overshoots into the menu frame.
   menuDivider: { position: "absolute", top: 0, left: -6, right: -6, height: 2, backgroundColor: "#5A5A5A" },
   menuLabel: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 16 },
+
+  // R-R disclaimer modal
+  discOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  discCard: { width: "100%", maxWidth: 360, maxHeight: "76%", backgroundColor: colors.surface, padding: spacing.xl },
+  discTitle: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
+  discScroll: { flexGrow: 0 },
+  discBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 21 },
+  discClose: { marginTop: spacing.lg, backgroundColor: colors.text, height: 46, alignItems: "center", justifyContent: "center" },
+  discCloseText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },
 });

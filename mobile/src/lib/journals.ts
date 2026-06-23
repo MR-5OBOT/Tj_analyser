@@ -8,11 +8,9 @@ export type Trade = {
   date: string; // YYYY-MM-DD
   instrument: string;
   direction: "long" | "short";
-  riskUnit: "$" | "%" | "R";
-  risk: number | null;
-  pnl: number | null;
+  rr: number | null; // trade result in R — the app's only performance unit
   slSize: number | null;
-  tpSize: number | null;
+  positionSize: number | null; // lots (CFDs) / contracts (futures)
   entryTime: string; // HH:MM
   outcome: "win" | "loss" | "be";
   tradeLink: string;

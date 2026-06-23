@@ -4,23 +4,21 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Updates from "expo-updates";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
-import { getBaseUrl, setBaseUrl } from "../lib/api";
+import { pingBackend } from "../lib/api";
 import { JOURNALS_KEY } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
-const HERO_FILL = "#A8A8A8";
-const HERO_TEXT = "#0A0A0A";
 const DIVIDER_COLOR = "#5A5A5A"; // row separator: cross-line style, darker than the frame
 
 export function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <ServerSettings />
+      <BackendHealth />
       <DataAndAbout />
     </ScrollView>
   );
@@ -28,51 +26,32 @@ export function SettingsScreen() {
 
 /* -------------------------------- Server ---------------------------------- */
 
-function ServerSettings() {
-  const [url, setUrl] = useState("");
-  const [saved, setSaved] = useState(false);
+function BackendHealth() {
+  const [status, setStatus] = useState<"checking" | "up" | "down">("checking");
 
-  useEffect(() => {
-    getBaseUrl().then(setUrl);
+  const check = useCallback(() => {
+    setStatus("checking");
+    pingBackend().then((ok) => setStatus(ok ? "up" : "down"));
   }, []);
 
-  const save = useCallback(async () => {
-    await setBaseUrl(url.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
-  }, [url]);
+  useEffect(() => {
+    check();
+  }, [check]);
+
+  const color = status === "up" ? colors.positive : status === "down" ? colors.danger : colors.textSubtle;
+  const text =
+    status === "checking"
+      ? "● Checking backend…"
+      : status === "up"
+        ? "● Backend online"
+        : "● Backend unreachable — tap to retry";
 
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Server</Text>
-      <View style={styles.card}>
-        <SketchBorder seed={123} straight />
-        <View style={styles.serverBody}>
-          <Text style={styles.serverLabel}>Backend URL</Text>
-          <View style={styles.serverInputWrap}>
-            <TextInput
-              style={styles.serverInput}
-              value={url}
-              onChangeText={setUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder="https://your-backend.example.com"
-              placeholderTextColor={colors.textSubtle}
-              onSubmitEditing={save}
-              returnKeyType="done"
-            />
-            <SketchBorder seed={321} straight />
-          </View>
-          <View style={styles.serverActions}>
-            <Text style={styles.serverHint}>Used by the PDF report generator.</Text>
-            <Pressable style={styles.serverSave} onPress={save}>
-              <SketchBorder seed={567} straight />
-              <Text style={styles.serverSaveText}>{saved ? "Saved ✓" : "Save"}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <Pressable onPress={check} disabled={status === "checking"}>
+        <Text style={[styles.health, { color }]}>{text}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -232,21 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 0,
   },
-  serverBody: { padding: spacing.lg, gap: spacing.sm },
-  serverLabel: { ...font.body, color: colors.text, fontFamily: fontFamily.medium },
-  serverInputWrap: { position: "relative" },
-  serverInput: {
-    backgroundColor: colors.surfaceAlt,
-    color: colors.text,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontFamily: "monospace",
-    fontSize: 13,
-  },
-  serverActions: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.xs },
-  serverHint: { flex: 1, fontSize: 12, color: colors.textSubtle, fontFamily: fontFamily.regular },
-  serverSave: { backgroundColor: HERO_FILL, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  serverSaveText: { color: HERO_TEXT, fontFamily: fontFamily.bold, fontSize: 13 },
+  health: { fontFamily: fontFamily.medium, fontSize: 14, letterSpacing: 0.3 },
   row: {
     flexDirection: "row",
     alignItems: "center",

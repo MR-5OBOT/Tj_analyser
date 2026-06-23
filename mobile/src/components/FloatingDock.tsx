@@ -47,7 +47,7 @@ export function FloatingDock({
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
     >
       <View style={styles.dock}>
-        <SketchBorder seed={991} color="#000000" />
+        <SketchBorder seed={991} color="#000000" tight />
         {items.map((item) => (
           <DockButton
             key={item.key}
@@ -184,14 +184,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
+    paddingTop: 6, // ~3% shorter band (was spacing.sm = 8)
     backgroundColor: "#505050",
   },
   dock: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    padding: 13, // grey layer between the black sketch frame and the buttons
+    // grey layer between the black sketch frame and the buttons
+    paddingHorizontal: 13,
+    paddingVertical: 10, // ~3% shorter (was 11)
     backgroundColor: "#A8A8A8",
     borderRadius: 0,
   },

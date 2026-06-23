@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
@@ -7,17 +7,23 @@ import { addTrade } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
 type Direction = "long" | "short";
-type RiskUnit = "$" | "%" | "R";
 type Outcome = "win" | "loss" | "be";
-type Draft = {
+
+const fmtRR = (s: string) => {
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? `${n > 0 ? "+" : ""}${n}R` : "—";
+};
+const rrColor = (s: string) => {
+  const n = parseFloat(s);
+  return !Number.isFinite(n) || n === 0 ? colors.textMuted : n > 0 ? colors.positive : colors.danger;
+};
+export type Draft = {
   date: Date | null;
   instrument: string;
   direction: Direction | null;
-  riskUnit: RiskUnit;
-  risk: string;
-  pnl: string;
+  rr: string;
   slSize: string;
-  tpSize: string;
+  positionSize: string;
   entryTime: string;
   outcome: Outcome | null;
   tradeLink: string;
@@ -25,15 +31,15 @@ type Draft = {
   notes: string;
 };
 
-const INITIAL_DRAFT: Draft = {
+// Exported so the parent can own this state and keep the wizard's place across
+// tab switches (it only resets when the app is killed).
+export const INITIAL_DRAFT: Draft = {
   date: null,
   instrument: "",
   direction: null,
-  riskUnit: "R",
-  risk: "",
-  pnl: "",
+  rr: "",
   slSize: "",
-  tpSize: "",
+  positionSize: "",
   entryTime: "",
   outcome: null,
   tradeLink: "",
@@ -55,6 +61,10 @@ const numOrNull = (s: string) => {
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : null;
 };
+// Input guards: digits + one dot (positive), or a leading minus too (signed).
+const numericText = (t: string) => t.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+const signedText = (t: string) => t.replace(/[^0-9.-]/g, "").replace(/(?!^)-/g, "").replace(/(\..*)\./g, "$1");
+const pad2 = (n: number) => String(n).padStart(2, "0");
 const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -63,9 +73,17 @@ const fmtPro = (d: Date) =>
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-export function AddTradeScreen() {
-  const [step, setStep] = useState(1);
-  const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
+export function AddTradeScreen({
+  step,
+  setStep,
+  draft,
+  setDraft,
+}: {
+  step: number;
+  setStep: React.Dispatch<React.SetStateAction<number>>;
+  draft: Draft;
+  setDraft: React.Dispatch<React.SetStateAction<Draft>>;
+}) {
   const [saving, setSaving] = useState(false);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -85,11 +103,9 @@ export function AddTradeScreen() {
         date: isoDate(draft.date),
         instrument: draft.instrument.trim(),
         direction: draft.direction,
-        riskUnit: draft.riskUnit,
-        risk: numOrNull(draft.risk),
-        pnl: numOrNull(draft.pnl),
+        rr: numOrNull(draft.rr),
         slSize: numOrNull(draft.slSize),
-        tpSize: numOrNull(draft.tpSize),
+        positionSize: numOrNull(draft.positionSize),
         entryTime: draft.entryTime.trim(),
         outcome: draft.outcome,
         tradeLink: draft.tradeLink.trim(),
@@ -128,26 +144,40 @@ export function AddTradeScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        {step > 1 ? (
-          <View style={[styles.btnCell, styles.btnCellBack]}>
-            <View style={styles.btnShadow} pointerEvents="none" />
-            <Pressable style={[styles.btnFace, styles.btnBack]} onPress={() => setStep((s) => s - 1)}>
-              <SketchBorder straight seed={210} />
-              <Text style={styles.btnBackText}>BACK</Text>
-            </Pressable>
-          </View>
-        ) : null}
-        <View style={styles.btnCell}>
-          <View style={styles.btnShadow} pointerEvents="none" />
-          <Pressable
-            style={[styles.btnFace, styles.btnNext, !canNext && styles.btnDisabled]}
-            disabled={!canNext}
-            onPress={() => (last ? save() : setStep((s) => s + 1))}
-          >
-            <Text style={styles.btnNextText}>{last ? "SAVE" : "NEXT"}</Text>
-          </Pressable>
-        </View>
+        {step > 1 ? <FooterButton kind="back" label="BACK" onPress={() => setStep((s) => s - 1)} /> : null}
+        <FooterButton
+          kind="next"
+          label={last ? "SAVE" : "NEXT"}
+          disabled={!canNext}
+          onPress={() => (last ? save() : setStep((s) => s + 1))}
+        />
       </View>
+    </View>
+  );
+}
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+// Footer button with the dock-button "push": the face slides into its hard
+// shadow while held. Colors differ (back = grey, next = white), style matches.
+function FooterButton({ kind, label, onPress, disabled }: { kind: "back" | "next"; label: string; onPress: () => void; disabled?: boolean }) {
+  const down = useRef(new Animated.Value(0)).current;
+  const spring = (to: number) => Animated.spring(down, { toValue: to, friction: 7, tension: 220, useNativeDriver: true }).start();
+  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, BTN_OFFSET] });
+  const isNext = kind === "next";
+  return (
+    <View style={[styles.btnCell, !isNext && styles.btnCellBack]}>
+      <View style={styles.btnShadow} pointerEvents="none" />
+      <AnimatedPressable
+        style={[styles.btnFace, isNext ? styles.btnNext : styles.btnBack, disabled && styles.btnDisabled, { transform: [{ translateX: shift }, { translateY: shift }] }]}
+        disabled={disabled}
+        onPress={onPress}
+        onPressIn={() => spring(1)}
+        onPressOut={() => spring(0)}
+      >
+        <SketchBorder straight seed={isNext ? 211 : 210} color="#000000" />
+        <Text style={isNext ? styles.btnNextText : styles.btnBackText}>{label}</Text>
+      </AnimatedPressable>
     </View>
   );
 }
@@ -177,7 +207,7 @@ function StepSetup({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) => v
   const [picking, setPicking] = useState(false);
   return (
     <>
-      <Text style={styles.stepTitle}>STEP 1 · INSTRUMENT & DIRECTION</Text>
+      <Text style={styles.stepTitle}>STEP 1 · SYMBOL & DIRECTION</Text>
 
       <Text style={styles.label}>DATE *</Text>
       <Pressable style={styles.field} onPress={() => setPicking(true)}>
@@ -187,7 +217,7 @@ function StepSetup({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) => v
         </Text>
       </Pressable>
 
-      <Text style={styles.label}>INSTRUMENT *</Text>
+      <Text style={styles.label}>SYMBOL *</Text>
       <View style={styles.field}>
         <SketchBorder straight seed={322} />
         <TextInput
@@ -234,44 +264,35 @@ function StepSetup({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) => v
 }
 
 function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) => void }) {
+  const [pickingTime, setPickingTime] = useState(false);
   return (
     <>
-      <Text style={styles.stepTitle}>STEP 2 · RISK & OUTCOME</Text>
+      <Text style={styles.stepTitle}>STEP 2 · RESULT & OUTCOME</Text>
 
-      <Text style={styles.label}>RISK</Text>
-      <View style={styles.riskRow}>
-        <View style={styles.unitRow}>
-          {(["$", "%", "R"] as RiskUnit[]).map((u) => (
-            <Pressable
-              key={u}
-              style={[styles.unitBtn, draft.riskUnit === u && styles.unitBtnOn]}
-              onPress={() => set({ riskUnit: u })}
-            >
-              <Text style={[styles.unitText, draft.riskUnit === u && styles.unitTextOn]}>{u}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <View style={[styles.field, styles.flex1, styles.noMargin]}>
-          <SketchBorder straight seed={331} />
-          <TextInput style={styles.input} value={draft.risk} onChangeText={(t) => set({ risk: t })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
-        </View>
-      </View>
-
-      {/* P&L · Entry time share one row to save vertical space. */}
+      {/* R-R · Entry time share one row to save vertical space. */}
       <View style={styles.row2}>
         <View style={styles.flex1}>
-          <Text style={styles.label}>P&L ({draft.riskUnit})</Text>
+          <Text style={styles.label}>R-R (RESULT) *</Text>
           <View style={styles.field}>
-            <SketchBorder straight seed={332} />
-            <TextInput style={styles.input} value={draft.pnl} onChangeText={(t) => set({ pnl: t })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="numbers-and-punctuation" />
+            <SketchBorder straight seed={331} />
+            <TextInput
+              style={[styles.input, { color: rrColor(draft.rr) }]}
+              value={draft.rr}
+              onChangeText={(t) => set({ rr: signedText(t) })}
+              placeholder="e.g. 2.5 or -1"
+              placeholderTextColor={colors.textSubtle}
+              keyboardType="numbers-and-punctuation"
+            />
           </View>
         </View>
         <View style={styles.flex1}>
           <Text style={styles.label}>ENTRY TIME</Text>
-          <View style={styles.field}>
+          <Pressable style={styles.field} onPress={() => setPickingTime(true)}>
             <SketchBorder straight seed={335} />
-            <TextInput style={styles.input} value={draft.entryTime} onChangeText={(t) => set({ entryTime: t })} placeholder="HH:MM" placeholderTextColor={colors.textSubtle} keyboardType="numbers-and-punctuation" maxLength={5} />
-          </View>
+            <Text style={[styles.dateText, draft.entryTime ? styles.fieldValue : styles.fieldPlaceholder]}>
+              {draft.entryTime || "Select"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -280,14 +301,14 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
           <Text style={styles.label}>SL SIZE</Text>
           <View style={styles.field}>
             <SketchBorder straight seed={333} />
-            <TextInput style={styles.input} value={draft.slSize} onChangeText={(t) => set({ slSize: t })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} value={draft.slSize} onChangeText={(t) => set({ slSize: numericText(t) })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
           </View>
         </View>
         <View style={styles.flex1}>
-          <Text style={styles.label}>TP SIZE</Text>
+          <Text style={styles.label}>POSITION SIZE</Text>
           <View style={styles.field}>
             <SketchBorder straight seed={334} />
-            <TextInput style={styles.input} value={draft.tpSize} onChangeText={(t) => set({ tpSize: t })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
+            <TextInput style={styles.input} value={draft.positionSize} onChangeText={(t) => set({ positionSize: numericText(t) })} placeholder="lots / contracts" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
           </View>
         </View>
       </View>
@@ -306,7 +327,76 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
           </Pressable>
         ))}
       </View>
+
+      <TimePickerModal
+        visible={pickingTime}
+        value={draft.entryTime}
+        onClose={() => setPickingTime(false)}
+        onPick={(t) => {
+          set({ entryTime: t });
+          setPickingTime(false);
+        }}
+      />
     </>
+  );
+}
+
+function TimePickerModal({
+  visible,
+  value,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  value: string;
+  onClose: () => void;
+  onPick: (t: string) => void;
+}) {
+  const [h, setH] = useState(9);
+  const [m, setM] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    const [hh, mm] = value.split(":");
+    const ph = parseInt(hh, 10);
+    const pm = parseInt(mm, 10);
+    setH(Number.isFinite(ph) ? ph : new Date().getHours());
+    setM(Number.isFinite(pm) ? Math.round(pm / 5) * 5 : 0);
+  }, [visible, value]);
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const mins = Array.from({ length: 12 }, (_, i) => i * 5);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.timeCard} onPress={() => {}}>
+          <SketchBorder seed={655} straight />
+          <Text style={styles.timeDisplay}>
+            {pad2(h)}:{pad2(m)}
+          </Text>
+          <View style={styles.timeCols}>
+            <ScrollView style={styles.timeCol} showsVerticalScrollIndicator={false}>
+              {hours.map((hh) => (
+                <Pressable key={hh} style={[styles.timeItem, h === hh && styles.timeItemOn]} onPress={() => setH(hh)}>
+                  <Text style={[styles.timeItemText, h === hh && styles.timeItemTextOn]}>{pad2(hh)}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={styles.timeColon}>:</Text>
+            <ScrollView style={styles.timeCol} showsVerticalScrollIndicator={false}>
+              {mins.map((mm) => (
+                <Pressable key={mm} style={[styles.timeItem, m === mm && styles.timeItemOn]} onPress={() => setM(mm)}>
+                  <Text style={[styles.timeItemText, m === mm && styles.timeItemTextOn]}>{pad2(mm)}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+          <Pressable style={styles.timeSet} onPress={() => onPick(`${pad2(h)}:${pad2(m)}`)}>
+            <Text style={styles.timeSetText}>SET TIME</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -362,12 +452,12 @@ function StepNotes({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) => v
 function StepReview({ draft }: { draft: Draft }) {
   const rows: [string, string][] = [
     ["DATE", draft.date ? fmtPro(draft.date) : "—"],
-    ["INSTRUMENT", draft.instrument.trim() || "—"],
+    ["SYMBOL", draft.instrument.trim() || "—"],
     ["DIRECTION", draft.direction ? draft.direction.toUpperCase() : "—"],
-    ["RISK", draft.risk ? `${draft.risk} ${draft.riskUnit}` : "—"],
-    ["P&L", draft.pnl ? `${draft.pnl} ${draft.riskUnit}` : "—"],
-    ["SL / TP", `${draft.slSize || "—"} / ${draft.tpSize || "—"}`],
-    ["ENTRY", draft.entryTime.trim() || "—"],
+    ["R-R (RESULT)", fmtRR(draft.rr)],
+    ["SL SIZE", draft.slSize || "—"],
+    ["POSITION SIZE", draft.positionSize || "—"],
+    ["ENTRY TIME", draft.entryTime.trim() || "—"],
     ["OUTCOME", draft.outcome ? draft.outcome.toUpperCase() : "—"],
     ["TAG", draft.tag ? `#${draft.tag}` : "—"],
     ["LINK", draft.tradeLink.trim() || "—"],
@@ -510,15 +600,8 @@ const styles = StyleSheet.create({
   dateText: { textAlign: "center" },
   input: { color: colors.text, fontFamily: fontFamily.medium, fontSize: 15, padding: 0 },
 
-  // Step 2 — risk unit toggle, multi-column rows, outcome tiles
-  riskRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
-  unitRow: { flexDirection: "row", gap: 4 },
-  unitBtn: { width: 36, height: 48, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderSoft },
-  unitBtnOn: { backgroundColor: colors.text, borderColor: colors.text },
-  unitText: { color: colors.textMuted, fontFamily: fontFamily.bold, fontSize: 15 },
-  unitTextOn: { color: colors.background },
+  // Step 2 — multi-column rows, outcome tiles
   flex1: { flex: 1 },
-  noMargin: { marginBottom: 0 },
   row2: { flexDirection: "row", gap: spacing.md },
   outBtn: { flex: 1, height: 60, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt, borderWidth: 1.5, borderColor: colors.borderSoft },
   outWin: { borderColor: colors.positive, backgroundColor: "rgba(168,255,96,0.10)" },
@@ -585,4 +668,17 @@ const styles = StyleSheet.create({
   daySel: { backgroundColor: colors.text },
   dayText: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 13 },
   dayTextSel: { color: colors.background, fontFamily: fontFamily.bold },
+
+  // Time picker — digital readout + tap columns (HH | MM)
+  timeCard: { width: "100%", maxWidth: 300, backgroundColor: colors.surface, padding: spacing.lg, alignItems: "center" },
+  timeDisplay: { color: colors.text, fontFamily: "monospace", fontSize: 40, letterSpacing: 2, marginBottom: spacing.md },
+  timeCols: { flexDirection: "row", alignItems: "center", gap: spacing.sm, height: 180 },
+  timeCol: { width: 72 },
+  timeColon: { color: colors.textSubtle, fontFamily: fontFamily.bold, fontSize: 24 },
+  timeItem: { height: 44, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt, marginBottom: 4 },
+  timeItemOn: { backgroundColor: colors.text },
+  timeItemText: { color: colors.textMuted, fontFamily: "monospace", fontSize: 18 },
+  timeItemTextOn: { color: colors.background, fontFamily: fontFamily.bold },
+  timeSet: { marginTop: spacing.lg, alignSelf: "stretch", backgroundColor: colors.text, height: 46, alignItems: "center", justifyContent: "center" },
+  timeSetText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },
 });

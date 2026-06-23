@@ -1,30 +1,33 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-
-const API_URL_KEY = "tj.apiBaseUrl";
 
 // Hardcoded backend home. JS-level so it ships via OTA even on builds whose
 // embedded app.config predates this URL. Mirrors app.config.ts's default.
 const HARDCODED_DEFAULT = "https://inquisitive-lottie-fsocietyt-f7a26bff.koyeb.app";
 
-const CONFIG_DEFAULT = (
+// Fixed backend URL — no in-app override (drops the old Settings field and any
+// stale value previously saved on the device).
+const BASE_URL = (
   String((Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ?? "").trim() ||
   HARDCODED_DEFAULT
 ).replace(/\/+$/, "");
 
-/** Effective backend URL: a Settings override if set, else the build-time default. */
+/** The backend URL (fixed). Async so existing callers don't change. */
 export async function getBaseUrl(): Promise<string> {
-  let override: string | null = null;
-  try {
-    override = await AsyncStorage.getItem(API_URL_KEY);
-  } catch {
-    override = null;
-  }
-  return (override?.trim() || CONFIG_DEFAULT).replace(/\/+$/, "");
+  return BASE_URL;
 }
 
-export async function setBaseUrl(url: string): Promise<void> {
-  await AsyncStorage.setItem(API_URL_KEY, url.trim());
+/** Reachability check for the Settings health line: any HTTP reply = up. */
+export async function pingBackend(timeoutMs = 12000): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await fetch(BASE_URL, { method: "GET", signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export type AnalyzeResponse = {
