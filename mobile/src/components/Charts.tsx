@@ -111,6 +111,33 @@ export function ScatterChart({ points }: { points: number[] }) {
   );
 }
 
+// Position size (x) vs R-R (y): are bigger positions actually worth more R?
+export function RiskScatter({ points }: { points: { x: number; y: number }[] }) {
+  const [w, setW] = useState(0);
+  const H = 128;
+  const PAD = 16;
+  const xs = points.map((p) => p.x);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const spanX = maxX - minX || 1;
+  const maxAbs = Math.max(1, ...points.map((p) => Math.abs(p.y)));
+  const X = (v: number) => PAD + ((v - minX) / spanX) * (w - 2 * PAD);
+  const Y = (v: number) => PAD + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - 2 * PAD);
+  const zeroY = Y(0);
+  return (
+    <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+      {w > 1 ? (
+        <Svg width={w} height={H}>
+          <Line x1={PAD} y1={zeroY} x2={w - PAD} y2={zeroY} stroke={colors.textSubtle} strokeWidth={1} opacity={0.5} />
+          {points.map((p, i) => (
+            <Circle key={i} cx={X(p.x)} cy={Y(p.y)} r={3.4} fill={p.y >= 0 ? colors.positive : colors.danger} opacity={0.85} />
+          ))}
+        </Svg>
+      ) : null}
+    </View>
+  );
+}
+
 export function CalendarCard({ cal }: { cal: Calendar }) {
   const cells: (CalDay | null)[] = [...Array.from({ length: cal.firstWeekday }, () => null), ...cal.days];
   while (cells.length % 7 !== 0) cells.push(null);

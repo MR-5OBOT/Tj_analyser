@@ -9,6 +9,7 @@ export type Dashboard = {
   equity: number[];
   monthly: { label: string; value: number }[];
   scatter: number[]; // recent R-multiples
+  risk: { x: number; y: number }[]; // position size (x) vs R-R (y)
   calendar: Calendar;
 };
 
@@ -59,6 +60,11 @@ export function buildDashboard(trades: Trade[]): Dashboard {
 
   const scatter = rs.slice(-20);
 
+  // Position size vs R-R — only trades that logged a size and a result.
+  const risk = sorted
+    .filter((t) => t.positionSize != null && t.rr != null)
+    .map((t) => ({ x: t.positionSize as number, y: t.rr as number }));
+
   // Calendar — current month, R + trade count per day.
   const year = now.getFullYear();
   const month = now.getMonth();
@@ -83,5 +89,5 @@ export function buildDashboard(trades: Trade[]): Dashboard {
     monthR: +days.reduce((s, d) => s + d.r, 0).toFixed(1),
   };
 
-  return { stats, equity, monthly, scatter, calendar };
+  return { stats, equity, monthly, scatter, risk, calendar };
 }

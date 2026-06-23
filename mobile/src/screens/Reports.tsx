@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { BarChart, ChartCard, EquityChart, ScatterChart } from "../components/Charts";
+import { BarChart, ChartCard, EquityChart, RiskScatter, ScatterChart } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { buildDashboard } from "../lib/dashboard";
 import { loadTrades, Trade } from "../lib/journals";
@@ -44,6 +44,16 @@ export function ReportsScreen() {
           <ScatterChart points={data.scatter} />
         </ChartCard>
       </View>
+
+      {data.risk.length > 0 ? (
+        <ChartCard title="SIZE vs R" right="POSITION SIZE" rot={0.8} seed={705}>
+          <RiskScatter points={data.risk} />
+          <View style={styles.axisRow}>
+            <Text style={styles.axisLabel}>SMALL SIZE</Text>
+            <Text style={styles.axisLabel}>BIG SIZE</Text>
+          </View>
+        </ChartCard>
+      ) : null}
     </ScrollView>
   );
 }
