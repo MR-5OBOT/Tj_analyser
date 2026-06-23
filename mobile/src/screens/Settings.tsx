@@ -9,14 +9,13 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
 import { getBaseUrl, setBaseUrl } from "../lib/api";
+import { JOURNALS_KEY } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
 const HERO_FILL = "#A8A8A8";
 const HERO_TEXT = "#0A0A0A";
 const DIVIDER_COLOR = "#5A5A5A"; // row separator: cross-line style, darker than the frame
-
-const JOURNALS_KEY = "tj.journals";
 
 export function SettingsScreen() {
   return (

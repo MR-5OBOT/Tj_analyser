@@ -3,8 +3,13 @@ import Constants from "expo-constants";
 
 const API_URL_KEY = "tj.apiBaseUrl";
 
-const CONFIG_DEFAULT = String(
-  (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ?? "",
+// Hardcoded backend home. JS-level so it ships via OTA even on builds whose
+// embedded app.config predates this URL. Mirrors app.config.ts's default.
+const HARDCODED_DEFAULT = "https://inquisitive-lottie-fsocietyt-f7a26bff.koyeb.app";
+
+const CONFIG_DEFAULT = (
+  String((Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ?? "").trim() ||
+  HARDCODED_DEFAULT
 ).replace(/\/+$/, "");
 
 /** Effective backend URL: a Settings override if set, else the build-time default. */

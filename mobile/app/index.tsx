@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
 import { MenuAction, TopHeader } from "../src/components/ui";
+import { AddTradeScreen } from "../src/screens/AddTrade";
 import { HomeScreen } from "../src/screens/Home";
 import { PdfReportScreen } from "../src/screens/PdfReport";
 import { SettingsScreen } from "../src/screens/Settings";
@@ -96,6 +97,8 @@ export default function Home() {
           <SettingsScreen />
         ) : active === "report" ? (
           <PdfReportScreen />
+        ) : active === "add" ? (
+          <AddTradeScreen />
         ) : active === "home" ? (
           <HomeScreen />
         ) : null}
