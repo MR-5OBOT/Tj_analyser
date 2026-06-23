@@ -52,24 +52,6 @@ CANONICAL_COLUMNS: Final[dict[str, str]] = {
     "notes": "Free-form trade notes",
 }
 
-# Human-friendly labels for each field, shown on the upload screen via /api/schema.
-FIELD_LABELS: Final[dict[str, str]] = {
-    "trade_date": "Date",
-    "trade_day": "Day",
-    "asset": "Asset",
-    "entry_time": "Entry time",
-    "exit_time": "Exit time",
-    "position_size": "Position size",
-    "outcome": "Outcome",
-    "rr": "R / R-multiple",
-    "risk_amount": "Risk",
-    "reward_amount": "Reward",
-    "stop_loss_points": "Stop-loss",
-    "session": "Session",
-    "setup": "Setup",
-    "notes": "Notes",
-}
-
 # Each field accepts exactly these names (matched case/spacing/punctuation-insensitively).
 # The upload screen shows these to the user: name your columns one of these or analysis
 # can't run. Keep to 3 clear examples per field.

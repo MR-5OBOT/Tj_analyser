@@ -1,8 +1,9 @@
 /**
  * Design tokens for the TJ Analyser app.
  *
- * Carried over from the original dark theme: near-black surfaces with a single lime
- * accent. Centralized here so every screen and component shares one visual language.
+ * Monochrome neo-brutalist dark theme: near-black surfaces, grey hand-drawn ink,
+ * green/red kept only for win/loss values. Centralized so every screen shares one
+ * visual language.
  */
 
 export const colors = {
@@ -11,17 +12,11 @@ export const colors = {
   surfaceAlt: "#111111",
   border: "#1C1C1C",
   borderSoft: "#2A2A2A",
-  accent: "#A0F25B",
-  accentSoft: "#182308",
-  onAccent: "#05211C",
   text: "#FFFFFF",
   textMuted: "#B8B8B8",
   textSubtle: "#6E6E6E",
   positive: "#A8FF60",
-  warning: "#FFD76A",
   danger: "#FF7A7A",
-  dangerSoft: "#160D0D",
-  dangerBorder: "#472727",
 };
 
 export const spacing = {
@@ -31,15 +26,6 @@ export const spacing = {
   lg: 16,
   xl: 20,
   xxl: 28,
-};
-
-export const radius = {
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 20,
-  xl: 24,
-  pill: 999,
 };
 
 // Space Grotesk — a neo-brutalism staple. Each weight is its own family name

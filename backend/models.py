@@ -18,23 +18,3 @@ class AnalyzeResponse(BaseModel):
     unmapped_columns: list[str] = Field(default_factory=list)
     rows_processed: int
     download_url: str
-
-
-class InspectResponse(BaseModel):
-    source_columns: list[str] = Field(default_factory=list)
-    detected_mappings: dict[str, str] = Field(default_factory=dict)
-    unmapped_columns: list[str] = Field(default_factory=list)
-    missing_required: list[str] = Field(default_factory=list)
-
-
-class SchemaColumn(BaseModel):
-    field: str
-    label: str
-    description: str
-    accepted_names: list[str] = Field(default_factory=list)
-
-
-class SchemaResponse(BaseModel):
-    columns: list[SchemaColumn] = Field(default_factory=list)
-    required_one_of: list[str] = Field(default_factory=list)
-    note: str = ""

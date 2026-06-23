@@ -12,17 +12,11 @@ from pandas.errors import EmptyDataError, ParserError
 
 from backend.files import cleanup_expired_reports, report_pdf_path
 from backend.logging_utils import get_logger
-from backend.models import (
-    AnalyzeRequestForm,
-    AnalyzeResponse,
-    InspectResponse,
-    SchemaColumn,
-    SchemaResponse,
-)
+from backend.models import AnalyzeRequestForm, AnalyzeResponse
 from backend.settings import settings
 from backend.url_utils import normalize_source_url
-from config import CANONICAL_COLUMNS, COLUMN_ALIASES, FIELD_LABELS, OUTCOME_VALUE_MAP
-from helpers.journal_normalization import detect_column_mappings, normalize_journal
+from config import CANONICAL_COLUMNS, OUTCOME_VALUE_MAP
+from helpers.journal_normalization import normalize_journal
 from helpers.reporting import build_report, export_pdf_report
 
 logger = get_logger("backend.service")
@@ -136,65 +130,9 @@ def analyze_journal(
     )
 
 
-def build_schema() -> SchemaResponse:
-    """Describe every accepted field, its 3 accepted names, and the result requirement.
-
-    Powers the upload screen so the app shows users exactly how to name their columns
-    without hardcoding the list.
-    """
-    columns = [
-        SchemaColumn(
-            field=field,
-            label=FIELD_LABELS.get(field, field.replace("_", " ").title()),
-            description=CANONICAL_COLUMNS.get(field, ""),
-            accepted_names=COLUMN_ALIASES.get(field, []),
-        )
-        for field in CANONICAL_COLUMNS
-    ]
-    return SchemaResponse(
-        columns=columns,
-        required_one_of=["outcome", "rr"],
-        note=(
-            "Name each column one of its accepted names (capitalization and spacing don't "
-            "matter). You must include at least an 'outcome' or an 'rr' column — without one, "
-            "analysis can't run. Every other field is optional and unlocks more charts."
-        ),
-    )
-
-
-def inspect_columns(raw_df: pd.DataFrame, *, column_mappings: dict | None = None) -> InspectResponse:
-    """Preview how a journal's headers map to the internal schema, without analyzing it."""
-    source_columns = [str(column) for column in raw_df.columns]
-    detected_mappings = detect_column_mappings(raw_df, column_mappings)
-    missing_required = _missing_required(detected_mappings)
-    logger.info(
-        "inspect_columns source_count=%s detected=%s missing_required=%s",
-        len(source_columns),
-        ",".join(detected_mappings.keys()),
-        ",".join(missing_required),
-    )
-    return InspectResponse(
-        source_columns=source_columns,
-        detected_mappings=_to_json_safe(detected_mappings),
-        unmapped_columns=_unmapped_columns(source_columns, detected_mappings),
-        missing_required=missing_required,
-    )
-
-
 def _unmapped_columns(source_columns: list[str], detected_mappings: dict) -> list[str]:
     mapped = {str(value) for value in detected_mappings.values()}
     return [column for column in source_columns if column not in mapped]
-
-
-def _missing_required(detected_mappings: dict) -> list[str]:
-    """Report 'outcome' as missing only when it can't be derived from rr or reward+risk."""
-    detected = set(detected_mappings.keys())
-    outcome_satisfiable = (
-        "outcome" in detected
-        or "rr" in detected
-        or {"reward_amount", "risk_amount"}.issubset(detected)
-    )
-    return [] if outcome_satisfiable else ["outcome"]
 
 
 def parse_optional_json(raw_value: str | None) -> dict:
