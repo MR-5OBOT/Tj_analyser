@@ -19,7 +19,7 @@ export const DOCK_SPACE = 110;
 // read as light-grey tiles with a dark icon; no accent color in the dock at all.
 const BRUTAL_BORDER = "#111111"; // outline on every element (matches idle face)
 const NAV_SHADOW = "#505050"; // grey hard shadow under idle nav squares
-const ADD_SHADOW = "#000000"; // black hard shadow under the Add square
+const ADD_SHADOW = "#A8A8A8"; // light-grey hard shadow under the Add square
 const FILL_HERO = "#A8A8A8"; // muted light-grey fill for active + Add tiles
 const ICON_HERO = "#0A0A0A"; // dark icon on the light-grey tiles
 const CONNECTOR_COLOR = "#000000"; // seam line, black over the grey bg
