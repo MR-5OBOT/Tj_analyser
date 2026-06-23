@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
 import { MenuAction, TopHeader } from "../src/components/ui";
+import { HomeScreen } from "../src/screens/Home";
 import { PdfReportScreen } from "../src/screens/PdfReport";
 import { SettingsScreen } from "../src/screens/Settings";
 import { colors } from "../src/theme/tokens";
@@ -95,6 +96,8 @@ export default function Home() {
           <SettingsScreen />
         ) : active === "report" ? (
           <PdfReportScreen />
+        ) : active === "home" ? (
+          <HomeScreen />
         ) : null}
       </SafeAreaView>
 
