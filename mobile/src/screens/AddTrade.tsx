@@ -269,8 +269,34 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
     <>
       <Text style={styles.stepTitle}>STEP 2 · RESULT & OUTCOME</Text>
 
-      {/* R-R · Entry time share one row to save vertical space. */}
+      {/* Entry · SL, then Position · R-R — matches the logs column order. */}
       <View style={styles.row2}>
+        <View style={styles.flex1}>
+          <Text style={styles.label}>ENTRY TIME</Text>
+          <Pressable style={styles.field} onPress={() => setPickingTime(true)}>
+            <SketchBorder straight seed={335} />
+            <Text style={[styles.dateText, draft.entryTime ? styles.fieldValue : styles.fieldPlaceholder]}>
+              {draft.entryTime || "Select"}
+            </Text>
+          </Pressable>
+        </View>
+        <View style={styles.flex1}>
+          <Text style={styles.label}>SL SIZE</Text>
+          <View style={styles.field}>
+            <SketchBorder straight seed={333} />
+            <TextInput style={styles.input} value={draft.slSize} onChangeText={(t) => set({ slSize: numericText(t) })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.row2}>
+        <View style={styles.flex1}>
+          <Text style={styles.label}>POSITION SIZE</Text>
+          <View style={styles.field}>
+            <SketchBorder straight seed={334} />
+            <TextInput style={styles.input} value={draft.positionSize} onChangeText={(t) => set({ positionSize: numericText(t) })} placeholder="lots / contracts" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
+          </View>
+        </View>
         <View style={styles.flex1}>
           <Text style={styles.label}>R-R (RESULT) *</Text>
           <View style={styles.field}>
@@ -283,32 +309,6 @@ function StepOutcome({ draft, set }: { draft: Draft; set: (p: Partial<Draft>) =>
               placeholderTextColor={colors.textSubtle}
               keyboardType="numbers-and-punctuation"
             />
-          </View>
-        </View>
-        <View style={styles.flex1}>
-          <Text style={styles.label}>ENTRY TIME</Text>
-          <Pressable style={styles.field} onPress={() => setPickingTime(true)}>
-            <SketchBorder straight seed={335} />
-            <Text style={[styles.dateText, draft.entryTime ? styles.fieldValue : styles.fieldPlaceholder]}>
-              {draft.entryTime || "Select"}
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.row2}>
-        <View style={styles.flex1}>
-          <Text style={styles.label}>SL SIZE</Text>
-          <View style={styles.field}>
-            <SketchBorder straight seed={333} />
-            <TextInput style={styles.input} value={draft.slSize} onChangeText={(t) => set({ slSize: numericText(t) })} placeholder="0" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
-          </View>
-        </View>
-        <View style={styles.flex1}>
-          <Text style={styles.label}>POSITION SIZE</Text>
-          <View style={styles.field}>
-            <SketchBorder straight seed={334} />
-            <TextInput style={styles.input} value={draft.positionSize} onChangeText={(t) => set({ positionSize: numericText(t) })} placeholder="lots / contracts" placeholderTextColor={colors.textSubtle} keyboardType="decimal-pad" />
           </View>
         </View>
       </View>
@@ -454,11 +454,11 @@ function StepReview({ draft }: { draft: Draft }) {
     ["DATE", draft.date ? fmtPro(draft.date) : "—"],
     ["SYMBOL", draft.instrument.trim() || "—"],
     ["DIRECTION", draft.direction ? draft.direction.toUpperCase() : "—"],
-    ["R-R (RESULT)", fmtRR(draft.rr)],
+    ["ENTRY TIME", draft.entryTime.trim() || "—"],
     ["SL SIZE", draft.slSize || "—"],
     ["POSITION SIZE", draft.positionSize || "—"],
-    ["ENTRY TIME", draft.entryTime.trim() || "—"],
-    ["OUTCOME", draft.outcome ? draft.outcome.toUpperCase() : "—"],
+    ["RESULT", draft.outcome ? draft.outcome.toUpperCase() : "—"],
+    ["R-R", fmtRR(draft.rr)],
     ["TAG", draft.tag ? `#${draft.tag}` : "—"],
     ["LINK", draft.tradeLink.trim() || "—"],
     ["NOTES", draft.notes.trim() || "—"],

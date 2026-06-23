@@ -27,11 +27,11 @@ const HEADER_H = 34;
 const COLS: Col[] = [
   { key: "instrument", label: "SYMBOL", w: 110, align: "left" },
   { key: "direction", label: "DIRECTION", w: 96, align: "center" },
-  { key: "rr", label: "R-R", w: 72, align: "right" },
-  { key: "outcome", label: "RESULT", w: 80, align: "center" },
   { key: "entryTime", label: "ENTRY TIME", w: 88, align: "center" },
   { key: "slSize", label: "SL SIZE", w: 74, align: "right" },
   { key: "positionSize", label: "POSITION SIZE", w: 104, align: "right" },
+  { key: "outcome", label: "RESULT", w: 80, align: "center" },
+  { key: "rr", label: "R-R", w: 72, align: "right" },
   { key: "tag", label: "TAG", w: 96, align: "center" },
   { key: "link", label: "LINK", w: 60, align: "center" },
 ];
@@ -214,11 +214,11 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
     ["DATE", fmtDate(trade.date)],
     ["SYMBOL", trade.instrument || "—"],
     ["DIRECTION", trade.direction.toUpperCase()],
-    ["R-R (RESULT)", trade.rr == null ? "—" : `${trade.rr > 0 ? "+" : ""}${trade.rr}R`],
-    ["RESULT", trade.outcome.toUpperCase()],
     ["ENTRY TIME", trade.entryTime || "—"],
     ["SL SIZE", `${trade.slSize ?? "—"}`],
     ["POSITION SIZE", `${trade.positionSize ?? "—"}`],
+    ["RESULT", trade.outcome.toUpperCase()],
+    ["R-R", trade.rr == null ? "—" : `${trade.rr > 0 ? "+" : ""}${trade.rr}R`],
     ["TAG", trade.tag ? `#${trade.tag}` : "—"],
     ["NOTES", trade.notes || "—"],
   ];

@@ -34,3 +34,24 @@ export async function addTrade(t: Trade): Promise<void> {
   trades.push(t);
   await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
 }
+
+// CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).
+const CSV_COLUMNS: { header: string; get: (t: Trade) => string | number | null }[] = [
+  { header: "DATE", get: (t) => t.date },
+  { header: "SYMBOL", get: (t) => t.instrument },
+  { header: "DIRECTION", get: (t) => t.direction },
+  { header: "ENTRY TIME", get: (t) => t.entryTime },
+  { header: "SL SIZE", get: (t) => t.slSize },
+  { header: "POSITION SIZE", get: (t) => t.positionSize },
+  { header: "RESULT", get: (t) => t.outcome },
+  { header: "R-R", get: (t) => t.rr },
+  { header: "TAG", get: (t) => t.tag },
+  { header: "LINK", get: (t) => t.tradeLink },
+];
+
+export function tradesToCsv(trades: Trade[]): string {
+  const esc = (v: string | number | null) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const head = CSV_COLUMNS.map((c) => c.header).join(",");
+  const rows = trades.map((t) => CSV_COLUMNS.map((c) => esc(c.get(t))).join(","));
+  return [head, ...rows].join("\n");
+}

@@ -9,7 +9,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
-import { JOURNALS_KEY } from "../lib/journals";
+import { JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
@@ -77,18 +77,12 @@ function DataAndAbout() {
 
   const exportJournals = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(JOURNALS_KEY);
-      const trades = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(trades) || trades.length === 0) {
+      const trades = await loadTrades();
+      if (trades.length === 0) {
         Alert.alert("Nothing to export", "You haven't journaled any trades yet.");
         return;
       }
-      const headers = Array.from(new Set(trades.flatMap((t) => Object.keys(t ?? {}))));
-      const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-      const csv = [
-        headers.join(","),
-        ...trades.map((t) => headers.map((h) => esc(t?.[h])).join(",")),
-      ].join("\n");
+      const csv = tradesToCsv(trades);
       const uri = `${FileSystem.cacheDirectory}journals.csv`;
       await FileSystem.writeAsStringAsync(uri, csv);
       if (await Sharing.isAvailableAsync()) {
