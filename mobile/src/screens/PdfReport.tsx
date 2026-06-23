@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { ColumnGuide } from "../components/ColumnGuide";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { SketchBorder } from "../components/ui";
+import { BrutalLoader, SketchBorder } from "../components/ui";
 import { analyze, AnalyzeInput, ApiError, getBaseUrl } from "../lib/api";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
@@ -55,24 +55,14 @@ export function PdfReportScreen() {
 
       const res = await analyze(input);
       const base = await getBaseUrl();
-      const { cacheUri, savedTo } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
+      const { cacheUri } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
 
-      const openPdf = async () => {
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(cacheUri, { mimeType: "application/pdf", dialogTitle: "TJ report" });
-        }
-      };
-
-      if (savedTo) {
-        Alert.alert("Report saved ✓", `${res.rows_processed} trades analysed. Saved to your chosen folder.`, [
-          { text: "Open", onPress: openPdf },
-          { text: "Done", style: "cancel" },
-        ]);
+      // Auto-open the finished PDF in a reader the moment it's ready (it's already
+      // saved to Downloads by downloadReport). Falls back to a note if no viewer.
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(cacheUri, { mimeType: "application/pdf", dialogTitle: "Open report" });
       } else {
-        Alert.alert("Report ready", `${res.rows_processed} trades analysed. Choose where to save it.`, [
-          { text: "Save / Open", onPress: openPdf },
-          { text: "Cancel", style: "cancel" },
-        ]);
+        Alert.alert("Report ready", `${res.rows_processed} trades analysed and saved to Downloads.`);
       }
     } catch (e) {
       setError(e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
@@ -151,7 +141,7 @@ export function PdfReportScreen() {
       <Pressable style={[styles.generate, busy && styles.generateBusy]} onPress={generate} disabled={busy}>
         <SketchBorder seed={455} straight />
         {busy ? (
-          <ActivityIndicator color={HERO_TEXT} />
+          <BrutalLoader color={HERO_TEXT} label="GENERATING" />
         ) : (
           <Text style={styles.generateText}>Generate report</Text>
         )}

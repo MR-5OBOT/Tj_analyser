@@ -3,6 +3,10 @@ import * as FileSystem from "expo-file-system/legacy";
 
 const EXPORT_DIR_KEY = "tj.exportDir";
 
+// SAF tree URI for the device's public Downloads folder — used as the initial
+// location of the one-time folder prompt so "Downloads" is the obvious default.
+const DOWNLOADS_DIR_URI = "content://com.android.externalstorage.documents/tree/primary%3ADownload";
+
 export type SaveResult = { cacheUri: string; savedTo: string | null };
 
 /** A timestamped base name (no extension) for a generated report. */
@@ -31,7 +35,9 @@ export async function downloadReport(pdfUrl: string, baseName: string): Promise<
 async function saveToExportFolder(cacheUri: string, baseName: string): Promise<string | null> {
   let dir = (await AsyncStorage.getItem(EXPORT_DIR_KEY))?.trim() || null;
   if (!dir) {
-    const res = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+    // Open the picker pre-pointed at Downloads; once granted it's remembered and
+    // every later report saves there automatically with no further prompts.
+    const res = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(DOWNLOADS_DIR_URI);
     if (!res.granted) return null; // declined — caller can offer Share instead
     dir = res.directoryUri;
     await AsyncStorage.setItem(EXPORT_DIR_KEY, dir);
