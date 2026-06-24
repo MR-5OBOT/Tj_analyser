@@ -25,7 +25,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { csvToTrades, deleteTrade, importTrades, loadTrades, MAX_IMPORT_ROWS, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -130,9 +130,13 @@ export function TradesLogsScreen() {
     const added = await importTrades(parsed);
     setImporting(false);
     reload();
+    const capNote =
+      parsed.length === MAX_IMPORT_ROWS
+        ? `\n\nNote: imports are capped at ${MAX_IMPORT_ROWS.toLocaleString()} rows per file — extra rows were dropped.`
+        : "";
     Alert.alert(
       "Imported",
-      added === 0 ? "Those rows are already in your journal." : `Added ${added} new trade${added === 1 ? "" : "s"}.`,
+      (added === 0 ? "Those rows are already in your journal." : `Added ${added} new trade${added === 1 ? "" : "s"}.`) + capNote,
     );
   };
 

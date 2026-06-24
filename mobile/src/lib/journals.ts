@@ -3,6 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Same key Settings.tsx reads/exports/clears — keep them in sync.
 export const JOURNALS_KEY = "tj.journals";
 
+// Hard cap on rows taken from a single uploaded CSV — anything past this is dropped.
+export const MAX_IMPORT_ROWS = 3000;
+
 export type Trade = {
   id: string;
   date: string; // YYYY-MM-DD
@@ -128,7 +131,8 @@ export function csvToTrades(csv: string): Trade[] {
   };
   const get = (r: string[], idx: number) => (idx >= 0 && idx < r.length ? r[idx].trim() : "");
   const num = (s: string) => { const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
-  return rows.slice(1).map((r, k) => {
+  // Hard cap: only the first MAX_IMPORT_ROWS data rows are kept; the rest are dropped.
+  return rows.slice(1, 1 + MAX_IMPORT_ROWS).map((r, k) => {
     const dir = get(r, i.dir).toLowerCase();
     const res = get(r, i.res).toLowerCase();
     return {
