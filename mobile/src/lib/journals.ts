@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
 // Same key Settings.tsx reads/exports/clears — keep them in sync.
 export const JOURNALS_KEY = "tj.journals";
@@ -32,6 +33,33 @@ export function getCachedTrades(): Trade[] | null {
   return cache;
 }
 
+// Screens stay mounted (keep-alive nav), so they can't rely on a remount to pick
+// up new trades — they subscribe here and reload when any write changes the cache.
+const listeners = new Set<() => void>();
+function emit() {
+  for (const fn of listeners) fn();
+}
+
+/** Run `fn` whenever the journal changes (add/import/delete/clear). Returns an
+ *  unsubscribe. Lets kept-alive screens stay fresh without remounting. */
+export function subscribe(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/** Shared trade state for a screen: seeds from cache, loads once, and re-renders
+ *  whenever the journal is written. */
+export function useTrades(): Trade[] | null {
+  const [trades, setTrades] = useState<Trade[] | null>(getCachedTrades);
+  useEffect(() => {
+    loadTrades().then(setTrades);
+    return subscribe(() => setTrades(getCachedTrades()));
+  }, []);
+  return trades;
+}
+
 export async function loadTrades(): Promise<Trade[]> {
   if (cache) return cache;
   try {
@@ -49,6 +77,7 @@ export async function loadTrades(): Promise<Trade[]> {
 async function persist(trades: Trade[]): Promise<void> {
   await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
   cache = trades;
+  emit();
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
@@ -88,6 +117,7 @@ export async function deleteTrade(id: string): Promise<void> {
 export async function clearTrades(): Promise<void> {
   cache = [];
   await AsyncStorage.removeItem(JOURNALS_KEY);
+  emit();
 }
 
 // CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).

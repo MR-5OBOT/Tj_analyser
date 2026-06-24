@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { CalendarCard } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { SketchBorder } from "../components/ui";
 import { buildDashboard, Tone } from "../lib/dashboard";
-import { getCachedTrades, loadTrades, Trade } from "../lib/journals";
+import { useTrades } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
 const toneColor = (t: Tone) => (t === "positive" ? colors.positive : t === "negative" ? colors.danger : colors.text);
@@ -20,10 +20,7 @@ const STAT_ROWS: { i: number; frac: number; rot: number; mt: number }[][] = [
 ];
 
 export function HomeScreen() {
-  const [trades, setTrades] = useState<Trade[] | null>(getCachedTrades);
-  useEffect(() => {
-    loadTrades().then(setTrades);
-  }, []);
+  const trades = useTrades();
   const data = useMemo(() => (trades && trades.length ? buildDashboard(trades) : null), [trades]);
 
   if (trades && trades.length === 0) {

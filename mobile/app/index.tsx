@@ -48,6 +48,10 @@ const ITEMS: DockItem[] = PAGES.filter((p) => p.key !== "settings" && p.key !== 
 const addPage = PAGES.find((p) => p.key === "add")!;
 const ADD_ITEM: DockItem = { key: addPage.key, icon: addPage.icon };
 
+// Screens kept mounted across switches (Settings is excluded — it's reached
+// rarely from the ⋮ menu and reads its stored-count fresh on each mount).
+const KEEP_ALIVE = ["home", "report", "add", "journals"];
+
 export default function Home() {
   // A small navigation stack so the header Back button returns to the previous tab.
   // Home is the root: selecting it resets the stack, so Back is disabled there.
@@ -60,6 +64,28 @@ export default function Home() {
   const [addDraft, setAddDraft] = useState<Draft>(INITIAL_DRAFT);
   const [toolsOpen, setToolsOpen] = useState(false); // header tools/settings menu
   const page = PAGES.find((p) => p.key === active) ?? PAGES[0];
+
+  // Keep-alive nav: once a screen is visited it stays mounted (just hidden), so
+  // switching back is instant — no rebuild of stats/charts and no table re-render.
+  const [visited, setVisited] = useState<Set<string>>(() => new Set([active]));
+  useEffect(() => {
+    setVisited((v) => (v.has(active) ? v : new Set(v).add(active)));
+  }, [active]);
+
+  const renderScreen = (key: string) => {
+    switch (key) {
+      case "report":
+        return <ReportsScreen />;
+      case "add":
+        return <AddTradeScreen step={addStep} setStep={setAddStep} draft={addDraft} setDraft={setAddDraft} />;
+      case "journals":
+        return <TradesLogsScreen />;
+      case "settings":
+        return <SettingsScreen />;
+      default:
+        return <HomeScreen />;
+    }
+  };
 
   const select = (key: string) => {
     if (key === active) return;
@@ -91,17 +117,16 @@ export default function Home() {
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
         <TopHeader title={page.title} onMenu={() => setToolsOpen(true)} />
-        {active === "settings" ? (
-          <SettingsScreen />
-        ) : active === "report" ? (
-          <ReportsScreen />
-        ) : active === "add" ? (
-          <AddTradeScreen step={addStep} setStep={setAddStep} draft={addDraft} setDraft={setAddDraft} />
-        ) : active === "journals" ? (
-          <TradesLogsScreen />
-        ) : active === "home" ? (
-          <HomeScreen />
-        ) : null}
+        <View style={styles.pages}>
+          {KEEP_ALIVE.map((key) =>
+            visited.has(key) ? (
+              <View key={key} style={active === key ? styles.page : styles.hidden}>
+                {renderScreen(key)}
+              </View>
+            ) : null,
+          )}
+          {active === "settings" ? <View style={styles.page}>{renderScreen("settings")}</View> : null}
+        </View>
       </SafeAreaView>
 
       <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
@@ -118,4 +143,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  pages: { flex: 1 },
+  // Active screen fills the area; hidden ones stay mounted but unpainted.
+  page: { ...StyleSheet.absoluteFillObject },
+  hidden: { display: "none" },
 });

@@ -24,7 +24,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, MAX_IMPORT_ROWS, Trade, tradesToCsv } from "../lib/journals";
+import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -74,8 +74,11 @@ export function TradesLogsScreen() {
   const reload = useCallback(() => {
     loadTrades().then((t) => setTrades([...t].reverse()));
   }, []);
+  // Load once, then refresh on any journal write (own import/delete, or an
+  // Add-trade / Settings-clear from another kept-alive screen).
   useEffect(() => {
     reload();
+    return subscribe(reload);
   }, [reload]);
 
   const exportCsv = async () => {
@@ -130,9 +133,8 @@ export function TradesLogsScreen() {
       Alert.alert("Import failed", e instanceof Error ? e.message : "Could not read the CSV.");
       return; // keep the modal open so they can pick a corrected file
     }
-    const added = await importTrades(parsed);
+    const added = await importTrades(parsed); // persist → emit → reload via subscription
     setImporting(false);
-    reload();
     const capNote =
       parsed.length === MAX_IMPORT_ROWS
         ? `\n\nNote: imports are capped at ${MAX_IMPORT_ROWS.toLocaleString()} rows per file — extra rows were dropped.`
@@ -151,8 +153,7 @@ export function TradesLogsScreen() {
         style: "destructive",
         onPress: async () => {
           await deleteTrade(t.id);
-          setMenuTrade(null);
-          reload();
+          setMenuTrade(null); // deleteTrade persist → emit → reload via subscription
         },
       },
     ]);
