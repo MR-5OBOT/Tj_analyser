@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
@@ -343,14 +343,13 @@ export function ToolsMenu({ open, onClose, onSettings }: { open: boolean; onClos
 }
 
 function CalcModal({ calcKey, onClose }: { calcKey: string | null; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
   const calc = TOOLS.find((c) => c.key === calcKey) ?? null;
   return (
     <Modal visible={!!calc} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => {}}>
-          {calc ? <CalcBody calc={calc} onClose={onClose} /> : null}
-        </Pressable>
-      </Pressable>
+      <View style={[styles.overlay, { paddingTop: insets.top + spacing.sm, paddingBottom: insets.bottom + spacing.sm }]}>
+        <View style={styles.card}>{calc ? <CalcBody calc={calc} onClose={onClose} /> : null}</View>
+      </View>
     </Modal>
   );
 }
@@ -395,7 +394,12 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
   return (
     <>
       <SketchBorder seed={2201} straight />
-      <Text style={styles.title}>{calc.title.toUpperCase()}</Text>
+      <View style={styles.headRow}>
+        <Text style={[styles.title, { marginBottom: 0 }]}>{calc.title.toUpperCase()}</Text>
+        <PressButton onPress={onClose} hitSlop={10}>
+          <Ionicons name="close" size={26} color={colors.textMuted} />
+        </PressButton>
+      </View>
       {variants.length > 1 ? (
         <View style={styles.segRow}>
           {variants.map((v, i) => (
@@ -406,7 +410,7 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
         </View>
       ) : null}
       {/* key resets the inputs when you switch instrument type */}
-      <CalcForm key={variant.key} variant={variant} blurb={variant.blurb ?? calc.blurb} onClose={onClose} />
+      <CalcForm key={variant.key} variant={variant} blurb={variant.blurb ?? calc.blurb} />
     </>
   );
 }
@@ -446,7 +450,7 @@ function SelectField({ value, options, onChange }: { value: string; options: Opt
   );
 }
 
-function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string; onClose: () => void }) {
+function CalcForm({ variant, blurb }: { variant: Variant; blurb: string }) {
   const [vals, setVals] = useState<Record<string, string>>(() => {
     const o: Record<string, string> = Object.fromEntries(variant.fields.map((f) => [f.key, f.default]));
     // Apply the default-selected symbol's fills (value-per-unit, stop unit).
@@ -458,14 +462,16 @@ function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string
   const [units, setUnits] = useState<Record<string, string>>(() =>
     Object.fromEntries(variant.fields.filter((f) => f.units).map((f) => [f.key, f.units![0]])),
   );
-  const outs = useMemo(() => {
+  const [results, setResults] = useState<Out[] | null>(null); // shown in a popup on Calculate
+
+  const calculate = () => {
     const nums: Record<string, number> = {};
     for (const f of variant.fields) {
       const n = parseFloat(vals[f.key]);
       nums[f.key] = Number.isFinite(n) ? n : 0;
     }
-    return variant.compute(nums, units);
-  }, [vals, units, variant]);
+    setResults(variant.compute(nums, units));
+  };
 
   return (
     <>
@@ -503,26 +509,38 @@ function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string
             )}
           </View>
         ))}
-        <View style={styles.outBox}>
-          {outs.map((o, i) => (
-            <View key={i} style={styles.outRow}>
-              <Text style={styles.outLabel}>{o.label}</Text>
-              <Text
-                style={[
-                  styles.outValue,
-                  o.tone === "good" && { color: colors.positive },
-                  o.tone === "bad" && { color: colors.danger },
-                ]}
-              >
-                {o.value}
-              </Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
-      <PressButton style={styles.close} onPress={onClose}>
-        <Text style={styles.closeText}>DONE</Text>
+      <PressButton style={styles.calcBtn} onPress={calculate}>
+        <Text style={styles.calcBtnText}>CALCULATE</Text>
       </PressButton>
+
+      <Modal visible={!!results} transparent animationType="fade" onRequestClose={() => setResults(null)}>
+        <Pressable style={styles.resOverlay} onPress={() => setResults(null)}>
+          <Pressable style={styles.resCard} onPress={() => {}}>
+            <SketchBorder seed={2204} straight />
+            <Text style={styles.resTitle}>RESULT</Text>
+            <View style={styles.outBox}>
+              {(results ?? []).map((o, i) => (
+                <View key={i} style={styles.outRow}>
+                  <Text style={styles.outLabel}>{o.label}</Text>
+                  <Text
+                    style={[
+                      styles.outValue,
+                      o.tone === "good" && { color: colors.positive },
+                      o.tone === "bad" && { color: colors.danger },
+                    ]}
+                  >
+                    {o.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <PressButton style={styles.close} onPress={() => setResults(null)}>
+              <Text style={styles.closeText}>CLOSE</Text>
+            </PressButton>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -536,9 +554,16 @@ const styles = StyleSheet.create({
   menuLabel: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
 
   // Calculator modal — same brutalist card as the disclaimer.
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
-  card: { width: "100%", maxWidth: 380, height: "90%", backgroundColor: colors.surface, padding: spacing.xl },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: spacing.lg },
+  card: { flex: 1, backgroundColor: colors.surface, padding: spacing.xl },
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
+  headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md },
+  // CALCULATE: primary action; results then open in their own popup.
+  calcBtn: { marginTop: spacing.md, backgroundColor: colors.positive, height: 50, alignItems: "center", justifyContent: "center" },
+  calcBtnText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 15, letterSpacing: 1.5 },
+  resOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  resCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surface, padding: spacing.xl },
+  resTitle: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 18, letterSpacing: 1, marginBottom: spacing.md },
   // Top instrument-type selector (Position Sizer)
   segRow: { flexDirection: "row", marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.borderSoft },
   segItem: { flex: 1, paddingVertical: spacing.sm, alignItems: "center" },
