@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BackHandler, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
 import { ToolsMenu } from "../src/components/Tools";
@@ -12,14 +13,27 @@ import { SettingsScreen } from "../src/screens/Settings";
 import { TradesLogsScreen } from "../src/screens/TradesLogs";
 import { colors } from "../src/theme/tokens";
 
-type Page = { key: string; icon: DockItem["icon"]; title: string };
+type Page = { key: string; icon: DockItem["icon"]; title: string; svg?: DockItem["svg"] };
+
+// Tabler "file-spreadsheet" — the Raw Data Table tab.
+function SpreadsheetIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M14 3v4a1 1 0 0 0 1 1h4" />
+      <Path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" />
+      <Path d="M8 11h8v7h-8l0 -7" />
+      <Path d="M8 15h8" />
+      <Path d="M11 11v7" />
+    </Svg>
+  );
+}
 
 // All routable pages (Settings lives in the header ⋮ menu, not the dock).
 const PAGES: Page[] = [
   { key: "home", icon: "home-outline", title: "Home" },
   { key: "report", icon: "stats-chart-outline", title: "Reports" },
   { key: "add", icon: "create-outline", title: "Add trade" },
-  { key: "journals", icon: "server-outline", title: "Trades Logs" },
+  { key: "journals", icon: "server-outline", title: "Raw Data Table", svg: (p) => <SpreadsheetIcon {...p} /> },
   { key: "settings", icon: "settings-outline", title: "Settings" },
 ];
 
@@ -28,6 +42,7 @@ const PAGES: Page[] = [
 const ITEMS: DockItem[] = PAGES.filter((p) => p.key !== "settings" && p.key !== "add").map((p) => ({
   key: p.key,
   icon: p.icon,
+  svg: p.svg,
 }));
 
 const addPage = PAGES.find((p) => p.key === "add")!;

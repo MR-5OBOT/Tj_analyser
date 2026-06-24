@@ -161,7 +161,7 @@ export function TradesLogsScreen() {
     <View style={styles.root}>
       <View style={styles.titleRow}>
         <View style={styles.titleLeft}>
-          <Text style={styles.title}>TRADE LOG</Text>
+          <Text style={styles.title}>RAW DATA TABLE</Text>
           <Text style={styles.titleSub}>
             {list.length} {list.length === 1 ? "entry" : "entries"}
             {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}

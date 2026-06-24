@@ -8,7 +8,11 @@ import { SketchBorder } from "./ui";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-export type DockItem = { key: string; icon: IconName };
+export type DockItem = {
+  key: string;
+  icon: IconName;
+  svg?: (p: { size: number; color: string }) => React.ReactNode; // custom glyph; overrides `icon`
+};
 
 /** Vertical space the dock occupies, so page content can pad clear of it. */
 export const DOCK_SPACE = 110;
@@ -130,7 +134,9 @@ function DockButton({
             { transform: [{ translateX: shift }, { translateY: shift }] },
           ]}
         >
-          <Ionicons name={item.icon} size={18} color={active ? ICON_HERO : colors.textMuted} />
+          {item.svg
+            ? item.svg({ size: 19, color: active ? ICON_HERO : colors.textMuted })
+            : <Ionicons name={item.icon} size={18} color={active ? ICON_HERO : colors.textMuted} />}
         </Animated.View>
       </View>
     </Pressable>
