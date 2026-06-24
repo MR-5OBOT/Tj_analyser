@@ -179,9 +179,13 @@ export function TopHeader({
           {title}
         </Text>
       </View>
-      {/* Right → tools / settings menu */}
+      {/* Right → tools / settings menu — 3 hand-drawn stacked lines */}
       <PressButton onPress={onMenu} hitSlop={12} style={s.menuTrigger}>
-        <Ionicons name="ellipsis-vertical" size={22} color={HEADER_TITLE_COLOR} />
+        <View style={s.kebab}>
+          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-2.5deg" }] }]} />
+          <View style={[s.kebabBar, { width: 21, marginLeft: 2, transform: [{ rotate: "1.8deg" }] }]} />
+          <View style={[s.kebabBar, { width: 24, transform: [{ rotate: "-1deg" }] }]} />
+        </View>
       </PressButton>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -270,8 +274,10 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   logoSlot: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
-  // Right header button slot (Settings).
+  // Right header button slot — frameless 3-line overflow trigger.
   menuTrigger: { width: HEADER_BTN, height: HEADER_BTN, alignItems: "center", justifyContent: "center" },
+  kebab: { alignItems: "center", justifyContent: "center", gap: 3 },
+  kebabBar: { height: 7, borderRadius: 2, borderWidth: 1.5, borderColor: HEADER_TITLE_COLOR },
   // Each edge: two flex segments inside a container, rotated a few degrees so the
   // line bends; the container overshoots the corners for the crossed `+` marks.
   hEdge: { position: "absolute", height: SKETCH_W, flexDirection: "row" },
