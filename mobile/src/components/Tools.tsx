@@ -121,60 +121,41 @@ export const TOOLS: Calc[] = [
     title: "Position Sizer",
     icon: "cube-outline",
     svg: (p) => <CalcOffIcon {...p} />,
-    blurb: "Size a trade from your risk — pick your instrument. Size comes out in that market's units.",
+    blurb: "Size a trade from your risk — pick how you measure the stop.",
     variants: [
       {
-        key: "cfd",
-        label: "CFD",
-        blurb: "Stocks / CFDs / crypto. Stop is your loss per 1 unit (share / contract / coin).",
+        key: "per-unit",
+        label: "Per-unit",
+        blurb: "You know your loss per 1 unit — stocks / CFDs / crypto (e.g. $0.50 a share).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop (loss / 1 unit)", default: "0.5" },
+          { key: "stop", label: "Loss / 1 unit", default: "0.5" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Units", value: fmt(v.stop > 0 ? r / v.stop : 0), tone: "good" },
+            { label: "Position size", value: fmt(v.stop > 0 ? r / v.stop : 0), tone: "good" },
           ];
         },
       },
       {
-        key: "futures",
-        label: "Futures",
-        blurb: "Futures contracts. Enter the value of one tick/point for the contract (e.g. ES = $12.50 / tick).",
+        key: "stop-value",
+        label: "Stop × value",
+        blurb: "Futures or forex — stop distance × the value of one unit of move (tick / point / pip).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop", units: ["ticks", "points"], default: "40" },
-          { key: "value", label: "Tick / point value $", default: "12.5" },
+          { key: "stop", label: "Stop", units: ["ticks", "points", "pips"], default: "40" },
+          { key: "value", label: "Value per unit $", default: "12.5" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
           const per = v.stop * v.value;
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Contracts", value: fmt(per > 0 ? r / per : 0), tone: "good" },
-          ];
-        },
-      },
-      {
-        key: "forex",
-        label: "Forex",
-        blurb: "Forex lots. Pip value is per 1.00 lot (≈ $10 / pip on most USD-quote pairs).",
-        fields: [
-          { key: "account", label: "Account size", default: "10000" },
-          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop (pips)", default: "20" },
-          { key: "pip", label: "Pip value $ / lot", default: "10" },
-        ],
-        compute: (v, u) => {
-          const r = riskAmount(v, u);
-          const per = v.stop * v.pip;
-          return [
-            { label: "Risk amount", value: fmt(r) },
-            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+            { label: "Position size", value: fmt(per > 0 ? r / per : 0), tone: "good" },
           ];
         },
       },
