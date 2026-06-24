@@ -35,6 +35,7 @@ type Col = { key: keyof Trade | "link"; label: string; w: number; align: Align }
 const DATE_W = 92;
 const ROW_H = 44;
 const HEADER_H = 34;
+const MAX_TABLE_ROWS = 200; // rows drawn on screen; full set still stored & analysed
 
 const COLS: Col[] = [
   { key: "instrument", label: "SYMBOL", w: 80, align: "center" },
@@ -160,6 +161,10 @@ export function TradesLogsScreen() {
 
   const list = trades ?? [];
   const totalR = list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0);
+  // Only draw the most recent rows on screen (a few thousand plain rows freezes
+  // the UI thread). The full set is still stored for export / PDF report / stats.
+  const visible = list.slice(0, MAX_TABLE_ROWS);
+  const capped = list.length - visible.length;
 
   return (
     <View style={styles.root}>
@@ -169,6 +174,7 @@ export function TradesLogsScreen() {
           <Text style={styles.titleSub}>
             {list.length} {list.length === 1 ? "entry" : "entries"}
             {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}
+            {capped > 0 ? `  ·  showing ${MAX_TABLE_ROWS}` : ""}
           </Text>
         </View>
         <View style={styles.actionsWrap}>
@@ -216,7 +222,7 @@ export function TradesLogsScreen() {
             <View style={{ flexDirection: "row" }}>
               {/* Frozen DATE column */}
               <View>
-                {list.map((t, i) => (
+                {visible.map((t, i) => (
                   <Pressable
                     key={t.id}
                     onPress={() => setActive(t)}
@@ -233,7 +239,7 @@ export function TradesLogsScreen() {
               {/* Scrollable columns */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} onScroll={onBodyScroll} scrollEventThrottle={16}>
                 <View>
-                  {list.map((t, i) => (
+                  {visible.map((t, i) => (
                     <Pressable
                       key={t.id}
                       onPress={() => setActive(t)}
