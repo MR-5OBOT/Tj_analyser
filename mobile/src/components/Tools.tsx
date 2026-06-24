@@ -166,32 +166,13 @@ export const TOOLS: Calc[] = [
       {
         key: "forex",
         label: "Forex",
-        blurb: "Pick a pair — pip value per 1.0 lot auto-fills",
+        blurb: "Pick a symbol — pip value per 1.0 lot auto-fills. Use Custom for anything else (indices / metals / commodities).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "symbol", label: "Pair", default: "EURUSD", options: FOREX_SYMBOLS },
+          { key: "symbol", label: "Symbol", default: "EURUSD", options: FOREX_SYMBOLS },
           { key: "stop", label: "Stop", suffix: "pips", default: "20" },
           { key: "value", label: "Pip value $ / lot", default: "10" },
-        ],
-        compute: (v, u) => {
-          const r = riskAmount(v, u);
-          const per = v.stop * v.value;
-          return [
-            { label: "Risk amount", value: fmt(r) },
-            { label: "Lots", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
-          ];
-        },
-      },
-      {
-        key: "others",
-        label: "Others",
-        blurb: "Indices / metals / commodities — stop in points, value per point per 1.0 lot.",
-        fields: [
-          { key: "account", label: "Account size", default: "10000" },
-          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop", suffix: "points", default: "50" },
-          { key: "value", label: "Point value $ / lot", default: "1" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
@@ -357,33 +338,35 @@ function CalcModal({ calcKey, onClose }: { calcKey: string | null; onClose: () =
   );
 }
 
-// In-row unit picker (e.g. % / $). Chip stays in the input row; the option list
-// drops just below it. Rendered as a fragment so the menu anchors to inputWrap.
+// In-row unit picker (e.g. % / $). The chip stays in the input row; the options
+// open in their own modal so any outside tap closes it (no dangling menu).
 function UnitDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (u: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <PressButton style={styles.unitChip} onPress={() => setOpen((o) => !o)}>
+      <PressButton style={styles.unitChip} onPress={() => setOpen(true)}>
         <Text style={styles.unitValue}>{value}</Text>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={13} color={colors.textSubtle} />
+        <Ionicons name="chevron-down" size={13} color={colors.textSubtle} />
       </PressButton>
-      {open ? (
-        <View style={styles.unitMenu}>
-          {options.map((o, i) => (
-            <PressButton
-              key={o}
-              style={[styles.unitItem, i > 0 && styles.unitItemDivider]}
-              onPress={() => {
-                onChange(o);
-                setOpen(false);
-              }}
-            >
-              <Text style={[styles.unitValue, o === value && { color: colors.positive }]}>{o}</Text>
-            </PressButton>
-          ))}
-          <SketchBorder seed={2202} straight />
-        </View>
-      ) : null}
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.selectOverlay} onPress={() => setOpen(false)}>
+          <Pressable style={styles.unitCard} onPress={() => {}}>
+            {options.map((o, i) => (
+              <PressButton
+                key={o}
+                style={[styles.unitRow, i > 0 && styles.selectItemDiv]}
+                onPress={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
+              >
+                <Text style={[styles.selectItemText, o === value && { color: colors.positive }]}>{o}</Text>
+              </PressButton>
+            ))}
+            <SketchBorder seed={2202} straight />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -418,7 +401,7 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
   );
 }
 
-// Full-width select (e.g. the symbol list). Opens a scrollable list below the box.
+// Full-width select (e.g. the symbol list). Opens the option list in its own modal.
 function SelectField({ value, options, onChange }: { value: string; options: Option[]; onChange: (o: Option) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -584,9 +567,8 @@ const styles = StyleSheet.create({
   // In-row unit dropdown
   unitChip: { flexDirection: "row", alignItems: "center", gap: 2, height: 28, marginLeft: spacing.sm, paddingLeft: spacing.sm, borderLeftWidth: 1, borderLeftColor: colors.borderSoft },
   unitValue: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15, minWidth: 14, textAlign: "center" },
-  unitMenu: { position: "absolute", top: 46, right: -1, minWidth: 56, backgroundColor: colors.surfaceAlt, zIndex: 30 },
-  unitItem: { paddingVertical: spacing.sm, alignItems: "center" },
-  unitItemDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  unitCard: { width: 160, backgroundColor: colors.surfaceAlt },
+  unitRow: { paddingVertical: spacing.md, alignItems: "center" },
   // Full-width select (symbol list)
   selectBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderSoft, paddingHorizontal: spacing.md, height: 46 },
   selectValue: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 16 },
