@@ -36,24 +36,24 @@ export function ReportsScreen() {
         </View>
       </ChartCard>
 
+      <ChartCard title="MONTHLY R" rot={-1.5} seed={702}>
+        <BarChart data={data.monthly} />
+      </ChartCard>
+
       <View style={styles.chartRow}>
-        <ChartCard title="MONTHLY R" rot={-1.5} seed={702} style={styles.half}>
-          <BarChart data={data.monthly} />
-        </ChartCard>
         <ChartCard title="R MULTIPLES" rot={-1.8} seed={703} style={styles.half}>
           <ScatterChart points={data.scatter} />
         </ChartCard>
+        {data.risk.length > 0 ? (
+          <ChartCard title="SIZE vs R" rot={0.8} seed={705} style={styles.half}>
+            <RiskScatter points={data.risk} />
+            <View style={styles.axisRow}>
+              <Text style={styles.axisLabel}>SMALL</Text>
+              <Text style={styles.axisLabel}>BIG</Text>
+            </View>
+          </ChartCard>
+        ) : null}
       </View>
-
-      {data.risk.length > 0 ? (
-        <ChartCard title="SIZE vs R" right="POSITION SIZE" rot={0.8} seed={705}>
-          <RiskScatter points={data.risk} />
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>SMALL SIZE</Text>
-            <Text style={styles.axisLabel}>BIG SIZE</Text>
-          </View>
-        </ChartCard>
-      ) : null}
     </ScrollView>
   );
 }
