@@ -39,7 +39,7 @@ export type AnalyzeInput =
   | { kind: "url"; url: string };
 
 /** POST a journal (file or URL) to /api/analyze and return the report metadata. */
-export async function analyze(input: AnalyzeInput, timeoutMs = 90000): Promise<AnalyzeResponse> {
+export async function analyze(input: AnalyzeInput, timeoutMs = 180000): Promise<AnalyzeResponse> {
   const base = await getBaseUrl();
   if (!base) throw new ApiError("No backend URL set. Add it in Settings → Server.");
 

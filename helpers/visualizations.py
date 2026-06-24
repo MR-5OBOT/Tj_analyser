@@ -39,7 +39,7 @@ def rr_curve(
     sns.lineplot(x=x, y=rr_series.cumsum(), label="R/R", color=COLORS["primary"], ax=ax)
     
     style_axes(ax, title, xlabel, ylabel)
-    ax.legend()
+    ax.legend(loc="upper left")
     
     return finalize_plot(fig)
 
@@ -120,7 +120,7 @@ def rr_barplot_months(
     
     ax.axhline(0, color=COLORS["gray"], linestyle="-", linewidth=1)
     style_axes(ax, title, xlabel, ylabel, rotation=45)
-    ax.legend()
+    ax.legend(loc="upper left")
     
     return finalize_plot(fig)
 
@@ -200,7 +200,7 @@ def outcome_by_day(
     
     style_axes(ax, title, xlabel, ylabel)
     ax.spines["bottom"].set_visible(False)
-    ax.legend(title="OUTCOMES", loc="best")
+    ax.legend(title="OUTCOMES", loc="upper right")
     
     return finalize_plot(fig)
 
@@ -227,7 +227,7 @@ def distribution_plot(
     )
     
     style_axes(ax, title, xlabel, ylabel)
-    ax.legend()
+    ax.legend(loc="upper left")
     
     return finalize_plot(fig)
 
@@ -249,11 +249,12 @@ def risk_vs_reward_scatter(
         y=reward_series,
         hue=outcome,
         palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": COLORS["neutral"]},
+        rasterized=True,  # raster the point cloud → fast PDF save with many points
         ax=ax,
     )
     
     style_axes(ax, title, xlabel, ylabel)
-    ax.legend()
+    ax.legend(loc="upper left")
     
     return finalize_plot(fig)
 
@@ -346,7 +347,7 @@ def bar_outcomes_by_custom_ranges(
     )
 
     style_axes(ax, title, xlabel, ylabel)
-    ax.legend(title="OUTCOMES", loc="best")
+    ax.legend(title="OUTCOMES", loc="upper right")
     
     return finalize_plot(fig)
 
@@ -398,6 +399,7 @@ def rr_vs_hour_range_bubble_scatter(
         palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": "#888444"},
         edgecolor=PLOT_DEFAULTS["edgecolor"],
         alpha=0.8,
+        rasterized=True,  # raster the point cloud → fast PDF save with many points
         ax=ax,
     )
 
@@ -435,6 +437,7 @@ def rr_vs_sl_points(
         palette={"WIN": COLORS["win"], "LOSS": COLORS["loss"], "BE": "#888444"},
         edgecolor=PLOT_DEFAULTS["edgecolor"],
         alpha=0.8,
+        rasterized=True,  # raster the point cloud → fast PDF save with many points
         ax=ax,
     )
 
