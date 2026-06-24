@@ -113,6 +113,8 @@ function mulberry32(seed: number) {
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—");
+// Lots / contracts: round DOWN to 1 decimal so you never size above your risk.
+const fmtSize = (n: number) => (Number.isFinite(n) ? (Math.floor(n * 10) / 10).toFixed(1) : "—");
 
 // Risk in account currency: a flat $ amount, or a % of the account.
 const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
@@ -176,7 +178,7 @@ export const TOOLS: Calc[] = [
           const per = v.stop * v.value;
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+            { label: "Lots", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
           ];
         },
       },
@@ -195,7 +197,7 @@ export const TOOLS: Calc[] = [
           const per = v.stop * v.value;
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+            { label: "Lots", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
           ];
         },
       },
@@ -215,7 +217,7 @@ export const TOOLS: Calc[] = [
           const per = v.stop * v.value;
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Contracts", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+            { label: "Contracts", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
           ];
         },
       },
