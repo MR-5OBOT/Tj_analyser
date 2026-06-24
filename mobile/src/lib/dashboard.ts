@@ -28,23 +28,16 @@ export function buildDashboard(trades: Trade[]): Dashboard {
   const grossLoss = Math.abs(rs.filter((r) => r < 0).reduce((s, r) => s + r, 0));
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : grossWin > 0 ? Infinity : 0;
 
-  const equityFull: number[] = [];
+  const equity: number[] = [];
   let cum = 0;
   let peak = 0;
   let dd = 0;
   for (const r of rs) {
     cum += r;
-    equityFull.push(+cum.toFixed(2));
+    equity.push(+cum.toFixed(2));
     peak = Math.max(peak, cum);
     dd = Math.min(dd, cum - peak);
   }
-  // Downsample the curve for the chart — a 3k-point SVG path is needless work and
-  // looks identical at screen resolution. Keeps first & last, samples evenly.
-  const MAX_POINTS = 150;
-  const equity =
-    equityFull.length <= MAX_POINTS
-      ? equityFull
-      : Array.from({ length: MAX_POINTS }, (_, i) => equityFull[Math.round((i * (equityFull.length - 1)) / (MAX_POINTS - 1))]);
 
   const stats: Stat[] = [
     { label: "WIN RATE", value: `${winRate.toFixed(0)}%`, tone: "neutral" },
@@ -67,11 +60,10 @@ export function buildDashboard(trades: Trade[]): Dashboard {
 
   const scatter = rs.slice(-20);
 
-  // Position size vs R-R — only trades that logged a size and a result. Capped to
-  // the most recent ones so the scatter never draws thousands of SVG dots.
+  // Position size vs R-R — only trades that logged a size and a result. Full set;
+  // the scatter draws them as a single path so any count stays fast.
   const risk = sorted
     .filter((t) => t.positionSize != null && t.rr != null)
-    .slice(-120)
     .map((t) => ({ x: t.positionSize as number, y: t.rr as number }));
 
   // Calendar — current month, R + trade count per day.

@@ -1,12 +1,49 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, Line, Polygon, Polyline, Rect } from "react-native-svg";
+import Svg, { Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
 
 import { CalDay, Calendar } from "../lib/dashboard";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 import { SketchBorder } from "./ui";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+// Loop-based min/max — never spread a big array into Math.min/max (10k args
+// blows the call stack). Returns ±Infinity for an empty array.
+const minOf = (a: number[]) => a.reduce((m, v) => (v < m ? v : m), Infinity);
+const maxOf = (a: number[]) => a.reduce((m, v) => (v > m ? v : m), -Infinity);
+
+// Min-max decimation to ~`buckets` pixel columns: for each column keep the min
+// and max value, so every peak/valley survives and the drawn line is identical
+// to plotting all points — but bounded by the device's actual chart width.
+function decimate(values: number[], buckets: number): { x: number; v: number }[] {
+  const n = values.length;
+  if (n === 0) return [];
+  const d = n - 1 || 1;
+  if (buckets < 1 || n <= buckets * 2) return values.map((v, i) => ({ x: i / d, v }));
+  const out: { x: number; v: number }[] = [];
+  const size = n / buckets;
+  for (let b = 0; b < buckets; b++) {
+    const start = Math.floor(b * size);
+    const end = Math.min(n, Math.floor((b + 1) * size));
+    let mi = start;
+    let ma = start;
+    for (let i = start + 1; i < end; i++) {
+      if (values[i] < values[mi]) mi = i;
+      if (values[i] > values[ma]) ma = i;
+    }
+    const lo = Math.min(mi, ma);
+    const hi = Math.max(mi, ma);
+    out.push({ x: lo / d, v: values[lo] });
+    if (hi !== lo) out.push({ x: hi / d, v: values[hi] });
+  }
+  return out;
+}
+
+// All dots of one colour as a single SVG path (one node, any point count). A
+// near-zero segment with a round cap renders as a filled dot.
+const dotPath = (coords: { x: number; y: number }[]) =>
+  coords.map((c) => `M${c.x.toFixed(1)} ${c.y.toFixed(1)}h.01`).join("");
 
 export function ChartCard({
   title,
@@ -39,15 +76,18 @@ export function EquityChart({ values }: { values: number[] }) {
   const [w, setW] = useState(0);
   const H = 118;
   const PAD = 10;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  // One bucket per pixel of the measured chart width → adapts to any screen.
+  const sampled = useMemo(() => decimate(values, Math.floor(w - 2 * PAD)), [values, w]);
+  const vs = sampled.map((p) => p.v);
+  const min = minOf(vs);
+  const max = maxOf(vs);
   const span = max - min || 1;
-  const X = (i: number) => PAD + (values.length <= 1 ? 0 : i / (values.length - 1)) * (w - 2 * PAD);
+  const X = (x: number) => PAD + x * (w - 2 * PAD);
   const Y = (val: number) => PAD + (1 - (val - min) / span) * (H - 2 * PAD);
-  const pts = values.map((val, i) => `${X(i).toFixed(1)},${Y(val).toFixed(1)}`).join(" ");
+  const pts = sampled.map((p) => `${X(p.x).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
-      {w > 1 ? (
+      {w > 1 && sampled.length > 0 ? (
         <Svg width={w} height={H}>
           <Polygon points={`${PAD},${H - PAD} ${pts} ${(w - PAD).toFixed(1)},${H - PAD}`} fill={colors.positive} opacity={0.07} />
           <Polyline points={pts} fill="none" stroke={colors.positive} strokeWidth={2} />
@@ -88,50 +128,52 @@ export function BarChart({ data }: { data: { label: string; value: number }[] })
   );
 }
 
-// Each recent trade's R-multiple as a dot, above/below a zero baseline.
+// Each trade's R-multiple as a dot, above/below a zero baseline. All dots drawn
+// as two paths (green/red) — one node each, so any point count stays fast.
 export function ScatterChart({ points }: { points: number[] }) {
   const [w, setW] = useState(0);
   const H = 128;
   const PAD = 16;
-  const maxAbs = Math.max(1, ...points.map((p) => Math.abs(p)));
+  const maxAbs = Math.max(1, maxOf(points.map(Math.abs)));
   const X = (i: number) => PAD + (points.length <= 1 ? 0.5 : i / (points.length - 1)) * (w - 2 * PAD);
   const Y = (v: number) => PAD + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - 2 * PAD);
   const zeroY = Y(0);
+  const coords = points.map((p, i) => ({ x: X(i), y: Y(p), pos: p >= 0 }));
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 1 ? (
         <Svg width={w} height={H}>
           <Line x1={PAD} y1={zeroY} x2={w - PAD} y2={zeroY} stroke={colors.textSubtle} strokeWidth={1} opacity={0.5} />
-          {points.map((p, i) => (
-            <Circle key={i} cx={X(i)} cy={Y(p)} r={3.4} fill={p >= 0 ? colors.positive : colors.danger} opacity={0.85} />
-          ))}
+          <Path d={dotPath(coords.filter((c) => c.pos))} stroke={colors.positive} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
+          <Path d={dotPath(coords.filter((c) => !c.pos))} stroke={colors.danger} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
         </Svg>
       ) : null}
     </View>
   );
 }
 
-// Position size (x) vs R-R (y): are bigger positions actually worth more R?
+// Position size (x) vs R-R (y): are bigger positions actually worth more R? All
+// points drawn as two paths (green/red) — one node each, fast at any count.
 export function RiskScatter({ points }: { points: { x: number; y: number }[] }) {
   const [w, setW] = useState(0);
   const H = 128;
   const PAD = 16;
   const xs = points.map((p) => p.x);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
+  const minX = minOf(xs);
+  const maxX = maxOf(xs);
   const spanX = maxX - minX || 1;
-  const maxAbs = Math.max(1, ...points.map((p) => Math.abs(p.y)));
+  const maxAbs = Math.max(1, maxOf(points.map((p) => Math.abs(p.y))));
   const X = (v: number) => PAD + ((v - minX) / spanX) * (w - 2 * PAD);
   const Y = (v: number) => PAD + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - 2 * PAD);
   const zeroY = Y(0);
+  const coords = points.map((p) => ({ x: X(p.x), y: Y(p.y), pos: p.y >= 0 }));
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 1 ? (
         <Svg width={w} height={H}>
           <Line x1={PAD} y1={zeroY} x2={w - PAD} y2={zeroY} stroke={colors.textSubtle} strokeWidth={1} opacity={0.5} />
-          {points.map((p, i) => (
-            <Circle key={i} cx={X(p.x)} cy={Y(p.y)} r={3.4} fill={p.y >= 0 ? colors.positive : colors.danger} opacity={0.85} />
-          ))}
+          <Path d={dotPath(coords.filter((c) => c.pos))} stroke={colors.positive} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
+          <Path d={dotPath(coords.filter((c) => !c.pos))} stroke={colors.danger} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
         </Svg>
       ) : null}
     </View>
