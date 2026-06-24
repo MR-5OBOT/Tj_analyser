@@ -3,6 +3,7 @@ import { BackHandler, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DockItem, FloatingDock } from "../src/components/FloatingDock";
+import { ToolsMenu } from "../src/components/Tools";
 import { TopHeader } from "../src/components/ui";
 import { AddTradeScreen, Draft, INITIAL_DRAFT } from "../src/screens/AddTrade";
 import { HomeScreen } from "../src/screens/Home";
@@ -42,6 +43,7 @@ export default function Home() {
   // it only resets when the app is killed (or after a save).
   const [addStep, setAddStep] = useState(1);
   const [addDraft, setAddDraft] = useState<Draft>(INITIAL_DRAFT);
+  const [toolsOpen, setToolsOpen] = useState(false); // header tools/settings menu
   const page = PAGES.find((p) => p.key === active) ?? PAGES[0];
 
   const select = (key: string) => {
@@ -73,7 +75,7 @@ export default function Home() {
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
-        <TopHeader title={page.title} onSettings={() => select("settings")} />
+        <TopHeader title={page.title} onMenu={() => setToolsOpen(true)} />
         {active === "settings" ? (
           <SettingsScreen />
         ) : active === "report" ? (
@@ -88,6 +90,7 @@ export default function Home() {
       </SafeAreaView>
 
       <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
+      <ToolsMenu open={toolsOpen} onClose={() => setToolsOpen(false)} onSettings={() => select("settings")} />
     </View>
   );
 }

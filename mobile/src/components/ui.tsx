@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Linking, Modal, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -89,6 +89,32 @@ export function SketchBorder({ seed, straight, color, tight }: { seed?: number; 
   );
 }
 
+/**
+ * One shared press feel for every tappable control *outside the dock*: a quick
+ * scale-down + dim while held (no Animated — uses Pressable's `pressed` state, so
+ * it can't get into a bad animation node). `tilt` keeps a button's resting
+ * rotation, since a transform array replaces rather than merges.
+ */
+export function PressButton({
+  style,
+  tilt = 0,
+  children,
+  ...rest
+}: Omit<PressableProps, "style" | "children"> & { style?: StyleProp<ViewStyle>; tilt?: number; children?: React.ReactNode }) {
+  return (
+    <Pressable
+      {...rest}
+      style={({ pressed }) => [
+        style,
+        { transform: [{ rotate: `${tilt}deg` }, { scale: pressed ? 0.94 : 1 }] },
+        pressed && { opacity: 0.7 },
+      ]}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 /** Brutalist activity indicator: a row of hard squares that march in a staggered
  *  pulse — zero radius, monochrome, matched to the sketch UI (no spinning circle). */
 export function BrutalLoader({ color = colors.text, label }: { color?: string; label?: string }) {
@@ -132,52 +158,36 @@ const R_MANIFESTO =
  */
 export function TopHeader({
   title,
-  onSettings,
+  onMenu,
 }: {
   title: string;
-  onSettings: () => void;
+  onMenu: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false); // left "!" menu
   const [disc, setDisc] = useState(false); // disclaimer modal
   const [about, setAbout] = useState(false); // about modal
-  const press = useRef(new Animated.Value(0)).current;
-  const springPress = (to: number) =>
-    Animated.spring(press, { toValue: to, friction: 6, tension: 240, useNativeDriver: true }).start();
 
   return (
     <View style={s.topHeader}>
       {/* Left "!" → Disclaimer / About menu */}
-      <Pressable onPress={() => setOpen(true)} style={s.logoSlot} hitSlop={8}>
+      <PressButton onPress={() => setOpen(true)} style={s.logoSlot} hitSlop={8}>
         <Ionicons name="alert-circle-outline" size={27} color={HEADER_TITLE_COLOR} />
-      </Pressable>
+      </PressButton>
       <View style={s.brand}>
         <Text style={s.headerTitle} numberOfLines={1}>
           {title}
         </Text>
       </View>
-      {/* Right → Settings */}
-      <Pressable
-        onPress={onSettings}
-        onPressIn={() => springPress(1)}
-        onPressOut={() => springPress(0)}
-        hitSlop={12}
-        style={s.menuTrigger}
-      >
-        <Animated.View
-          style={{
-            opacity: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] }),
-            transform: [{ scale: press.interpolate({ inputRange: [0, 1], outputRange: [1, 0.85] }) }],
-          }}
-        >
-          <Ionicons name="settings-outline" size={23} color={HEADER_TITLE_COLOR} />
-        </Animated.View>
-      </Pressable>
+      {/* Right → tools / settings menu */}
+      <PressButton onPress={onMenu} hitSlop={12} style={s.menuTrigger}>
+        <Ionicons name="ellipsis-vertical" size={22} color={HEADER_TITLE_COLOR} />
+      </PressButton>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={s.menuOverlay} onPress={() => setOpen(false)}>
           <View style={[s.menu, { marginTop: insets.top + 52 }]}>
-            <Pressable
+            <PressButton
               style={s.menuItem}
               onPress={() => {
                 setOpen(false);
@@ -186,8 +196,8 @@ export function TopHeader({
             >
               <Ionicons name="alert-circle-outline" size={18} color={colors.textMuted} />
               <Text style={s.menuLabel}>Disclaimer</Text>
-            </Pressable>
-            <Pressable
+            </PressButton>
+            <PressButton
               style={s.menuItem}
               onPress={() => {
                 setOpen(false);
@@ -197,7 +207,7 @@ export function TopHeader({
               <View style={s.menuDivider} pointerEvents="none" />
               <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
               <Text style={s.menuLabel}>About</Text>
-            </Pressable>
+            </PressButton>
             <SketchBorder seed={4517} straight />
           </View>
         </Pressable>
@@ -211,9 +221,9 @@ export function TopHeader({
             <ScrollView showsVerticalScrollIndicator={false} style={s.discScroll}>
               <Text style={s.discBody}>{R_MANIFESTO}</Text>
             </ScrollView>
-            <Pressable style={s.discClose} onPress={() => setDisc(false)}>
+            <PressButton style={s.discClose} onPress={() => setDisc(false)}>
               <Text style={s.discCloseText}>GOT IT</Text>
-            </Pressable>
+            </PressButton>
           </Pressable>
         </Pressable>
       </Modal>
@@ -229,12 +239,12 @@ export function TopHeader({
             <Text style={s.aboutVersion}>
               Version {APP_VERSION} · build {APP_BUILD}
             </Text>
-            <Pressable style={s.aboutLink} onPress={() => Linking.openURL(AUTHOR_URL)}>
+            <PressButton style={s.aboutLink} onPress={() => Linking.openURL(AUTHOR_URL)}>
               <Text style={s.aboutLinkText}>🌐  Author's website</Text>
-            </Pressable>
-            <Pressable style={s.discClose} onPress={() => setAbout(false)}>
+            </PressButton>
+            <PressButton style={s.discClose} onPress={() => setAbout(false)}>
               <Text style={s.discCloseText}>CLOSE</Text>
-            </Pressable>
+            </PressButton>
           </Pressable>
         </Pressable>
       </Modal>

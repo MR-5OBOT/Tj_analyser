@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { BrutalLoader, SketchBorder } from "../components/ui";
+import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { csvToTrades, deleteTrade, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
@@ -168,11 +168,11 @@ export function TradesLogsScreen() {
           </Text>
         </View>
         <View style={styles.actionsWrap}>
-          <Pressable style={styles.actionsBtn} onPress={() => setActionsOpen(true)}>
+          <PressButton style={styles.actionsBtn} onPress={() => setActionsOpen(true)}>
             <SketchBorder seed={771} straight />
             <Text style={styles.actionsBtnText}>ACTIONS</Text>
             <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
-          </Pressable>
+          </PressButton>
         </View>
       </View>
 
@@ -258,7 +258,7 @@ export function TradesLogsScreen() {
         <Pressable style={styles.actOverlay} onPress={() => setActionsOpen(false)}>
           <View style={[styles.actMenu, { marginTop: insets.top + 96 }]}>
             <SketchBorder seed={914} straight />
-            <Pressable
+            <PressButton
               style={styles.actItem}
               onPress={() => {
                 setActionsOpen(false);
@@ -267,8 +267,8 @@ export function TradesLogsScreen() {
             >
               <PdfIcon size={18} color={colors.textMuted} />
               <Text style={styles.actItemText}>Generate PDF report</Text>
-            </Pressable>
-            <Pressable
+            </PressButton>
+            <PressButton
               style={[styles.actItem, styles.actDivider]}
               onPress={() => {
                 setActionsOpen(false);
@@ -277,8 +277,8 @@ export function TradesLogsScreen() {
             >
               <Ionicons name="cloud-download-outline" size={18} color={colors.textMuted} />
               <Text style={styles.actItemText}>Import CSV</Text>
-            </Pressable>
-            <Pressable
+            </PressButton>
+            <PressButton
               style={[styles.actItem, styles.actDivider]}
               onPress={() => {
                 setActionsOpen(false);
@@ -287,7 +287,7 @@ export function TradesLogsScreen() {
             >
               <Ionicons name="cloud-upload-outline" size={18} color={colors.textMuted} />
               <Text style={styles.actItemText}>Export CSV</Text>
-            </Pressable>
+            </PressButton>
           </View>
         </Pressable>
       </Modal>
@@ -324,14 +324,14 @@ function RowMenu({
           <Text style={styles.rmHeading}>
             {trade.instrument || "—"} · {fmtDate(trade.date)}
           </Text>
-          <Pressable style={styles.rmItem} onPress={() => onShare(trade)}>
+          <PressButton style={styles.rmItem} onPress={() => onShare(trade)}>
             <Ionicons name="share-outline" size={18} color={colors.textMuted} />
             <Text style={styles.rmItemText}>Share trade</Text>
-          </Pressable>
-          <Pressable style={[styles.rmItem, styles.rmDivider]} onPress={() => onDelete(trade)}>
+          </PressButton>
+          <PressButton style={[styles.rmItem, styles.rmDivider]} onPress={() => onDelete(trade)}>
             <Ionicons name="trash-outline" size={18} color={colors.danger} />
             <Text style={[styles.rmItemText, { color: colors.danger }]}>Delete trade</Text>
-          </Pressable>
+          </PressButton>
         </Pressable>
       </Pressable>
     </Modal>

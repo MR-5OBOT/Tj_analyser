@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { SketchBorder } from "../components/ui";
+import { PressButton, SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
 import { JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
@@ -179,7 +179,7 @@ function Row({
   divider?: boolean;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.row}>
+    <PressButton onPress={onPress} style={styles.row}>
       {divider ? <View style={styles.rowDivider} pointerEvents="none" /> : null}
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={20} color={danger ? colors.danger : colors.textMuted} />
@@ -189,7 +189,7 @@ function Row({
         <Text style={styles.rowSub}>{sub}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textSubtle} />
-    </Pressable>
+    </PressButton>
   );
 }
 
