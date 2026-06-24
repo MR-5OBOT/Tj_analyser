@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  FlatList,
   Linking,
   Modal,
   NativeScrollEvent,
@@ -48,6 +49,7 @@ const COLS: Col[] = [
   { key: "link", label: "LINK", w: 60, align: "center" },
 ];
 
+const BODY_W = COLS.reduce((a, c) => a + c.w, 0); // total scrollable-columns width
 const fmtDate = (iso: string) => iso.replace(/-/g, "/");
 const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
@@ -67,6 +69,7 @@ export function TradesLogsScreen() {
   const [reporting, setReporting] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const headerRef = useRef<ScrollView>(null);
+  const dateListRef = useRef<FlatList<Trade>>(null); // frozen column, scroll synced to the body
   const insets = useSafeAreaInsets();
 
   const reload = useCallback(() => {
@@ -207,45 +210,60 @@ export function TradesLogsScreen() {
             <Text style={styles.emptySub}>Log one with ✎ — or import a CSV ↑.</Text>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.md }}>
-            <View style={{ flexDirection: "row" }}>
-              {/* Frozen DATE column */}
-              <View>
-                {list.map((t, i) => (
+          // Two virtualized lists (only visible rows render): a frozen DATE column
+          // whose vertical scroll is driven by the horizontally-scrollable body.
+          <View style={{ flexDirection: "row", flex: 1 }}>
+            <FlatList
+              ref={dateListRef}
+              data={list}
+              keyExtractor={(t) => t.id}
+              style={{ width: DATE_W }}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              extraData={pressedId}
+              initialNumToRender={16}
+              getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
+              renderItem={({ item: t, index: i }) => (
+                <Pressable
+                  onPress={() => setActive(t)}
+                  onLongPress={() => setMenuTrade(t)}
+                  onPressIn={() => setPressedId(t.id)}
+                  onPressOut={() => setPressedId(null)}
+                  style={[styles.dateCell, { width: DATE_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
+                >
+                  <Text style={styles.dateText}>{fmtDate(t.date)}</Text>
+                </Pressable>
+              )}
+            />
+
+            <ScrollView horizontal style={{ flex: 1 }} showsHorizontalScrollIndicator={false} onScroll={onBodyScroll} scrollEventThrottle={16}>
+              <FlatList
+                data={list}
+                keyExtractor={(t) => t.id}
+                style={{ width: BODY_W }}
+                showsVerticalScrollIndicator={false}
+                extraData={pressedId}
+                initialNumToRender={16}
+                getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
+                onScroll={(e) => dateListRef.current?.scrollToOffset({ offset: e.nativeEvent.contentOffset.y, animated: false })}
+                scrollEventThrottle={16}
+                contentContainerStyle={{ paddingBottom: spacing.md }}
+                renderItem={({ item: t, index: i }) => (
                   <Pressable
-                    key={t.id}
                     onPress={() => setActive(t)}
                     onLongPress={() => setMenuTrade(t)}
                     onPressIn={() => setPressedId(t.id)}
                     onPressOut={() => setPressedId(null)}
-                    style={[styles.dateCell, { width: DATE_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
+                    style={[styles.row, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
                   >
-                    <Text style={styles.dateText}>{fmtDate(t.date)}</Text>
+                    {COLS.map((c) => (
+                      <Cell key={c.key} col={c} trade={t} />
+                    ))}
                   </Pressable>
-                ))}
-              </View>
-
-              {/* Scrollable columns */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} onScroll={onBodyScroll} scrollEventThrottle={16}>
-                <View>
-                  {list.map((t, i) => (
-                    <Pressable
-                      key={t.id}
-                      onPress={() => setActive(t)}
-                      onLongPress={() => setMenuTrade(t)}
-                      onPressIn={() => setPressedId(t.id)}
-                      onPressOut={() => setPressedId(null)}
-                      style={[styles.row, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
-                    >
-                      {COLS.map((c) => (
-                        <Cell key={c.key} col={c} trade={t} />
-                      ))}
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          </ScrollView>
+                )}
+              />
+            </ScrollView>
+          </View>
         )}
       </View>
 
