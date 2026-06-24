@@ -163,7 +163,7 @@ export const TOOLS: Calc[] = [
       {
         key: "forex",
         label: "Forex",
-        blurb: "Pick a pair — pip value per 1.0 lot auto-fills (USD-quote majors = $10; JPY/cross/metals approximate, editable).",
+        blurb: "Pick a pair — pip value per 1.0 lot auto-fills",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
@@ -183,7 +183,7 @@ export const TOOLS: Calc[] = [
       {
         key: "others",
         label: "Others",
-        blurb: "Indices / metals / commodities — stop in points, value per point per 1.0 lot (set it for your broker).",
+        blurb: "Indices / metals / commodities — stop in points, value per point per 1.0 lot.",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
 
   // Calculator modal — same brutalist card as the disclaimer.
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
-  card: { width: "100%", maxWidth: 360, maxHeight: "82%", backgroundColor: colors.surface, padding: spacing.xl },
+  card: { width: "100%", maxWidth: 380, height: "90%", backgroundColor: colors.surface, padding: spacing.xl },
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
   // Top instrument-type selector (Position Sizer)
   segRow: { flexDirection: "row", marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.borderSoft },
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   segItemOn: { backgroundColor: colors.text },
   segText: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 12, letterSpacing: 0.4 },
   segTextOn: { color: colors.background },
-  scroll: { flexGrow: 0 },
+  scroll: { flex: 1 },
   blurb: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 19, marginBottom: spacing.lg },
   field: { marginBottom: spacing.md },
   fieldLabel: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: spacing.xs },
