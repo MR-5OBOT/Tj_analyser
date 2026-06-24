@@ -68,3 +68,39 @@ id,date,day,asset,entry_time,exit_time,size,outcome,rr,risk,reward,sl,session,se
 ### Optional later
 - Additive cloud option (Apps Script → Google Sheet) if off-device backup is ever
   wanted. The local CSV mirror stands alone; cloud is purely additive.
+
+## On-device PDF report — retire the Python backend
+
+**Goal:** Generate the PDF report on the phone, so the app needs no server at all
+— then delete `backend/`, `helpers/`, `Dockerfile.backend`, and the Koyeb deploy.
+
+### Why (and why NOT bundle Python)
+- The server's only job is the PDF. All stats/charts are already computed in-app
+  (`dashboard.ts` + SVG in `Charts.tsx`); the app is fully offline except this.
+- The pain is the free server: cold starts, a separate deploy, an upload flow.
+- **Do NOT bundle the Python into the app.** pandas/numpy/matplotlib via Chaquopy
+  needs ejecting Expo managed → bare, ARM C-extension wheels, +tens of MB APK, and
+  ongoing native upkeep. That's a *bigger* headache, not smaller. Rejected.
+
+### Approach: `expo-print` (HTML → PDF) + `expo-sharing`
+- Build the report as an HTML string from the in-app stats; embed charts as inline
+  SVG (reuse the `Charts.tsx` shapes). `Print.printToFileAsync({ html })` → PDF →
+  share/save with the existing `expo-sharing` flow.
+- Vector-crisp, matches the app's neo-brutalist style (report finally looks like
+  the app, not matplotlib).
+
+### Chart parity (matches or beats current report)
+Most are already SVG in-app → equal/better, near-automatic:
+- stats table (HTML table, better), R curve + drawdown (`lineplot`→ EquityChart),
+  asset/months/outcome bars (`barplot`→ BarChart), risk-vs-R / SL / bubble
+  scatters (`scatterplot`→ Scatter/RiskScatter).
+
+Two charts are the deliberate work — do them properly so nothing regresses:
+- **Distribution** (`sns.histplot`): bin the values in JS (~20 lines), draw bars.
+- **Heatmap** R by day×hour (`sns.heatmap`, RdBu_r): a colored grid like the P&L
+  calendar + a diverging value→color function.
+
+### Cost / sequencing
+- One dependency (`expo-print`) + one native rebuild; after that it's OTA-able.
+- Then strip the backend entirely.
+- **Do this AFTER the big-data lag work is closed** (current focus).
