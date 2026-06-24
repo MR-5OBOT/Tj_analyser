@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
-import { InteractionManager } from "react-native";
 
 // Legacy AsyncStorage blob key — now only a one-time migration source (see below).
 export const JOURNALS_KEY = "tj.journals";
@@ -148,16 +147,15 @@ async function migrateFromLegacy(): Promise<void> {
 void migrateFromLegacy();
 
 // ---------------------------------------------------------------------------
-// Dashboard data hook — Home/Reports read the light stats rows and rebuild only
-// when the journal changes. Deferred so a mutation never blocks the visible screen.
+// Dashboard data hook — Home/Reports read the light stats rows (cached + shared,
+// so the query + dashboard build happen once) and rebuild when the journal
+// changes. Seeded synchronously so launch paints data on the first frame (no
+// loader flash), and updated synchronously so a write's rebuild batches with the
+// loader closing instead of trailing it.
 // ---------------------------------------------------------------------------
 export function useTrades(): StatsRow[] | null {
-  const [rows, setRows] = useState<StatsRow[] | null>(null);
-  useEffect(() => {
-    const load = () => InteractionManager.runAfterInteractions(() => setRows(getStatsRows()));
-    load();
-    return subscribe(load);
-  }, []);
+  const [rows, setRows] = useState<StatsRow[] | null>(getStatsRows);
+  useEffect(() => subscribe(() => setRows(getStatsRows())), []);
   return rows;
 }
 
