@@ -9,7 +9,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { PressButton, SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
-import { JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
+import { clearTrades, JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
@@ -103,7 +103,7 @@ function DataAndAbout() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await AsyncStorage.removeItem(JOURNALS_KEY);
+            await clearTrades();
             setStoredCount(0);
           },
         },

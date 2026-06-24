@@ -25,7 +25,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -53,7 +53,12 @@ const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
 export function TradesLogsScreen() {
-  const [trades, setTrades] = useState<Trade[] | null>(null);
+  // Seed from the in-memory cache (warmed by Home on launch) so re-opening this
+  // page shows the logs immediately instead of flashing empty for ~0.5s.
+  const [trades, setTrades] = useState<Trade[] | null>(() => {
+    const c = getCachedTrades();
+    return c ? [...c].reverse() : null;
+  });
   const [active, setActive] = useState<Trade | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
