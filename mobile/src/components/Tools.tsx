@@ -164,8 +164,8 @@ export const TOOLS: Calc[] = [
     blurb: "Size a trade from your risk.",
     variants: [
       {
-        key: "forex",
-        label: "Forex",
+        key: "cfd",
+        label: "CFD",
         blurb: "Pick a symbol — pip value per 1.0 lot auto-fills. Use Custom for anything else (indices / metals / commodities).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
