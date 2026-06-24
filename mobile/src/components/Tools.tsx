@@ -31,6 +31,22 @@ function LetterRIcon({ size, color }: IconProps) {
   );
 }
 
+// Tabler "calculator-off" — used for the Position Sizer tool.
+function CalcOffIcon({ size, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M19.823 19.824a2 2 0 0 1 -1.823 1.176h-12a2 2 0 0 1 -2 -2v-14c0 -.295 .064 -.575 .178 -.827m2.822 -1.173h11a2 2 0 0 1 2 2v11" />
+      <Path d="M10 10h-1a1 1 0 0 1 -1 -1v-1m3 -1h4a1 1 0 0 1 1 1v1a1 1 0 0 1 -1 1h-1" />
+      <Path d="M8 14v.01" />
+      <Path d="M12 14v.01" />
+      <Path d="M8 17v.01" />
+      <Path d="M12 17v.01" />
+      <Path d="M16 17v.01" />
+      <Path d="M3 3l18 18" />
+    </Svg>
+  );
+}
+
 // Tabler "percentage" — used for the Required Win Rate tool.
 function PercentIcon({ size, color }: IconProps) {
   return (
@@ -62,6 +78,7 @@ export const TOOLS: Calc[] = [
     key: "position-sizer",
     title: "Position Sizer",
     icon: "cube-outline",
+    svg: (p) => <CalcOffIcon {...p} />,
     blurb: "Size a trade from your risk. Units are yours (lots / contracts / shares); R stays the journal's job.",
     fields: [
       { key: "account", label: "Account size", default: "10000" },
