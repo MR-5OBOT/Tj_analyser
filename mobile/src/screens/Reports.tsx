@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BarChart, ChartCard, EquityChart, RiskScatter, ScatterChart } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
+import { BrutalLoader } from "../components/ui";
 import { buildDashboard } from "../lib/dashboard";
 import { useTrades } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -23,7 +24,13 @@ export const ReportsScreen = React.memo(function ReportsScreen() {
       </View>
     );
   }
-  if (!data) return <View style={styles.scroll} />; // still loading
+  // Cold launch: journal still parsing — native-driven loader, not a black screen.
+  if (!data)
+    return (
+      <View style={styles.loading}>
+        <BrutalLoader label="LOADING" />
+      </View>
+    );
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -59,6 +66,7 @@ export const ReportsScreen = React.memo(function ReportsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },
