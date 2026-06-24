@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const JOURNALS_KEY = "tj.journals";
 
 // Hard cap on rows taken from a single uploaded CSV — anything past this is dropped.
-export const MAX_IMPORT_ROWS = 3000;
+export const MAX_IMPORT_ROWS = 5000;
 
 export type Trade = {
   id: string;
@@ -22,14 +22,33 @@ export type Trade = {
   createdAt: string; // ISO
 };
 
+// Single in-memory source of truth: parse the journal from disk once, then keep
+// it. Every write below keeps it in sync, so screens never re-parse the blob.
+let cache: Trade[] | null = null;
+
+/** Synchronous peek at the cache (null before the first load) so a screen can
+ *  seed its initial state instantly instead of flashing empty on each open. */
+export function getCachedTrades(): Trade[] | null {
+  return cache;
+}
+
 export async function loadTrades(): Promise<Trade[]> {
+  if (cache) return cache;
   try {
     const raw = await AsyncStorage.getItem(JOURNALS_KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
+    cache = Array.isArray(arr) ? arr : [];
   } catch {
-    return [];
+    cache = [];
   }
+  return cache;
+}
+
+// Write to disk first, then refresh the cache — so the cache never holds data
+// that didn't actually persist.
+async function persist(trades: Trade[]): Promise<void> {
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
+  cache = trades;
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
@@ -57,12 +76,18 @@ function dedupe(trades: Trade[]): Trade[] {
 
 export async function addTrade(t: Trade): Promise<void> {
   const trades = await loadTrades();
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(dedupe([...trades, t])));
+  await persist(dedupe([...trades, t]));
 }
 
 export async function deleteTrade(id: string): Promise<void> {
   const trades = await loadTrades();
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades.filter((t) => t.id !== id)));
+  await persist(trades.filter((t) => t.id !== id));
+}
+
+/** Wipe every trade (used by Settings) — clears the cache too. */
+export async function clearTrades(): Promise<void> {
+  cache = [];
+  await AsyncStorage.removeItem(JOURNALS_KEY);
 }
 
 // CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).
@@ -158,6 +183,6 @@ export function csvToTrades(csv: string): Trade[] {
 export async function importTrades(incoming: Trade[]): Promise<number> {
   const existing = await loadTrades();
   const merged = dedupe([...existing, ...incoming]);
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(merged));
+  await persist(merged);
   return merged.length - existing.length;
 }

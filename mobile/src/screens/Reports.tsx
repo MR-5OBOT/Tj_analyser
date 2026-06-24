@@ -4,13 +4,13 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { BarChart, ChartCard, EquityChart, RiskScatter, ScatterChart } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { buildDashboard } from "../lib/dashboard";
-import { loadTrades, Trade } from "../lib/journals";
+import { getCachedTrades, loadTrades, Trade } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
 // Charts/stats view over the in-app journal. (PDF generation lives in the
 // Trades Logs "Generate PDF report" action — uploads are handled there.)
 export function ReportsScreen() {
-  const [trades, setTrades] = useState<Trade[] | null>(null);
+  const [trades, setTrades] = useState<Trade[] | null>(getCachedTrades);
   useEffect(() => {
     loadTrades().then(setTrades);
   }, []);

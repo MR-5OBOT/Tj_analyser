@@ -6,10 +6,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  FlatList,
   Linking,
   Modal,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,7 +24,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, importTrades, loadTrades, MAX_IMPORT_ROWS, Trade, tradesToCsv } from "../lib/journals";
+import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, MAX_IMPORT_ROWS, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -35,7 +34,6 @@ type Col = { key: keyof Trade | "link"; label: string; w: number; align: Align }
 const DATE_W = 92;
 const ROW_H = 44;
 const HEADER_H = 34;
-const MAX_TABLE_ROWS = 200; // rows drawn on screen; full set still stored & analysed
 
 const COLS: Col[] = [
   { key: "instrument", label: "SYMBOL", w: 80, align: "center" },
@@ -49,12 +47,20 @@ const COLS: Col[] = [
   { key: "link", label: "LINK", w: 60, align: "center" },
 ];
 
+// Full table width: DATE + every scrollable column. Header and rows share it
+// inside one horizontal scroll, so columns can never drift out of alignment.
+const TOTAL_W = DATE_W + COLS.reduce((a, c) => a + c.w, 0);
+
 const fmtDate = (iso: string) => iso.replace(/-/g, "/");
 const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
 export function TradesLogsScreen() {
-  const [trades, setTrades] = useState<Trade[] | null>(null);
+  // Seed from the in-memory cache (newest first) so re-opening is instant.
+  const [trades, setTrades] = useState<Trade[] | null>(() => {
+    const c = getCachedTrades();
+    return c ? [...c].reverse() : null;
+  });
   const [active, setActive] = useState<Trade | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -62,7 +68,7 @@ export function TradesLogsScreen() {
   const [menuTrade, setMenuTrade] = useState<Trade | null>(null);
   const [reporting, setReporting] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const headerRef = useRef<ScrollView>(null);
+  const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
 
   const reload = useCallback(() => {
@@ -71,10 +77,6 @@ export function TradesLogsScreen() {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  const onBodyScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    headerRef.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false });
-  };
 
   const exportCsv = async () => {
     const all = await loadTrades();
@@ -161,10 +163,6 @@ export function TradesLogsScreen() {
 
   const list = trades ?? [];
   const totalR = list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0);
-  // Only draw the most recent rows on screen (a few thousand plain rows freezes
-  // the UI thread). The full set is still stored for export / PDF report / stats.
-  const visible = list.slice(0, MAX_TABLE_ROWS);
-  const capped = list.length - visible.length;
 
   return (
     <View style={styles.root}>
@@ -174,7 +172,6 @@ export function TradesLogsScreen() {
           <Text style={styles.titleSub}>
             {list.length} {list.length === 1 ? "entry" : "entries"}
             {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}
-            {capped > 0 ? `  ·  showing ${MAX_TABLE_ROWS}` : ""}
           </Text>
         </View>
         <View style={styles.actionsWrap}>
@@ -187,28 +184,11 @@ export function TradesLogsScreen() {
       </View>
 
       {/* Hand-drawn frame around the whole table */}
-      <View style={styles.tableFrame}>
+      <View style={styles.tableFrame} onLayout={(e) => setFrameH(e.nativeEvent.layout.height)}>
         <SketchBorder straight seed={770} />
 
-        {/* Pinned header: frozen DATE + horizontally-mirrored other columns */}
-        <View style={styles.headerRow}>
-          <View style={[styles.headerCell, { width: DATE_W }]}>
-            <Text style={styles.headerText}>DATE</Text>
-          </View>
-          <ScrollView ref={headerRef} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: "row" }}>
-              {COLS.map((c) => (
-                <View key={c.key} style={[styles.headerCell, { width: c.w, alignItems: textAlign(c.align) }]}>
-                  <Text style={styles.headerText}>{c.label}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
         {trades === null ? (
-          // Loading: the loader's pulse is native-driven, so it keeps animating
-          // smoothly even while a large table renders behind it.
+          // Loading: the loader's pulse is native-driven, so it stays smooth.
           <View style={styles.loadingInFrame}>
             <BrutalLoader label="LOADING" />
           </View>
@@ -218,43 +198,47 @@ export function TradesLogsScreen() {
             <Text style={styles.emptySub}>Log one with ✎ — or import a CSV ↑.</Text>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.md }}>
-            <View style={{ flexDirection: "row" }}>
-              {/* Frozen DATE column */}
-              <View>
-                {visible.map((t, i) => (
+          // One horizontal scroll wraps both the header and the virtualized body,
+          // so their columns share the exact same widths & x-offset — can't drift.
+          // The FlatList only mounts the visible rows, so any row count stays fast.
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ width: TOTAL_W }}>
+              <View style={styles.headerRow}>
+                <View style={[styles.headerCell, { width: DATE_W }]}>
+                  <Text style={styles.headerText}>DATE</Text>
+                </View>
+                {COLS.map((c) => (
+                  <View key={c.key} style={[styles.headerCell, { width: c.w, alignItems: textAlign(c.align) }]}>
+                    <Text style={styles.headerText}>{c.label}</Text>
+                  </View>
+                ))}
+              </View>
+              <FlatList
+                data={list}
+                keyExtractor={(t) => t.id}
+                style={{ height: Math.max(0, frameH - HEADER_H - 2) }}
+                showsVerticalScrollIndicator={false}
+                extraData={pressedId}
+                initialNumToRender={20}
+                getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
+                contentContainerStyle={{ paddingBottom: spacing.md }}
+                renderItem={({ item: t, index: i }) => (
                   <Pressable
-                    key={t.id}
                     onPress={() => setActive(t)}
                     onLongPress={() => setMenuTrade(t)}
                     onPressIn={() => setPressedId(t.id)}
                     onPressOut={() => setPressedId(null)}
-                    style={[styles.dateCell, { width: DATE_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
+                    style={[styles.row, { width: TOTAL_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
                   >
-                    <Text style={styles.dateText}>{fmtDate(t.date)}</Text>
+                    <View style={[styles.dateCell, { width: DATE_W }]}>
+                      <Text style={styles.dateText}>{fmtDate(t.date)}</Text>
+                    </View>
+                    {COLS.map((c) => (
+                      <Cell key={c.key} col={c} trade={t} />
+                    ))}
                   </Pressable>
-                ))}
-              </View>
-
-              {/* Scrollable columns */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} onScroll={onBodyScroll} scrollEventThrottle={16}>
-                <View>
-                  {visible.map((t, i) => (
-                    <Pressable
-                      key={t.id}
-                      onPress={() => setActive(t)}
-                      onLongPress={() => setMenuTrade(t)}
-                      onPressIn={() => setPressedId(t.id)}
-                      onPressOut={() => setPressedId(null)}
-                      style={[styles.row, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
-                    >
-                      {COLS.map((c) => (
-                        <Cell key={c.key} col={c} trade={t} />
-                      ))}
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
+                )}
+              />
             </View>
           </ScrollView>
         )}
