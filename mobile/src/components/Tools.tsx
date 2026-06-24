@@ -117,22 +117,9 @@ const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { max
 // Risk in account currency: a flat $ amount, or a % of the account.
 const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
 
-// Symbol -> { value per unit of move (per 1.0 lot), stop unit }. Selecting fills
-// those into the form. CFD values are broker ballparks (editable); futures point
-// values are exchange-standard.
-const cfd = (label: string, value: string, unit = "pips"): Option => ({ label, fill: { value, unit } });
+// Futures contract -> point value, exchange-standard. Selecting fills the value
+// (and the stop unit) into the form. CFDs vary by broker, so those are typed.
 const fut = (label: string, value: string): Option => ({ label, fill: { value, unit: "points" } });
-const CFD_SYMBOLS: Option[] = [
-  cfd("EURUSD", "10"),
-  cfd("GBPUSD", "10"),
-  cfd("AUDUSD", "10"),
-  cfd("USDJPY", "6.7"),
-  cfd("XAUUSD", "10"),
-  cfd("US30", "1", "points"),
-  cfd("NAS100", "1", "points"),
-  cfd("SPX500", "1", "points"),
-  { label: "Custom" },
-];
 const FUTURES_SYMBOLS: Option[] = [
   fut("MNQ", "2"),
   fut("NQ", "20"),
@@ -156,16 +143,16 @@ export const TOOLS: Calc[] = [
     title: "Position Sizer",
     icon: "cube-outline",
     svg: (p) => <CalcOffIcon {...p} />,
-    blurb: "Size a trade from your risk. Pick a symbol — its value-per-unit auto-fills (editable for your broker).",
+    blurb: "Size a trade from your risk.",
     variants: [
       {
         key: "cfd",
         label: "CFD",
+        blurb: "Forex / metals / indices — type your pip or point value per 1.0 lot (EURUSD ≈ $10 / pip).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "symbol", label: "Symbol", default: "EURUSD", options: CFD_SYMBOLS },
-          { key: "stop", label: "Stop", default: "20", unitFrom: "unit" },
+          { key: "stop", label: "Stop", units: ["pips", "points"], default: "20" },
           { key: "value", label: "Value per unit $ / lot", default: "10" },
         ],
         compute: (v, u) => {
@@ -180,6 +167,7 @@ export const TOOLS: Calc[] = [
       {
         key: "futures",
         label: "Futures",
+        blurb: "Mini / micro contracts — point value auto-fills from the symbol (exchange-standard).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
