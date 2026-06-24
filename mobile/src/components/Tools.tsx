@@ -152,8 +152,8 @@ export const TOOLS: Calc[] = [
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop", units: ["pips", "points"], default: "20" },
-          { key: "value", label: "Value per unit $ / lot", default: "10" },
+          { key: "stop", label: "Stop", suffix: "pips", default: "20" },
+          { key: "value", label: "Pip value $ / lot", default: "10" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
