@@ -127,8 +127,6 @@ const FUTURES_SYMBOLS: Option[] = [
   fut("ES", "50"),
   fut("MYM", "0.5"),
   fut("YM", "5"),
-  fut("M2K", "5"),
-  fut("RTY", "50"),
   fut("MGC", "10"),
   fut("GC", "100"),
   fut("MCL", "100"),
@@ -146,14 +144,33 @@ export const TOOLS: Calc[] = [
     blurb: "Size a trade from your risk.",
     variants: [
       {
-        key: "cfd",
-        label: "CFD",
-        blurb: "Forex / metals / indices — type your pip or point value per 1.0 lot (EURUSD ≈ $10 / pip).",
+        key: "forex",
+        label: "Forex",
+        blurb: "Currency pairs — stop in pips, pip value per 1.0 lot (USD-quote majors ≈ $10).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
           { key: "stop", label: "Stop", suffix: "pips", default: "20" },
           { key: "value", label: "Pip value $ / lot", default: "10" },
+        ],
+        compute: (v, u) => {
+          const r = riskAmount(v, u);
+          const per = v.stop * v.value;
+          return [
+            { label: "Risk amount", value: fmt(r) },
+            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+          ];
+        },
+      },
+      {
+        key: "cfd",
+        label: "CFD",
+        blurb: "Metals / indices / commodities — stop in points, value per point per 1.0 lot (set it for your broker).",
+        fields: [
+          { key: "account", label: "Account size", default: "10000" },
+          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "stop", label: "Stop", suffix: "points", default: "50" },
+          { key: "value", label: "Point value $ / lot", default: "1" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
