@@ -13,14 +13,19 @@ type Tone = "neutral" | "good" | "bad";
 type Field = { key: string; label: string; suffix?: string; default: string; units?: string[] };
 type Out = { label: string; value: string; tone?: Tone };
 type IconProps = { size: number; color: string };
+type Compute = (v: Record<string, number>, units: Record<string, string>) => Out[];
+// A tool is one set of fields, or several "variants" picked from a top segmented
+// menu (e.g. Position Sizer: CFD / Futures / Forex).
+type Variant = { key: string; label: string; blurb?: string; fields: Field[]; compute: Compute };
 export type Calc = {
   key: string;
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   svg?: (p: IconProps) => React.ReactNode; // custom glyph; overrides `icon`
   blurb: string;
-  fields: Field[];
-  compute: (v: Record<string, number>, units: Record<string, string>) => Out[];
+  fields?: Field[];
+  compute?: Compute;
+  variants?: Variant[];
 };
 
 // Tabler "letter-r" — used for the Required R:R tool.
@@ -106,6 +111,9 @@ function mulberry32(seed: number) {
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—");
 
+// Risk in account currency: a flat $ amount, or a % of the account.
+const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
+
 // The pocket calculators behind the header menu. Pure formulas — no journal data.
 export const TOOLS: Calc[] = [
   {
@@ -113,20 +121,64 @@ export const TOOLS: Calc[] = [
     title: "Position Sizer",
     icon: "cube-outline",
     svg: (p) => <CalcOffIcon {...p} />,
-    blurb: "Size a trade from your risk. Units are yours (lots / contracts / shares); R stays the journal's job.",
-    fields: [
-      { key: "account", label: "Account size", default: "10000" },
-      { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-      { key: "stop", label: "Stop size (loss / 1 unit)", default: "50" },
+    blurb: "Size a trade from your risk — pick your instrument. Size comes out in that market's units.",
+    variants: [
+      {
+        key: "cfd",
+        label: "CFD",
+        blurb: "Stocks / CFDs / crypto. Stop is your loss per 1 unit (share / contract / coin).",
+        fields: [
+          { key: "account", label: "Account size", default: "10000" },
+          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "stop", label: "Stop (loss / 1 unit)", default: "0.5" },
+        ],
+        compute: (v, u) => {
+          const r = riskAmount(v, u);
+          return [
+            { label: "Risk amount", value: fmt(r) },
+            { label: "Units", value: fmt(v.stop > 0 ? r / v.stop : 0), tone: "good" },
+          ];
+        },
+      },
+      {
+        key: "futures",
+        label: "Futures",
+        blurb: "Futures contracts. Enter the value of one tick/point for the contract (e.g. ES = $12.50 / tick).",
+        fields: [
+          { key: "account", label: "Account size", default: "10000" },
+          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "stop", label: "Stop", units: ["ticks", "points"], default: "40" },
+          { key: "value", label: "Tick / point value $", default: "12.5" },
+        ],
+        compute: (v, u) => {
+          const r = riskAmount(v, u);
+          const per = v.stop * v.value;
+          return [
+            { label: "Risk amount", value: fmt(r) },
+            { label: "Contracts", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+          ];
+        },
+      },
+      {
+        key: "forex",
+        label: "Forex",
+        blurb: "Forex lots. Pip value is per 1.00 lot (≈ $10 / pip on most USD-quote pairs).",
+        fields: [
+          { key: "account", label: "Account size", default: "10000" },
+          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "stop", label: "Stop (pips)", default: "20" },
+          { key: "pip", label: "Pip value $ / lot", default: "10" },
+        ],
+        compute: (v, u) => {
+          const r = riskAmount(v, u);
+          const per = v.stop * v.pip;
+          return [
+            { label: "Risk amount", value: fmt(r) },
+            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+          ];
+        },
+      },
     ],
-    compute: (v, u) => {
-      const riskAmt = u.risk === "$" ? v.risk : v.account * (v.risk / 100);
-      const size = v.stop > 0 ? riskAmt / v.stop : 0;
-      return [
-        { label: "Risk amount", value: fmt(riskAmt) },
-        { label: "Position size", value: fmt(size), tone: "good" },
-      ];
-    },
   },
   {
     key: "simulator",
@@ -294,28 +346,51 @@ function UnitDropdown({ value, options, onChange }: { value: string; options: st
 }
 
 function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
-  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(calc.fields.map((f) => [f.key, f.default])));
-  const [units, setUnits] = useState<Record<string, string>>(() =>
-    Object.fromEntries(calc.fields.filter((f) => f.units).map((f) => [f.key, f.units![0]])),
-  );
-  const outs = useMemo(() => {
-    const nums: Record<string, number> = {};
-    for (const f of calc.fields) {
-      const n = parseFloat(vals[f.key]);
-      nums[f.key] = Number.isFinite(n) ? n : 0;
-    }
-    return calc.compute(nums, units);
-  }, [vals, units, calc]);
+  // Single-field-set tools are treated as one unnamed variant.
+  const variants: Variant[] = calc.variants ?? [{ key: "_", label: "", fields: calc.fields ?? [], compute: calc.compute ?? (() => []) }];
+  const [vi, setVi] = useState(0);
+  const variant = variants[Math.min(vi, variants.length - 1)];
 
   return (
     <>
       <SketchBorder seed={2201} straight />
       <Text style={styles.title}>{calc.title.toUpperCase()}</Text>
+      {variants.length > 1 ? (
+        <View style={styles.segRow}>
+          {variants.map((v, i) => (
+            <PressButton key={v.key} style={[styles.segItem, i > 0 && styles.segDiv, i === vi && styles.segItemOn]} onPress={() => setVi(i)}>
+              <Text style={[styles.segText, i === vi && styles.segTextOn]}>{v.label}</Text>
+            </PressButton>
+          ))}
+        </View>
+      ) : null}
+      {/* key resets the inputs when you switch instrument type */}
+      <CalcForm key={variant.key} variant={variant} blurb={variant.blurb ?? calc.blurb} onClose={onClose} />
+    </>
+  );
+}
+
+function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string; onClose: () => void }) {
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(variant.fields.map((f) => [f.key, f.default])));
+  const [units, setUnits] = useState<Record<string, string>>(() =>
+    Object.fromEntries(variant.fields.filter((f) => f.units).map((f) => [f.key, f.units![0]])),
+  );
+  const outs = useMemo(() => {
+    const nums: Record<string, number> = {};
+    for (const f of variant.fields) {
+      const n = parseFloat(vals[f.key]);
+      nums[f.key] = Number.isFinite(n) ? n : 0;
+    }
+    return variant.compute(nums, units);
+  }, [vals, units, variant]);
+
+  return (
+    <>
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Text style={styles.blurb}>{calc.blurb}</Text>
-        {calc.fields.map((f, idx) => (
+        <Text style={styles.blurb}>{blurb}</Text>
+        {variant.fields.map((f, idx) => (
           // Descending zIndex so an opened dropdown overlays the rows beneath it.
-          <View key={f.key} style={[styles.field, { zIndex: calc.fields.length - idx }]}>
+          <View key={f.key} style={[styles.field, { zIndex: variant.fields.length - idx }]}>
             <Text style={styles.fieldLabel}>{f.label}</Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -371,6 +446,13 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
   card: { width: "100%", maxWidth: 360, maxHeight: "82%", backgroundColor: colors.surface, padding: spacing.xl },
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
+  // Top instrument-type selector (Position Sizer)
+  segRow: { flexDirection: "row", marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.borderSoft },
+  segItem: { flex: 1, paddingVertical: spacing.sm, alignItems: "center" },
+  segDiv: { borderLeftWidth: 1, borderLeftColor: colors.borderSoft },
+  segItemOn: { backgroundColor: colors.text },
+  segText: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 12, letterSpacing: 0.4 },
+  segTextOn: { color: colors.background },
   scroll: { flexGrow: 0 },
   blurb: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13, lineHeight: 19, marginBottom: spacing.lg },
   field: { marginBottom: spacing.md },
