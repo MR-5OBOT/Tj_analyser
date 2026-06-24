@@ -41,10 +41,11 @@ export async function loadTrades(): Promise<Trade[]> {
   return cache;
 }
 
-// Write trades to disk and refresh the cache in one step.
+// Write trades to disk, then refresh the cache — so the cache only ever holds
+// data that actually persisted (never ahead of disk on a failed write).
 async function persist(trades: Trade[]): Promise<void> {
-  cache = trades;
   await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
+  cache = trades;
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
