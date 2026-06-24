@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
 import { PressButton, SketchBorder } from "./ui";
@@ -9,14 +10,37 @@ import { PressButton, SketchBorder } from "./ui";
 type Tone = "neutral" | "good" | "bad";
 type Field = { key: string; label: string; suffix?: string; default: string };
 type Out = { label: string; value: string; tone?: Tone };
+type IconProps = { size: number; color: string };
 export type Calc = {
   key: string;
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
+  svg?: (p: IconProps) => React.ReactNode; // custom glyph; overrides `icon`
   blurb: string;
   fields: Field[];
   compute: (v: Record<string, number>) => Out[];
 };
+
+// Tabler "letter-r" — used for the Required R:R tool.
+function LetterRIcon({ size, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M7 20v-16h5.5a4 4 0 0 1 0 9h-5.5" />
+      <Path d="M12 13l5 7" />
+    </Svg>
+  );
+}
+
+// Tabler "percentage" — used for the Required Win Rate tool.
+function PercentIcon({ size, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M16 17a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+      <Path d="M6 7a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+      <Path d="M6 18l12 -12" />
+    </Svg>
+  );
+}
 
 // Deterministic RNG so a given simulator input always draws the same run.
 function mulberry32(seed: number) {
@@ -90,6 +114,7 @@ export const TOOLS: Calc[] = [
     key: "required-winrate",
     title: "Required Win Rate",
     icon: "trophy-outline",
+    svg: (p) => <PercentIcon {...p} />,
     blurb: "The win rate you need just to break even at a given reward:risk.",
     fields: [{ key: "rr", label: "Reward : Risk", suffix: ": 1", default: "2" }],
     compute: (v) => {
@@ -101,6 +126,7 @@ export const TOOLS: Calc[] = [
     key: "required-rr",
     title: "Required R:R",
     icon: "git-compare-outline",
+    svg: (p) => <LetterRIcon {...p} />,
     blurb: "The reward:risk you need to break even at a given win rate.",
     fields: [{ key: "wr", label: "Win rate", suffix: "%", default: "50" }],
     compute: (v) => {
@@ -146,7 +172,7 @@ export function ToolsMenu({ open, onClose, onSettings }: { open: boolean; onClos
                 }}
               >
                 {i > 0 ? <View style={styles.menuDivider} pointerEvents="none" /> : null}
-                <Ionicons name={c.icon} size={18} color={colors.textMuted} />
+                {c.svg ? c.svg({ size: 18, color: colors.textMuted }) : <Ionicons name={c.icon} size={18} color={colors.textMuted} />}
                 <Text style={styles.menuLabel}>{c.title}</Text>
               </PressButton>
             ))}
