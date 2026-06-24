@@ -8,7 +8,9 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 import { PressButton, SketchBorder } from "./ui";
 
 type Tone = "neutral" | "good" | "bad";
-type Field = { key: string; label: string; suffix?: string; default: string };
+// `units` turns the field's suffix into an in-row dropdown; the picked unit is
+// passed to compute (keyed by field key).
+type Field = { key: string; label: string; suffix?: string; default: string; units?: string[] };
 type Out = { label: string; value: string; tone?: Tone };
 type IconProps = { size: number; color: string };
 export type Calc = {
@@ -18,7 +20,7 @@ export type Calc = {
   svg?: (p: IconProps) => React.ReactNode; // custom glyph; overrides `icon`
   blurb: string;
   fields: Field[];
-  compute: (v: Record<string, number>) => Out[];
+  compute: (v: Record<string, number>, units: Record<string, string>) => Out[];
 };
 
 // Tabler "letter-r" — used for the Required R:R tool.
@@ -114,11 +116,11 @@ export const TOOLS: Calc[] = [
     blurb: "Size a trade from your risk. Units are yours (lots / contracts / shares); R stays the journal's job.",
     fields: [
       { key: "account", label: "Account size", default: "10000" },
-      { key: "risk", label: "Risk per trade", suffix: "%", default: "1" },
+      { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
       { key: "stop", label: "Stop size (loss / 1 unit)", default: "50" },
     ],
-    compute: (v) => {
-      const riskAmt = v.account * (v.risk / 100);
+    compute: (v, u) => {
+      const riskAmt = u.risk === "$" ? v.risk : v.account * (v.risk / 100);
       const size = v.stop > 0 ? riskAmt / v.stop : 0;
       return [
         { label: "Risk amount", value: fmt(riskAmt) },
@@ -260,16 +262,50 @@ function CalcModal({ calcKey, onClose }: { calcKey: string | null; onClose: () =
   );
 }
 
+// In-row unit picker (e.g. % / $). Chip stays in the input row; the option list
+// drops just below it. Rendered as a fragment so the menu anchors to inputWrap.
+function UnitDropdown({ value, options, onChange }: { value: string; options: string[]; onChange: (u: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <PressButton style={styles.unitChip} onPress={() => setOpen((o) => !o)}>
+        <Text style={styles.unitValue}>{value}</Text>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={13} color={colors.textSubtle} />
+      </PressButton>
+      {open ? (
+        <View style={styles.unitMenu}>
+          {options.map((o, i) => (
+            <PressButton
+              key={o}
+              style={[styles.unitItem, i > 0 && styles.unitItemDivider]}
+              onPress={() => {
+                onChange(o);
+                setOpen(false);
+              }}
+            >
+              <Text style={[styles.unitValue, o === value && { color: colors.positive }]}>{o}</Text>
+            </PressButton>
+          ))}
+          <SketchBorder seed={2202} straight />
+        </View>
+      ) : null}
+    </>
+  );
+}
+
 function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
   const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(calc.fields.map((f) => [f.key, f.default])));
+  const [units, setUnits] = useState<Record<string, string>>(() =>
+    Object.fromEntries(calc.fields.filter((f) => f.units).map((f) => [f.key, f.units![0]])),
+  );
   const outs = useMemo(() => {
     const nums: Record<string, number> = {};
     for (const f of calc.fields) {
       const n = parseFloat(vals[f.key]);
       nums[f.key] = Number.isFinite(n) ? n : 0;
     }
-    return calc.compute(nums);
-  }, [vals, calc]);
+    return calc.compute(nums, units);
+  }, [vals, units, calc]);
 
   return (
     <>
@@ -277,8 +313,9 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
       <Text style={styles.title}>{calc.title.toUpperCase()}</Text>
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.blurb}>{calc.blurb}</Text>
-        {calc.fields.map((f) => (
-          <View key={f.key} style={styles.field}>
+        {calc.fields.map((f, idx) => (
+          // Descending zIndex so an opened dropdown overlays the rows beneath it.
+          <View key={f.key} style={[styles.field, { zIndex: calc.fields.length - idx }]}>
             <Text style={styles.fieldLabel}>{f.label}</Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -290,7 +327,11 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
                 placeholderTextColor={colors.textSubtle}
                 selectionColor={colors.positive}
               />
-              {f.suffix ? <Text style={styles.suffix}>{f.suffix}</Text> : null}
+              {f.units ? (
+                <UnitDropdown value={units[f.key]} options={f.units} onChange={(u) => setUnits((s) => ({ ...s, [f.key]: u }))} />
+              ) : f.suffix ? (
+                <Text style={styles.suffix}>{f.suffix}</Text>
+              ) : null}
             </View>
           </View>
         ))}
@@ -337,6 +378,12 @@ const styles = StyleSheet.create({
   inputWrap: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderSoft, paddingHorizontal: spacing.md, height: 46 },
   input: { flex: 1, color: colors.text, fontFamily: fontFamily.bold, fontSize: 18, padding: 0 },
   suffix: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 14, marginLeft: spacing.sm },
+  // In-row unit dropdown
+  unitChip: { flexDirection: "row", alignItems: "center", gap: 2, height: 28, marginLeft: spacing.sm, paddingLeft: spacing.sm, borderLeftWidth: 1, borderLeftColor: colors.borderSoft },
+  unitValue: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15, minWidth: 14, textAlign: "center" },
+  unitMenu: { position: "absolute", top: 46, right: -1, minWidth: 56, backgroundColor: colors.surfaceAlt, zIndex: 30 },
+  unitItem: { paddingVertical: spacing.sm, alignItems: "center" },
+  unitItemDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   outBox: { marginTop: spacing.sm, backgroundColor: colors.surfaceAlt, padding: spacing.md, gap: spacing.sm },
   outRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   outLabel: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 13 },
