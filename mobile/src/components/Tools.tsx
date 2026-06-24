@@ -181,9 +181,9 @@ export const TOOLS: Calc[] = [
         },
       },
       {
-        key: "cfd",
-        label: "CFD",
-        blurb: "Metals / indices / commodities — stop in points, value per point per 1.0 lot (set it for your broker).",
+        key: "others",
+        label: "Others",
+        blurb: "Indices / metals / commodities — stop in points, value per point per 1.0 lot (set it for your broker).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
