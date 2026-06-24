@@ -19,7 +19,9 @@ const STAT_ROWS: { i: number; frac: number; rot: number; mt: number }[][] = [
   [{ i: 4, frac: 0.33, rot: -1.3, mt: 2 }, { i: 5, frac: 0.67, rot: 1.0, mt: 0 }],
 ];
 
-export function HomeScreen() {
+// memo: Home takes no props, so with keep-alive nav it must NOT re-render when the
+// parent re-renders on a tab switch — only when its own trades change.
+export const HomeScreen = React.memo(function HomeScreen() {
   const trades = useTrades();
   const data = useMemo(() => (trades && trades.length ? buildDashboard(trades) : null), [trades]);
 
@@ -62,7 +64,7 @@ export function HomeScreen() {
       <CalendarCard cal={data.calendar} />
     </ScrollView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: DOCK_SPACE },

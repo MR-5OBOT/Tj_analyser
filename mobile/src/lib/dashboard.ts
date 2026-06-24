@@ -13,8 +13,20 @@ export type Dashboard = {
   calendar: Calendar;
 };
 
-// Compute the whole dashboard from the real journal (R-only metrics).
+// One-entry ref cache: Home and Reports both build the dashboard from the same
+// cached trades array, so the second caller reuses the first's result instead of
+// re-scanning 5k rows. Invalidates automatically when the array ref changes (any
+// add/import/delete swaps in a new array).
+let memo: { trades: Trade[]; out: Dashboard } | null = null;
 export function buildDashboard(trades: Trade[]): Dashboard {
+  if (memo && memo.trades === trades) return memo.out;
+  const out = computeDashboard(trades);
+  memo = { trades, out };
+  return out;
+}
+
+// Compute the whole dashboard from the real journal (R-only metrics).
+function computeDashboard(trades: Trade[]): Dashboard {
   const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date)); // oldest first
   const rs = sorted.map((t) => t.rr ?? 0);
   const n = sorted.length;

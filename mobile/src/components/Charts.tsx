@@ -166,14 +166,20 @@ export function RiskScatter({ points }: { points: { x: number; y: number }[] }) 
   const X = (v: number) => PAD + ((v - minX) / spanX) * (w - 2 * PAD);
   const Y = (v: number) => PAD + (1 - (v + maxAbs) / (2 * maxAbs)) * (H - 2 * PAD);
   const zeroY = Y(0);
-  const coords = points.map((p) => ({ x: X(p.x), y: Y(p.y), pos: p.y >= 0 }));
+  // Up to ~5k points → build the two path strings once per data/width change, not
+  // on every incidental re-render.
+  const [posD, negD] = useMemo(() => {
+    const coords = points.map((p) => ({ x: X(p.x), y: Y(p.y), pos: p.y >= 0 }));
+    return [dotPath(coords.filter((c) => c.pos)), dotPath(coords.filter((c) => !c.pos))];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, w, minX, spanX, maxAbs]);
   return (
     <View style={{ height: H }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
       {w > 1 ? (
         <Svg width={w} height={H}>
           <Line x1={PAD} y1={zeroY} x2={w - PAD} y2={zeroY} stroke={colors.textSubtle} strokeWidth={1} opacity={0.5} />
-          <Path d={dotPath(coords.filter((c) => c.pos))} stroke={colors.positive} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
-          <Path d={dotPath(coords.filter((c) => !c.pos))} stroke={colors.danger} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
+          <Path d={posD} stroke={colors.positive} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
+          <Path d={negD} stroke={colors.danger} strokeWidth={6.8} strokeLinecap="round" opacity={0.85} />
         </Svg>
       ) : null}
     </View>

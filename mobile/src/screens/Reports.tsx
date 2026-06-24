@@ -9,7 +9,9 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 
 // Charts/stats view over the in-app journal. (PDF generation lives in the
 // Trades Logs "Generate PDF report" action — uploads are handled there.)
-export function ReportsScreen() {
+// memo: no props — must not re-render on a tab switch (keep-alive nav), only when
+// its own trades change. Otherwise every tab tap rebuilds the 5k-point SVG paths.
+export const ReportsScreen = React.memo(function ReportsScreen() {
   const trades = useTrades();
   const data = useMemo(() => (trades && trades.length ? buildDashboard(trades) : null), [trades]);
 
@@ -53,7 +55,7 @@ export function ReportsScreen() {
       </View>
     </ScrollView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE },

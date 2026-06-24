@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -55,14 +55,14 @@ const fmtDate = (iso: string) => iso.replace(/-/g, "/");
 const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
-export function TradesLogsScreen() {
+// memo: no props — must not re-render on a tab switch (keep-alive nav).
+export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // Seed from the in-memory cache (newest first) so re-opening is instant.
   const [trades, setTrades] = useState<Trade[] | null>(() => {
     const c = getCachedTrades();
     return c ? [...c].reverse() : null;
   });
   const [active, setActive] = useState<Trade | null>(null);
-  const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [warning, setWarning] = useState(false);
   const [menuTrade, setMenuTrade] = useState<Trade | null>(null);
@@ -163,7 +163,10 @@ export function TradesLogsScreen() {
   const shareRow = () => setMenuTrade(null);
 
   const list = trades ?? [];
-  const totalR = list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0);
+  const totalR = useMemo(
+    () => list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0),
+    [trades], // list is derived from trades; recompute only when the journal changes
+  );
 
   return (
     <View style={styles.root}>
@@ -219,25 +222,13 @@ export function TradesLogsScreen() {
                 keyExtractor={(t) => t.id}
                 style={{ height: Math.max(0, frameH - HEADER_H - 2) }}
                 showsVerticalScrollIndicator={false}
-                extraData={pressedId}
                 initialNumToRender={20}
+                windowSize={11}
+                removeClippedSubviews
                 getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
                 contentContainerStyle={{ paddingBottom: spacing.md }}
-                renderItem={({ item: t, index: i }) => (
-                  <Pressable
-                    onPress={() => setActive(t)}
-                    onLongPress={() => setMenuTrade(t)}
-                    onPressIn={() => setPressedId(t.id)}
-                    onPressOut={() => setPressedId(null)}
-                    style={[styles.row, { width: TOTAL_W }, i % 2 === 1 && styles.rowAlt, pressedId === t.id && styles.rowPressed]}
-                  >
-                    <View style={[styles.dateCell, { width: DATE_W }]}>
-                      <Text style={styles.dateText}>{fmtDate(t.date)}</Text>
-                    </View>
-                    {COLS.map((c) => (
-                      <Cell key={c.key} col={c} trade={t} />
-                    ))}
-                  </Pressable>
+                renderItem={({ item, index }) => (
+                  <Row trade={item} index={index} onPress={setActive} onLongPress={setMenuTrade} />
                 )}
               />
             </View>
@@ -303,7 +294,37 @@ export function TradesLogsScreen() {
       </Modal>
     </View>
   );
-}
+});
+
+// One table row, memoized: a kept-alive parent re-render (or another row's press)
+// can't re-render rows whose trade hasn't changed. Press feedback uses Pressable's
+// own `pressed` state — no screen-level state, so a tap never re-renders the list.
+const Row = React.memo(function Row({
+  trade,
+  index,
+  onPress,
+  onLongPress,
+}: {
+  trade: Trade;
+  index: number;
+  onPress: (t: Trade) => void;
+  onLongPress: (t: Trade) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onPress(trade)}
+      onLongPress={() => onLongPress(trade)}
+      style={({ pressed }) => [styles.row, { width: TOTAL_W }, index % 2 === 1 && styles.rowAlt, pressed && styles.rowPressed]}
+    >
+      <View style={[styles.dateCell, { width: DATE_W }]}>
+        <Text style={styles.dateText}>{fmtDate(trade.date)}</Text>
+      </View>
+      {COLS.map((c) => (
+        <Cell key={c.key} col={c} trade={trade} />
+      ))}
+    </Pressable>
+  );
+});
 
 function RowMenu({
   trade,
