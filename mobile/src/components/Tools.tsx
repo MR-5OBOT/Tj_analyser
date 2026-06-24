@@ -47,6 +47,21 @@ function CalcOffIcon({ size, color }: IconProps) {
   );
 }
 
+// Tabler "chart-dots-2" — used for the Simulator tool.
+function ChartDotsIcon({ size, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 3v18h18" />
+      <Path d="M7 15a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <Path d="M11 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <Path d="M16 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+      <Path d="M21 3l-6 1.5" />
+      <Path d="M14.113 6.65l2.771 3.695" />
+      <Path d="M16 12.5l-5 2" />
+    </Svg>
+  );
+}
+
 // Tabler "percentage" — used for the Required Win Rate tool.
 function PercentIcon({ size, color }: IconProps) {
   return (
@@ -98,6 +113,7 @@ export const TOOLS: Calc[] = [
     key: "simulator",
     title: "Simulator",
     icon: "pulse-outline",
+    svg: (p) => <ChartDotsIcon {...p} />,
     blurb: "One simulated run of N trades at your win rate and R:R, risking 1R each.",
     fields: [
       { key: "wr", label: "Win rate", suffix: "%", default: "50" },
