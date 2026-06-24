@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
+import { BrutalLoader, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
@@ -66,7 +66,8 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const [importing, setImporting] = useState(false);
   const [warning, setWarning] = useState(false);
   const [menuTrade, setMenuTrade] = useState<Trade | null>(null);
-  const [reporting, setReporting] = useState(false);
+  // One blocking-loader label for every whole-journal op (null = idle).
+  const [busy, setBusy] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
@@ -87,10 +88,16 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       Alert.alert("Nothing to export", "You haven't logged any trades yet.");
       return;
     }
-    const uri = `${FileSystem.cacheDirectory}trades.csv`;
-    await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export trades" });
+    setBusy("EXPORTING");
+    await nextFrame();
+    try {
+      const uri = `${FileSystem.cacheDirectory}trades.csv`;
+      await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export trades" });
+      }
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -101,7 +108,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       Alert.alert("No trades", "Log some trades first.");
       return;
     }
-    setReporting(true);
+    setBusy("GENERATING REPORT");
     try {
       const uri = `${FileSystem.cacheDirectory}trades.csv`;
       await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
@@ -121,19 +128,27 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     } catch (e) {
       Alert.alert("Report failed", e instanceof Error ? e.message : "Something went wrong.");
     } finally {
-      setReporting(false);
+      setBusy(null);
     }
   };
 
   const onCsv = async (csv: string) => {
+    setBusy("IMPORTING");
+    await nextFrame(); // paint the loader before the heavy parse/dedupe/persist
     let parsed: Trade[];
     try {
       parsed = csvToTrades(csv); // throws CsvError on missing/mismatched columns
     } catch (e) {
+      setBusy(null);
       Alert.alert("Import failed", e instanceof Error ? e.message : "Could not read the CSV.");
       return; // keep the modal open so they can pick a corrected file
     }
-    const added = await importTrades(parsed); // persist → emit → reload via subscription
+    let added: number;
+    try {
+      added = await importTrades(parsed); // persist → emit → reload via subscription
+    } finally {
+      setBusy(null);
+    }
     setImporting(false);
     const capNote =
       parsed.length === MAX_IMPORT_ROWS
@@ -152,8 +167,14 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          await deleteTrade(t.id);
-          setMenuTrade(null); // deleteTrade persist → emit → reload via subscription
+          setMenuTrade(null);
+          setBusy("DELETING");
+          await nextFrame();
+          try {
+            await deleteTrade(t.id); // persist → emit → reload via subscription
+          } finally {
+            setBusy(null);
+          }
         },
       },
     ]);
@@ -287,11 +308,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       <RowMenu trade={menuTrade} onClose={() => setMenuTrade(null)} onShare={shareRow} onDelete={deleteRow} />
       <TradeDetail trade={active} onClose={() => setActive(null)} />
 
-      <Modal visible={reporting} transparent animationType="fade">
-        <View style={styles.reportOverlay}>
-          <BrutalLoader color={colors.text} label="GENERATING REPORT" />
-        </View>
-      </Modal>
+      <LoaderOverlay visible={!!busy} label={busy ?? ""} />
     </View>
   );
 });
@@ -611,7 +628,6 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderWidth: 1 },
   chipText: { fontFamily: fontFamily.bold, fontSize: 9.5, letterSpacing: 0.5 },
 
-  reportOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center" },
   emptyInFrame: { paddingVertical: spacing.xxl, alignItems: "center" },
   loadingInFrame: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },

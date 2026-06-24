@@ -156,6 +156,24 @@ export function BrutalLoader({ color = colors.text, label }: { color?: string; l
   );
 }
 
+/** Full-screen blocking loader over a dimmed backdrop — one place for every
+ *  "this takes a moment" overlay (save / import / export / delete / report). The
+ *  BrutalLoader pulse is native-driven, so it keeps animating even while the JS
+ *  thread is busy stringifying a big journal. */
+export function LoaderOverlay({ visible, label }: { visible: boolean; label: string }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={s.loaderOverlay}>
+        <BrutalLoader color={colors.text} label={label} />
+      </View>
+    </Modal>
+  );
+}
+
+/** Yield one frame so a just-shown loader actually paints before a synchronous,
+ *  JS-thread-blocking task (e.g. JSON.stringify of 5k rows) starts. */
+export const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
 // The whole app measures performance in R only. This is the left-button explainer.
 const R_MANIFESTO =
   "TJ Analyser speaks one language: R.\n\n" +
@@ -300,6 +318,7 @@ const s = StyleSheet.create({
   lineH: { position: "absolute", left: -4, right: -4, height: SKETCH_W, backgroundColor: BRUTAL_BORDER },
   lineV: { position: "absolute", top: -4, bottom: -4, width: SKETCH_W, backgroundColor: BRUTAL_BORDER },
   // Brutalist loader: bold label + a row of marching hard squares.
+  loaderOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center" },
   loader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   loaderLabel: { fontFamily: fontFamily.bold, fontSize: 15, letterSpacing: 1.5 },
   loaderRow: { flexDirection: "row", alignItems: "center", gap: 5 },

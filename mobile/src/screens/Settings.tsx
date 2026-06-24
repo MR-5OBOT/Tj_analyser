@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { PressButton, SketchBorder } from "../components/ui";
+import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
 import { clearTrades, JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
@@ -60,6 +60,7 @@ function BackendHealth() {
 
 function DataAndAbout() {
   const [storedCount, setStoredCount] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null); // blocking-loader label (null = idle)
 
   const loadCount = useCallback(async () => {
     try {
@@ -82,6 +83,8 @@ function DataAndAbout() {
         Alert.alert("Nothing to export", "You haven't journaled any trades yet.");
         return;
       }
+      setBusy("EXPORTING");
+      await nextFrame(); // paint the loader before the big CSV stringify/write
       const csv = tradesToCsv(trades);
       const uri = `${FileSystem.cacheDirectory}journals.csv`;
       await FileSystem.writeAsStringAsync(uri, csv);
@@ -90,6 +93,8 @@ function DataAndAbout() {
       }
     } catch (e) {
       Alert.alert("Export failed", e instanceof Error ? e.message : "Unknown error.");
+    } finally {
+      setBusy(null);
     }
   }, []);
 
@@ -116,6 +121,7 @@ function DataAndAbout() {
       Alert.alert("Updates unavailable", "Over-the-air updates only work in the installed app.");
       return;
     }
+    setBusy("CHECKING UPDATES");
     try {
       const res = await Updates.checkForUpdateAsync();
       if (res.isAvailable) {
@@ -129,6 +135,8 @@ function DataAndAbout() {
       }
     } catch (e) {
       Alert.alert("Couldn't check", e instanceof Error ? e.message : "Unknown error.");
+    } finally {
+      setBusy(null);
     }
   }, []);
 
@@ -159,6 +167,7 @@ function DataAndAbout() {
         />
         <SketchBorder seed={789} straight />
       </View>
+      <LoaderOverlay visible={!!busy} label={busy ?? ""} />
     </View>
   );
 }
