@@ -414,33 +414,35 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
 // Full-width select (e.g. the symbol list). Opens a scrollable list below the box.
 function SelectField({ value, options, onChange }: { value: string; options: Option[]; onChange: (o: Option) => void }) {
   const [open, setOpen] = useState(false);
-  // Wrapper so the absolute menu anchors to the box, not the field label above it.
   return (
-    <View>
-      <PressButton style={styles.selectBox} onPress={() => setOpen((o) => !o)}>
+    <>
+      <PressButton style={styles.selectBox} onPress={() => setOpen(true)}>
         <Text style={styles.selectValue}>{value}</Text>
-        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.textSubtle} />
+        <Ionicons name="chevron-down" size={16} color={colors.textSubtle} />
       </PressButton>
-      {open ? (
-        <View style={styles.selectMenu}>
-          <ScrollView style={styles.selectScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            {options.map((o, i) => (
-              <PressButton
-                key={o.label}
-                style={[styles.selectItem, i > 0 && styles.selectItemDiv]}
-                onPress={() => {
-                  onChange(o);
-                  setOpen(false);
-                }}
-              >
-                <Text style={[styles.selectItemText, o.label === value && { color: colors.positive }]}>{o.label}</Text>
-              </PressButton>
-            ))}
-          </ScrollView>
-          <SketchBorder seed={2203} straight />
-        </View>
-      ) : null}
-    </View>
+      {/* The list lives in its own modal so it scrolls without fighting the form scroll. */}
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.selectOverlay} onPress={() => setOpen(false)}>
+          <Pressable style={styles.selectModal} onPress={() => {}}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {options.map((o, i) => (
+                <PressButton
+                  key={o.label}
+                  style={[styles.selectItem, i > 0 && styles.selectItemDiv]}
+                  onPress={() => {
+                    onChange(o);
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={[styles.selectItemText, o.label === value && { color: colors.positive }]}>{o.label}</Text>
+                </PressButton>
+              ))}
+            </ScrollView>
+            <SketchBorder seed={2203} straight />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -560,8 +562,8 @@ const styles = StyleSheet.create({
   // Full-width select (symbol list)
   selectBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderSoft, paddingHorizontal: spacing.md, height: 46 },
   selectValue: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 16 },
-  selectMenu: { position: "absolute", top: 46, left: 0, right: 0, maxHeight: 184, backgroundColor: colors.surfaceAlt, zIndex: 30 },
-  selectScroll: { flexGrow: 0 },
+  selectOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  selectModal: { width: "100%", maxWidth: 300, maxHeight: "60%", backgroundColor: colors.surfaceAlt },
   selectItem: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
   selectItemDiv: { borderTopWidth: 1, borderTopColor: colors.border },
   selectItemText: { color: colors.text, fontFamily: fontFamily.medium, fontSize: 15 },
