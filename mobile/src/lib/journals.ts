@@ -19,33 +19,14 @@ export type Trade = {
   createdAt: string; // ISO
 };
 
-// In-memory cache so navigating back to a screen doesn't re-read AsyncStorage
-// (a ~0.5s hit on every mount). Every write below keeps it in sync.
-let cache: Trade[] | null = null;
-
-/** Synchronous peek at the cache (null before the first load) so a screen can
- *  seed its initial state instantly instead of flashing empty on each open. */
-export function getCachedTrades(): Trade[] | null {
-  return cache;
-}
-
 export async function loadTrades(): Promise<Trade[]> {
-  if (cache) return cache;
   try {
     const raw = await AsyncStorage.getItem(JOURNALS_KEY);
     const arr = raw ? JSON.parse(raw) : [];
-    cache = Array.isArray(arr) ? arr : [];
+    return Array.isArray(arr) ? arr : [];
   } catch {
-    cache = [];
+    return [];
   }
-  return cache;
-}
-
-// Write trades to disk, then refresh the cache — so the cache only ever holds
-// data that actually persisted (never ahead of disk on a failed write).
-async function persist(trades: Trade[]): Promise<void> {
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
-  cache = trades;
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
@@ -73,18 +54,12 @@ function dedupe(trades: Trade[]): Trade[] {
 
 export async function addTrade(t: Trade): Promise<void> {
   const trades = await loadTrades();
-  await persist(dedupe([...trades, t]));
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(dedupe([...trades, t])));
 }
 
 export async function deleteTrade(id: string): Promise<void> {
   const trades = await loadTrades();
-  await persist(trades.filter((t) => t.id !== id));
-}
-
-/** Wipe every trade (used by Settings) — clears the cache too. */
-export async function clearTrades(): Promise<void> {
-  cache = [];
-  await AsyncStorage.removeItem(JOURNALS_KEY);
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades.filter((t) => t.id !== id)));
 }
 
 // CSV export columns — same order/fields as the Trades Logs sheet (no id/createdAt).
@@ -179,6 +154,6 @@ export function csvToTrades(csv: string): Trade[] {
 export async function importTrades(incoming: Trade[]): Promise<number> {
   const existing = await loadTrades();
   const merged = dedupe([...existing, ...incoming]);
-  await persist(merged);
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(merged));
   return merged.length - existing.length;
 }

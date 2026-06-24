@@ -25,7 +25,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
+import { csvToTrades, deleteTrade, importTrades, loadTrades, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -53,12 +53,7 @@ const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
 export function TradesLogsScreen() {
-  // Seed from the in-memory cache (warmed by Home on launch) so re-opening this
-  // page shows the logs immediately instead of flashing empty for ~0.5s.
-  const [trades, setTrades] = useState<Trade[] | null>(() => {
-    const c = getCachedTrades();
-    return c ? [...c].reverse() : null;
-  });
+  const [trades, setTrades] = useState<Trade[] | null>(null);
   const [active, setActive] = useState<Trade | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -201,7 +196,13 @@ export function TradesLogsScreen() {
           </ScrollView>
         </View>
 
-        {list.length === 0 ? (
+        {trades === null ? (
+          // Loading: the loader's pulse is native-driven, so it keeps animating
+          // smoothly even while a large table renders behind it.
+          <View style={styles.loadingInFrame}>
+            <BrutalLoader label="LOADING" />
+          </View>
+        ) : list.length === 0 ? (
           <View style={styles.emptyInFrame}>
             <Text style={styles.emptyText}>No trades yet.</Text>
             <Text style={styles.emptySub}>Log one with ✎ — or import a CSV ↑.</Text>
@@ -591,6 +592,7 @@ const styles = StyleSheet.create({
 
   reportOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center" },
   emptyInFrame: { paddingVertical: spacing.xxl, alignItems: "center" },
+  loadingInFrame: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },
 
