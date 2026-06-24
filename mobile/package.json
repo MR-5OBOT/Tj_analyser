@@ -7,7 +7,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "web": "expo start --web",
-    "build:apk": "../scripts/eas-build.sh"
+    "build:apk": "../scripts/eas-build.sh",
+    "test:db": "node scripts/db-smoke.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/space-grotesk": "^0.4.1",
