@@ -117,6 +117,23 @@ const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { max
 // Risk in account currency: a flat $ amount, or a % of the account.
 const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
 
+// Pair -> pip value per 1.0 lot (USD account). USD-quote majors are exactly $10;
+// JPY/cross/metals depend on price, so these are close defaults (editable).
+const fx = (label: string, value: string): Option => ({ label, fill: { value } });
+const FOREX_SYMBOLS: Option[] = [
+  fx("EURUSD", "10"),
+  fx("GBPUSD", "10"),
+  fx("AUDUSD", "10"),
+  fx("NZDUSD", "10"),
+  fx("USDJPY", "6.7"),
+  fx("USDCAD", "7.4"),
+  fx("USDCHF", "11"),
+  fx("EURJPY", "6.7"),
+  fx("GBPJPY", "6.7"),
+  fx("XAUUSD", "10"),
+  { label: "Custom" },
+];
+
 // Futures contract -> point value, exchange-standard. Selecting fills the value
 // (and the stop unit) into the form. CFDs vary by broker, so those are typed.
 const fut = (label: string, value: string): Option => ({ label, fill: { value, unit: "points" } });
@@ -146,10 +163,11 @@ export const TOOLS: Calc[] = [
       {
         key: "forex",
         label: "Forex",
-        blurb: "Currency pairs — stop in pips, pip value per 1.0 lot (USD-quote majors ≈ $10).",
+        blurb: "Pick a pair — pip value per 1.0 lot auto-fills (USD-quote majors = $10; JPY/cross/metals approximate, editable).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "symbol", label: "Pair", default: "EURUSD", options: FOREX_SYMBOLS },
           { key: "stop", label: "Stop", suffix: "pips", default: "20" },
           { key: "value", label: "Pip value $ / lot", default: "10" },
         ],
