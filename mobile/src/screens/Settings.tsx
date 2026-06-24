@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Updates from "expo-updates";
@@ -9,7 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
-import { clearTrades, JOURNALS_KEY, loadTrades, tradesToCsv } from "../lib/journals";
+import { clearTrades, countTrades, getAllTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
 // Brutalist surfaces: zero radius, hand-drawn grey borders, light-grey hero button.
@@ -62,14 +61,8 @@ function DataAndAbout() {
   const [storedCount, setStoredCount] = useState(0);
   const [busy, setBusy] = useState<string | null>(null); // blocking-loader label (null = idle)
 
-  const loadCount = useCallback(async () => {
-    try {
-      const raw = await AsyncStorage.getItem(JOURNALS_KEY);
-      const trades = raw ? JSON.parse(raw) : [];
-      setStoredCount(Array.isArray(trades) ? trades.length : 0);
-    } catch {
-      setStoredCount(0);
-    }
+  const loadCount = useCallback(() => {
+    setStoredCount(countTrades());
   }, []);
 
   useEffect(() => {
@@ -78,7 +71,7 @@ function DataAndAbout() {
 
   const exportJournals = useCallback(async () => {
     try {
-      const trades = await loadTrades();
+      const trades = getAllTrades();
       if (trades.length === 0) {
         Alert.alert("Nothing to export", "You haven't journaled any trades yet.");
         return;

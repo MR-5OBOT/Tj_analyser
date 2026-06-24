@@ -1,4 +1,4 @@
-import { Trade } from "./journals";
+import { StatsRow } from "./journals";
 
 export type Tone = "neutral" | "positive" | "negative";
 export type Stat = { label: string; value: string; tone: Tone };
@@ -17,8 +17,8 @@ export type Dashboard = {
 // cached trades array, so the second caller reuses the first's result instead of
 // re-scanning 5k rows. Invalidates automatically when the array ref changes (any
 // add/import/delete swaps in a new array).
-let memo: { trades: Trade[]; out: Dashboard } | null = null;
-export function buildDashboard(trades: Trade[]): Dashboard {
+let memo: { trades: StatsRow[]; out: Dashboard } | null = null;
+export function buildDashboard(trades: StatsRow[]): Dashboard {
   if (memo && memo.trades === trades) return memo.out;
   const out = computeDashboard(trades);
   memo = { trades, out };
@@ -26,7 +26,7 @@ export function buildDashboard(trades: Trade[]): Dashboard {
 }
 
 // Compute the whole dashboard from the real journal (R-only metrics).
-function computeDashboard(trades: Trade[]): Dashboard {
+function computeDashboard(trades: StatsRow[]): Dashboard {
   const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date)); // oldest first
   const rs = sorted.map((t) => t.rr ?? 0);
   const n = sorted.length;

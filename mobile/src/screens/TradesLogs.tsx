@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -24,7 +24,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { BrutalLoader, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { csvToTrades, deleteTrade, getCachedTrades, importTrades, loadTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
+import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, getTotalR, importTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -56,12 +56,15 @@ const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
 // memo: no props — must not re-render on a tab switch (keep-alive nav).
+// Rows fetched per page from SQLite as the list scrolls — the table never holds
+// the whole journal in JS, so any row count opens instantly and stays light.
+const PAGE = 50;
+
 export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
-  // Seed from the in-memory cache (newest first) so re-opening is instant.
-  const [trades, setTrades] = useState<Trade[] | null>(() => {
-    const c = getCachedTrades();
-    return c ? [...c].reverse() : null;
-  });
+  const [rows, setRows] = useState<Trade[] | null>(null); // loaded pages (newest first)
+  const [total, setTotal] = useState(0); // full count (from COUNT, not loaded rows)
+  const [totalR, setTotalR] = useState(0); // full R sum (from SUM)
+  const loadedRef = useRef(0);
   const [active, setActive] = useState<Trade | null>(null);
   const [importing, setImporting] = useState(false);
   const [warning, setWarning] = useState(false);
@@ -72,9 +75,23 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
 
+  // Refresh the currently-loaded window from the DB (after a write, or on mount).
   const reload = useCallback(() => {
-    loadTrades().then((t) => setTrades([...t].reverse()));
+    const refreshed = getPage(Math.max(PAGE, loadedRef.current), 0);
+    loadedRef.current = refreshed.length;
+    setRows(refreshed);
+    setTotal(countTrades());
+    setTotalR(getTotalR());
   }, []);
+  // Append the next page when the list nears its end.
+  const loadMore = useCallback(() => {
+    if (loadedRef.current >= total) return;
+    const next = getPage(PAGE, loadedRef.current);
+    if (next.length) {
+      loadedRef.current += next.length;
+      setRows((r) => [...(r ?? []), ...next]);
+    }
+  }, [total]);
   // Load once, then refresh on any journal write (own import/delete, or an
   // Add-trade / Settings-clear from another kept-alive screen).
   useEffect(() => {
@@ -83,7 +100,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   }, [reload]);
 
   const exportCsv = async () => {
-    const all = await loadTrades();
+    const all = getAllTrades();
     if (all.length === 0) {
       Alert.alert("Nothing to export", "You haven't logged any trades yet.");
       return;
@@ -103,7 +120,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
 
   // Build a PDF report straight from the in-app journal (no file picking).
   const reportFromLogs = async () => {
-    const all = await loadTrades();
+    const all = getAllTrades();
     if (all.length === 0) {
       Alert.alert("No trades", "Log some trades first.");
       return;
@@ -183,11 +200,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // ponytail: share is stubbed — wire up the actual share later.
   const shareRow = () => setMenuTrade(null);
 
-  const list = trades ?? [];
-  const totalR = useMemo(
-    () => list.filter((t) => t.rr != null).reduce((s, t) => s + (t.rr as number), 0),
-    [trades], // list is derived from trades; recompute only when the journal changes
-  );
+  const list = rows ?? []; // loaded pages; `total`/`totalR` are whole-journal aggregates
 
   return (
     <View style={styles.root}>
@@ -195,7 +208,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
         <View style={styles.titleLeft}>
           <Text style={styles.title}>RAW DATA TABLE</Text>
           <Text style={styles.titleSub}>
-            {list.length} {list.length === 1 ? "entry" : "entries"}
+            {total} {total === 1 ? "entry" : "entries"}
             {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}
           </Text>
         </View>
@@ -212,12 +225,12 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       <View style={styles.tableFrame} onLayout={(e) => setFrameH(e.nativeEvent.layout.height)}>
         <SketchBorder straight seed={770} />
 
-        {trades === null ? (
+        {rows === null ? (
           // Loading: the loader's pulse is native-driven, so it stays smooth.
           <View style={styles.loadingInFrame}>
             <BrutalLoader label="LOADING" />
           </View>
-        ) : list.length === 0 ? (
+        ) : total === 0 ? (
           <View style={styles.emptyInFrame}>
             <Text style={styles.emptyText}>No trades yet.</Text>
             <Text style={styles.emptySub}>Log one with ✎ — or import a CSV ↑.</Text>
@@ -246,6 +259,8 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
                 initialNumToRender={20}
                 windowSize={11}
                 removeClippedSubviews
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.6}
                 getItemLayout={(_, index) => ({ length: ROW_H, offset: ROW_H * index, index })}
                 contentContainerStyle={{ paddingBottom: spacing.md }}
                 renderItem={({ item, index }) => (

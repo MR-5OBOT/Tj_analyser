@@ -1,9 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SQLite from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { InteractionManager } from "react-native";
 
-// Same key Settings.tsx reads/exports/clears — keep them in sync.
+// Legacy AsyncStorage blob key — now only a one-time migration source (see below).
 export const JOURNALS_KEY = "tj.journals";
+const MIGRATED_KEY = "tj.sqlite.migrated";
 
 // Hard cap on rows taken from a single uploaded CSV — anything past this is dropped.
 export const MAX_IMPORT_ROWS = 5000;
@@ -24,20 +26,60 @@ export type Trade = {
   createdAt: string; // ISO
 };
 
-// Single in-memory source of truth: parse the journal from disk once, then keep
-// it. Every write below keeps it in sync, so screens never re-parse the blob.
-let cache: Trade[] | null = null;
+// The only columns the dashboard needs — queried light so launch never has to
+// materialize full rows just to compute stats.
+export type StatsRow = Pick<Trade, "date" | "rr" | "outcome" | "positionSize">;
 
-/** Synchronous peek at the cache (null before the first load) so a screen can
- *  seed its initial state instantly instead of flashing empty on each open. */
-export function getCachedTrades(): Trade[] | null {
-  return cache;
+// ---------------------------------------------------------------------------
+// SQLite storage. Rows live in a table, so reads touch only what's needed (a
+// page of rows, a count, an aggregate) and writes are per-row — no whole-journal
+// parse on launch, no whole-blob rewrite on every add/delete.
+// ---------------------------------------------------------------------------
+const db = SQLite.openDatabaseSync("tj.db");
+
+// Explicit column list (no internal dedupe_key) so SELECT * never leaks it.
+const COLS = "id,date,instrument,direction,rr,slSize,positionSize,entryTime,outcome,tradeLink,tag,notes,createdAt";
+
+db.execSync(`
+  PRAGMA journal_mode = WAL;
+  CREATE TABLE IF NOT EXISTS trades (
+    id TEXT PRIMARY KEY NOT NULL,
+    date TEXT NOT NULL, instrument TEXT, direction TEXT,
+    rr REAL, slSize REAL, positionSize REAL,
+    entryTime TEXT, outcome TEXT, tradeLink TEXT, tag TEXT, notes TEXT, createdAt TEXT,
+    dedupe_key TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(date);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_dedupe ON trades(dedupe_key);
+`);
+
+const INSERT_SQL = `INSERT OR REPLACE INTO trades
+  (id,date,instrument,direction,rr,slSize,positionSize,entryTime,outcome,tradeLink,tag,notes,createdAt,dedupe_key)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+
+const insertParams = (t: Trade) => [
+  t.id, t.date, t.instrument, t.direction, t.rr, t.slSize, t.positionSize,
+  t.entryTime, t.outcome, t.tradeLink, t.tag, t.notes, t.createdAt, tradeKey(t),
+];
+
+function insertMany(trades: Trade[]): void {
+  db.withTransactionSync(() => {
+    const stmt = db.prepareSync(INSERT_SQL);
+    try {
+      for (const t of trades) stmt.executeSync(insertParams(t));
+    } finally {
+      stmt.finalizeSync();
+    }
+  });
 }
 
-// Screens stay mounted (keep-alive nav), so they can't rely on a remount to pick
-// up new trades — they subscribe here and reload when any write changes the cache.
+// ---------------------------------------------------------------------------
+// Change notification — screens subscribe and refresh when the journal changes.
+// ---------------------------------------------------------------------------
 const listeners = new Set<() => void>();
-function emit() {
+let statsCache: StatsRow[] | null = null; // shared so Home + Reports build the dashboard once
+function emit(): void {
+  statsCache = null; // any write invalidates the derived-stats cache
   for (const fn of listeners) fn();
 }
 
@@ -50,48 +92,78 @@ export function subscribe(fn: () => void): () => void {
   };
 }
 
-/** Shared trade state for a screen: seeds from cache, loads once, and re-renders
- *  whenever the journal is written. */
-export function useTrades(): Trade[] | null {
-  const [trades, setTrades] = useState<Trade[] | null>(getCachedTrades);
-  useEffect(() => {
-    loadTrades().then(setTrades);
-    // Defer re-derivation off the interaction frame: a delete/import re-renders
-    // the visible screen immediately, while these (usually hidden) dashboard
-    // screens rebuild their stats/charts a tick later instead of freezing it.
-    return subscribe(() => InteractionManager.runAfterInteractions(() => setTrades(getCachedTrades())));
-  }, []);
-  return trades;
+// ---------------------------------------------------------------------------
+// Reads — each returns only what the caller needs.
+// ---------------------------------------------------------------------------
+/** One page of trades, newest first — for the virtualized Raw Data Table. */
+export function getPage(limit: number, offset: number): Trade[] {
+  return db.getAllSync<Trade>(
+    `SELECT ${COLS} FROM trades ORDER BY date DESC, createdAt DESC LIMIT ? OFFSET ?`,
+    [limit, offset],
+  );
 }
 
-export async function loadTrades(): Promise<Trade[]> {
-  if (cache) return cache;
+/** Total row count (native COUNT — no rows materialized). */
+export function countTrades(): number {
+  return db.getFirstSync<{ c: number }>("SELECT COUNT(*) AS c FROM trades")?.c ?? 0;
+}
+
+/** Sum of R across the whole journal (native SUM). */
+export function getTotalR(): number {
+  return db.getFirstSync<{ s: number }>("SELECT COALESCE(SUM(rr), 0) AS s FROM trades WHERE rr IS NOT NULL")?.s ?? 0;
+}
+
+/** Every trade (full rows) — for CSV export and the PDF report only. */
+export function getAllTrades(): Trade[] {
+  return db.getAllSync<Trade>(`SELECT ${COLS} FROM trades ORDER BY date`);
+}
+
+/** Light per-row columns the dashboard needs, cached + shared across screens. */
+export function getStatsRows(): StatsRow[] {
+  if (statsCache) return statsCache;
+  statsCache = db.getAllSync<StatsRow>("SELECT date, rr, outcome, positionSize FROM trades ORDER BY date");
+  return statsCache;
+}
+
+// ---------------------------------------------------------------------------
+// One-time migration: copy the old AsyncStorage blob into the table once, then
+// never again (a flag guards against re-importing after a Clear).
+// ---------------------------------------------------------------------------
+async function migrateFromLegacy(): Promise<void> {
   try {
+    if (await AsyncStorage.getItem(MIGRATED_KEY)) return;
     const raw = await AsyncStorage.getItem(JOURNALS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    cache = Array.isArray(arr) ? arr : [];
+    await AsyncStorage.setItem(MIGRATED_KEY, "1"); // mark done first, so it runs at most once
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr) && arr.length) {
+      insertMany(arr as Trade[]);
+      emit();
+    }
   } catch {
-    cache = [];
+    // A failed migration shouldn't break the app — worst case the old blob stays
+    // exportable and the user re-imports.
   }
-  return cache;
 }
+void migrateFromLegacy();
 
-// Optimistic write: update the in-memory cache and tell screens to refresh
-// *before* touching disk, so the UI never waits on a 5–10k-row stringify + write.
-// We yield a frame first so the visible screen paints the change, then flush to
-// disk in the background.
-// ponytail: cache can lead disk by one frame; if the app is killed in that window
-// a single just-made change could be lost. Fine for a personal journal — upgrade
-// path is SQLite (per-row writes) if that ever matters.
-async function persist(trades: Trade[]): Promise<void> {
-  cache = trades;
-  emit();
-  await new Promise<void>((r) => requestAnimationFrame(() => r()));
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
+// ---------------------------------------------------------------------------
+// Dashboard data hook — Home/Reports read the light stats rows and rebuild only
+// when the journal changes. Deferred so a mutation never blocks the visible screen.
+// ---------------------------------------------------------------------------
+export function useTrades(): StatsRow[] | null {
+  const [rows, setRows] = useState<StatsRow[] | null>(null);
+  useEffect(() => {
+    const load = () => InteractionManager.runAfterInteractions(() => setRows(getStatsRows()));
+    load();
+    return subscribe(load);
+  }, []);
+  return rows;
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
-// and internal id/createdAt are ignored).
+// and internal id/createdAt are ignored). Stored as a row's dedupe_key so the
+// UNIQUE index collapses duplicates, keeping the newest (INSERT OR REPLACE).
 function tradeKey(t: Trade): string {
   return [
     t.date.trim(),
@@ -105,28 +177,19 @@ function tradeKey(t: Trade): string {
   ].join("|");
 }
 
-// Collapse duplicates, keeping the LAST occurrence (the newly added/imported one)
-// while preserving each key's original position.
-function dedupe(trades: Trade[]): Trade[] {
-  const byKey = new Map<string, Trade>();
-  for (const t of trades) byKey.set(tradeKey(t), t);
-  return Array.from(byKey.values());
-}
-
 export async function addTrade(t: Trade): Promise<void> {
-  const trades = await loadTrades();
-  await persist(dedupe([...trades, t]));
+  db.runSync(INSERT_SQL, insertParams(t));
+  emit();
 }
 
 export async function deleteTrade(id: string): Promise<void> {
-  const trades = await loadTrades();
-  await persist(trades.filter((t) => t.id !== id));
+  db.runSync("DELETE FROM trades WHERE id = ?", [id]);
+  emit();
 }
 
-/** Wipe every trade (used by Settings) — clears the cache too. */
+/** Wipe every trade (used by Settings). */
 export async function clearTrades(): Promise<void> {
-  cache = [];
-  await AsyncStorage.removeItem(JOURNALS_KEY);
+  db.runSync("DELETE FROM trades");
   emit();
 }
 
@@ -218,11 +281,12 @@ export function csvToTrades(csv: string): Trade[] {
   });
 }
 
-// Merge imported trades into the journal, deduped on important columns
-// (imported rows win on conflict). Returns how many NEW unique rows were added.
+// Merge imported trades into the journal, deduped on important columns (imported
+// rows win on conflict via INSERT OR REPLACE). Returns how many NEW unique rows
+// were added.
 export async function importTrades(incoming: Trade[]): Promise<number> {
-  const existing = await loadTrades();
-  const merged = dedupe([...existing, ...incoming]);
-  await persist(merged);
-  return merged.length - existing.length;
+  const before = countTrades();
+  insertMany(incoming);
+  emit();
+  return countTrades() - before;
 }
