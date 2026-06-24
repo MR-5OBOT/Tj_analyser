@@ -113,8 +113,9 @@ function mulberry32(seed: number) {
 }
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—");
-// Lots / contracts: round DOWN to 1 decimal so you never size above your risk.
-const fmtSize = (n: number) => (Number.isFinite(n) ? (Math.floor(n * 10) / 10).toFixed(1) : "—");
+// Lots / contracts: round DOWN to 0.01 (micro-lot step) so you never size above
+// your risk. Display only — the underlying math is unchanged.
+const fmtSize = (n: number) => (Number.isFinite(n) ? (Math.floor(n * 100) / 100).toFixed(2) : "—");
 
 // Risk in account currency: a flat $ amount, or a % of the account.
 const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
