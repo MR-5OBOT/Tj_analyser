@@ -14,7 +14,7 @@ export type Trade = {
   entryTime: string; // HH:MM
   outcome: "win" | "loss" | "be";
   tradeLink: string;
-  tag: string; // market flag: CFD / Futures / Forex / …
+  tag: string; // market flag: CFDs / Futures / Forex / …
   notes: string;
   createdAt: string; // ISO
 };

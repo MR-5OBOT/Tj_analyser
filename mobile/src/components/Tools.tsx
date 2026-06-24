@@ -18,7 +18,7 @@ type Out = { label: string; value: string; tone?: Tone };
 type IconProps = { size: number; color: string };
 type Compute = (v: Record<string, number>, units: Record<string, string>) => Out[];
 // A tool is one set of fields, or several "variants" picked from a top segmented
-// menu (e.g. Position Sizer: CFD / Futures / Forex).
+// menu (e.g. Position Sizer: CFDs / Futures / Forex).
 type Variant = { key: string; label: string; blurb?: string; fields: Field[]; compute: Compute };
 export type Calc = {
   key: string;
@@ -164,8 +164,8 @@ export const TOOLS: Calc[] = [
     blurb: "Size a trade from your risk.",
     variants: [
       {
-        key: "cfd",
-        label: "CFD",
+        key: "cfds",
+        label: "CFDs",
         blurb: "Pick a symbol — pip value per 1.0 lot auto-fills. Use Custom for anything else (indices / metals / commodities).",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
