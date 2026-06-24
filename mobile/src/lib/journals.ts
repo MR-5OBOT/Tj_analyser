@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
+import { InteractionManager } from "react-native";
 
 // Same key Settings.tsx reads/exports/clears — keep them in sync.
 export const JOURNALS_KEY = "tj.journals";
@@ -55,7 +56,10 @@ export function useTrades(): Trade[] | null {
   const [trades, setTrades] = useState<Trade[] | null>(getCachedTrades);
   useEffect(() => {
     loadTrades().then(setTrades);
-    return subscribe(() => setTrades(getCachedTrades()));
+    // Defer re-derivation off the interaction frame: a delete/import re-renders
+    // the visible screen immediately, while these (usually hidden) dashboard
+    // screens rebuild their stats/charts a tick later instead of freezing it.
+    return subscribe(() => InteractionManager.runAfterInteractions(() => setTrades(getCachedTrades())));
   }, []);
   return trades;
 }
@@ -72,12 +76,18 @@ export async function loadTrades(): Promise<Trade[]> {
   return cache;
 }
 
-// Write to disk first, then refresh the cache — so the cache never holds data
-// that didn't actually persist.
+// Optimistic write: update the in-memory cache and tell screens to refresh
+// *before* touching disk, so the UI never waits on a 5–10k-row stringify + write.
+// We yield a frame first so the visible screen paints the change, then flush to
+// disk in the background.
+// ponytail: cache can lead disk by one frame; if the app is killed in that window
+// a single just-made change could be lost. Fine for a personal journal — upgrade
+// path is SQLite (per-row writes) if that ever matters.
 async function persist(trades: Trade[]): Promise<void> {
-  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
   cache = trades;
   emit();
+  await new Promise<void>((r) => requestAnimationFrame(() => r()));
+  await AsyncStorage.setItem(JOURNALS_KEY, JSON.stringify(trades));
 }
 
 // Two trades are "the same" when their important columns match (tag/link/notes
