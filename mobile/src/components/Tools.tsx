@@ -8,9 +8,12 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 import { PressButton, SketchBorder } from "./ui";
 
 type Tone = "neutral" | "good" | "bad";
-// `units` turns the field's suffix into an in-row dropdown; the picked unit is
-// passed to compute (keyed by field key).
-type Field = { key: string; label: string; suffix?: string; default: string; units?: string[] };
+// Selecting a symbol fills other fields (its value-per-unit, the stop's unit).
+type Option = { label: string; fill?: Record<string, string> };
+// A field is a numeric input, an in-row unit toggle (`units`, e.g. % / $), or a
+// select dropdown (`options`). `unitFrom` shows another val (e.g. the symbol's
+// stop unit) as the suffix.
+type Field = { key: string; label: string; suffix?: string; default: string; units?: string[]; options?: Option[]; unitFrom?: string };
 type Out = { label: string; value: string; tone?: Tone };
 type IconProps = { size: number; color: string };
 type Compute = (v: Record<string, number>, units: Record<string, string>) => Out[];
@@ -114,6 +117,38 @@ const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { max
 // Risk in account currency: a flat $ amount, or a % of the account.
 const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
 
+// Symbol -> { value per unit of move (per 1.0 lot), stop unit }. Selecting fills
+// those into the form. CFD values are broker ballparks (editable); futures point
+// values are exchange-standard.
+const cfd = (label: string, value: string, unit = "pips"): Option => ({ label, fill: { value, unit } });
+const fut = (label: string, value: string): Option => ({ label, fill: { value, unit: "points" } });
+const CFD_SYMBOLS: Option[] = [
+  cfd("EURUSD", "10"),
+  cfd("GBPUSD", "10"),
+  cfd("AUDUSD", "10"),
+  cfd("USDJPY", "6.7"),
+  cfd("XAUUSD", "10"),
+  cfd("US30", "1", "points"),
+  cfd("NAS100", "1", "points"),
+  cfd("SPX500", "1", "points"),
+  { label: "Custom" },
+];
+const FUTURES_SYMBOLS: Option[] = [
+  fut("MNQ", "2"),
+  fut("NQ", "20"),
+  fut("MES", "5"),
+  fut("ES", "50"),
+  fut("MYM", "0.5"),
+  fut("YM", "5"),
+  fut("M2K", "5"),
+  fut("RTY", "50"),
+  fut("MGC", "10"),
+  fut("GC", "100"),
+  fut("MCL", "100"),
+  fut("CL", "1000"),
+  { label: "Custom" },
+];
+
 // The pocket calculators behind the header menu. Pure formulas — no journal data.
 export const TOOLS: Calc[] = [
   {
@@ -121,41 +156,43 @@ export const TOOLS: Calc[] = [
     title: "Position Sizer",
     icon: "cube-outline",
     svg: (p) => <CalcOffIcon {...p} />,
-    blurb: "Size a trade from your risk — pick how you measure the stop.",
+    blurb: "Size a trade from your risk. Pick a symbol — its value-per-unit auto-fills (editable for your broker).",
     variants: [
       {
-        key: "per-unit",
-        label: "Per-unit",
-        blurb: "You know your loss per 1 unit — stocks / CFDs / crypto (e.g. $0.50 a share).",
+        key: "cfd",
+        label: "CFD",
         fields: [
           { key: "account", label: "Account size", default: "10000" },
           { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Loss / 1 unit", default: "0.5" },
-        ],
-        compute: (v, u) => {
-          const r = riskAmount(v, u);
-          return [
-            { label: "Risk amount", value: fmt(r) },
-            { label: "Position size", value: fmt(v.stop > 0 ? r / v.stop : 0), tone: "good" },
-          ];
-        },
-      },
-      {
-        key: "stop-value",
-        label: "Stop × value",
-        blurb: "Futures or forex — stop distance × the value of one unit of move (tick / point / pip).",
-        fields: [
-          { key: "account", label: "Account size", default: "10000" },
-          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
-          { key: "stop", label: "Stop", units: ["ticks", "points", "pips"], default: "40" },
-          { key: "value", label: "Value per unit $", default: "12.5" },
+          { key: "symbol", label: "Symbol", default: "EURUSD", options: CFD_SYMBOLS },
+          { key: "stop", label: "Stop", default: "20", unitFrom: "unit" },
+          { key: "value", label: "Value per unit $ / lot", default: "10" },
         ],
         compute: (v, u) => {
           const r = riskAmount(v, u);
           const per = v.stop * v.value;
           return [
             { label: "Risk amount", value: fmt(r) },
-            { label: "Position size", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+            { label: "Lots", value: fmt(per > 0 ? r / per : 0), tone: "good" },
+          ];
+        },
+      },
+      {
+        key: "futures",
+        label: "Futures",
+        fields: [
+          { key: "account", label: "Account size", default: "10000" },
+          { key: "risk", label: "Risk per trade", units: ["%", "$"], default: "1" },
+          { key: "symbol", label: "Contract", default: "MNQ", options: FUTURES_SYMBOLS },
+          { key: "stop", label: "Stop", default: "40", unitFrom: "unit" },
+          { key: "value", label: "Value per unit $ / contract", default: "2" },
+        ],
+        compute: (v, u) => {
+          const r = riskAmount(v, u);
+          const per = v.stop * v.value;
+          return [
+            { label: "Risk amount", value: fmt(r) },
+            { label: "Contracts", value: fmt(per > 0 ? r / per : 0), tone: "good" },
           ];
         },
       },
@@ -351,8 +388,48 @@ function CalcBody({ calc, onClose }: { calc: Calc; onClose: () => void }) {
   );
 }
 
+// Full-width select (e.g. the symbol list). Opens a scrollable list below the box.
+function SelectField({ value, options, onChange }: { value: string; options: Option[]; onChange: (o: Option) => void }) {
+  const [open, setOpen] = useState(false);
+  // Wrapper so the absolute menu anchors to the box, not the field label above it.
+  return (
+    <View>
+      <PressButton style={styles.selectBox} onPress={() => setOpen((o) => !o)}>
+        <Text style={styles.selectValue}>{value}</Text>
+        <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.textSubtle} />
+      </PressButton>
+      {open ? (
+        <View style={styles.selectMenu}>
+          <ScrollView style={styles.selectScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {options.map((o, i) => (
+              <PressButton
+                key={o.label}
+                style={[styles.selectItem, i > 0 && styles.selectItemDiv]}
+                onPress={() => {
+                  onChange(o);
+                  setOpen(false);
+                }}
+              >
+                <Text style={[styles.selectItemText, o.label === value && { color: colors.positive }]}>{o.label}</Text>
+              </PressButton>
+            ))}
+          </ScrollView>
+          <SketchBorder seed={2203} straight />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string; onClose: () => void }) {
-  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(variant.fields.map((f) => [f.key, f.default])));
+  const [vals, setVals] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = Object.fromEntries(variant.fields.map((f) => [f.key, f.default]));
+    // Apply the default-selected symbol's fills (value-per-unit, stop unit).
+    for (const f of variant.fields) {
+      if (f.options) Object.assign(o, (f.options.find((opt) => opt.label === o[f.key]) ?? f.options[0]).fill ?? {});
+    }
+    return o;
+  });
   const [units, setUnits] = useState<Record<string, string>>(() =>
     Object.fromEntries(variant.fields.filter((f) => f.units).map((f) => [f.key, f.units![0]])),
   );
@@ -373,22 +450,32 @@ function CalcForm({ variant, blurb, onClose }: { variant: Variant; blurb: string
           // Descending zIndex so an opened dropdown overlays the rows beneath it.
           <View key={f.key} style={[styles.field, { zIndex: variant.fields.length - idx }]}>
             <Text style={styles.fieldLabel}>{f.label}</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={styles.input}
+            {f.options ? (
+              <SelectField
                 value={vals[f.key]}
-                onChangeText={(t) => setVals((s) => ({ ...s, [f.key]: t.replace(/[^0-9.]/g, "") }))}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={colors.textSubtle}
-                selectionColor={colors.positive}
+                options={f.options}
+                onChange={(o) => setVals((s) => ({ ...s, [f.key]: o.label, ...(o.fill ?? {}) }))}
               />
-              {f.units ? (
-                <UnitDropdown value={units[f.key]} options={f.units} onChange={(u) => setUnits((s) => ({ ...s, [f.key]: u }))} />
-              ) : f.suffix ? (
-                <Text style={styles.suffix}>{f.suffix}</Text>
-              ) : null}
-            </View>
+            ) : (
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={vals[f.key]}
+                  onChangeText={(t) => setVals((s) => ({ ...s, [f.key]: t.replace(/[^0-9.]/g, "") }))}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={colors.textSubtle}
+                  selectionColor={colors.positive}
+                />
+                {f.units ? (
+                  <UnitDropdown value={units[f.key]} options={f.units} onChange={(u) => setUnits((s) => ({ ...s, [f.key]: u }))} />
+                ) : f.unitFrom ? (
+                  <Text style={styles.suffix}>{vals[f.unitFrom] ?? ""}</Text>
+                ) : f.suffix ? (
+                  <Text style={styles.suffix}>{f.suffix}</Text>
+                ) : null}
+              </View>
+            )}
           </View>
         ))}
         <View style={styles.outBox}>
@@ -447,6 +534,14 @@ const styles = StyleSheet.create({
   unitMenu: { position: "absolute", top: 46, right: -1, minWidth: 56, backgroundColor: colors.surfaceAlt, zIndex: 30 },
   unitItem: { paddingVertical: spacing.sm, alignItems: "center" },
   unitItemDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  // Full-width select (symbol list)
+  selectBox: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.borderSoft, paddingHorizontal: spacing.md, height: 46 },
+  selectValue: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 16 },
+  selectMenu: { position: "absolute", top: 46, left: 0, right: 0, maxHeight: 184, backgroundColor: colors.surfaceAlt, zIndex: 30 },
+  selectScroll: { flexGrow: 0 },
+  selectItem: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
+  selectItemDiv: { borderTopWidth: 1, borderTopColor: colors.border },
+  selectItemText: { color: colors.text, fontFamily: fontFamily.medium, fontSize: 15 },
   outBox: { marginTop: spacing.sm, backgroundColor: colors.surfaceAlt, padding: spacing.md, gap: spacing.sm },
   outRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   outLabel: { color: colors.textMuted, fontFamily: fontFamily.medium, fontSize: 13 },
