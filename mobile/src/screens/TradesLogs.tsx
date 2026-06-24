@@ -546,9 +546,14 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
         <Animated.View style={{ width: "100%", maxWidth: 360, opacity: a, transform: [{ scale }] }}>
           <Pressable style={styles.card} onPress={() => {}}>
             <SketchBorder seed={808} straight />
-            <Text style={styles.detailTitle}>
-              {trade.instrument} · {trade.direction?.toUpperCase() ?? "—"}
-            </Text>
+            <View style={styles.detailHead}>
+              <Text style={[styles.detailTitle, styles.detailTitleFlex]} numberOfLines={1}>
+                {trade.instrument} · {trade.direction?.toUpperCase() ?? "—"}
+              </Text>
+              <PressButton onPress={onClose} hitSlop={10}>
+                <Ionicons name="close" size={24} color={colors.textMuted} />
+              </PressButton>
+            </View>
             {rows.map(([k, v], i) => (
               <View key={k} style={[styles.detailRow, i > 0 && styles.detailDivider]}>
                 <Text style={styles.detailKey}>{k}</Text>
@@ -634,6 +639,8 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
   card: { backgroundColor: colors.surface, padding: spacing.lg },
   detailTitle: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15, marginBottom: spacing.md },
+  detailHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.md },
+  detailTitleFlex: { flex: 1, marginBottom: 0 },
   detailRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md, paddingVertical: spacing.sm },
   detailDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   detailKey: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 11, letterSpacing: 1 },

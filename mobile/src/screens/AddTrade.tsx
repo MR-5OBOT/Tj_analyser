@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { SketchBorder } from "../components/ui";
+import { BrutalLoader, SketchBorder } from "../components/ui";
 import { addTrade } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -97,6 +97,9 @@ export function AddTradeScreen({
   const save = async () => {
     if (saving || !draft.date || !draft.direction || !draft.outcome) return;
     setSaving(true);
+    // Let the loader overlay paint before addTrade's synchronous stringify of the
+    // whole journal blocks the JS thread (the ~0.5s delay on big journals).
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
       await addTrade({
         id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
@@ -152,6 +155,12 @@ export function AddTradeScreen({
           onPress={() => (last ? save() : setStep((s) => s + 1))}
         />
       </View>
+
+      <Modal visible={saving} transparent animationType="fade">
+        <View style={styles.savingOverlay}>
+          <BrutalLoader color={colors.text} label="SAVING" />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -565,6 +574,7 @@ const BTN_OFFSET = 4; // hard-shadow displacement for footer buttons
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  savingOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center" },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl },
 
   // Stepper
