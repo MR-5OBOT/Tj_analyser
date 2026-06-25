@@ -38,8 +38,32 @@ export type AnalyzeInput =
   | { kind: "file"; uri: string; name: string; mimeType?: string }
   | { kind: "url"; url: string };
 
-/** POST a journal (file or URL) to /api/analyze and return the report metadata. */
-export async function analyze(input: AnalyzeInput, timeoutMs = 180000): Promise<AnalyzeResponse> {
+// Live progress while the server works through its render queue (one at a time).
+export type AnalyzeProgress = { state: "queued" | "rendering"; position: number };
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+async function errorDetail(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (body?.detail) return typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+  } catch {
+    // non-JSON error body — fall through to the generic message
+  }
+  return `Server error (${res.status}).`;
+}
+
+/**
+ * Queue a journal for a PDF report and wait for it. The server renders one report
+ * at a time, so this POSTs to /api/analyze (which returns a job id + place in
+ * line) then polls /api/jobs/{id} until it's done. `onProgress` fires with the
+ * live queue position so the caller can show "in line — N ahead" / "rendering".
+ */
+export async function analyze(
+  input: AnalyzeInput,
+  onProgress?: (p: AnalyzeProgress) => void,
+  timeoutMs = 180000,
+): Promise<AnalyzeResponse> {
   const base = await getBaseUrl();
   if (!base) throw new ApiError("No backend URL set. Add it in Settings → Server.");
 
@@ -56,8 +80,9 @@ export async function analyze(input: AnalyzeInput, timeoutMs = 180000): Promise<
     } as unknown as Blob);
   }
 
+  // 1) Enqueue: the server reads/parses the file now and returns a job id + position.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), 60000); // covers upload + parse only
   let res: Response;
   try {
     res = await fetch(`${base}/api/analyze`, { method: "POST", body: form, signal: controller.signal });
@@ -69,16 +94,26 @@ export async function analyze(input: AnalyzeInput, timeoutMs = 180000): Promise<
   } finally {
     clearTimeout(timer);
   }
+  if (!res.ok) throw new ApiError(await errorDetail(res));
+  const queued = (await res.json()) as { job_id: string; state: AnalyzeProgress["state"]; position: number };
+  onProgress?.({ state: queued.state, position: queued.position });
 
-  if (!res.ok) {
-    let detail = `Server error (${res.status}).`;
+  // 2) Poll for the place in line, then the finished report.
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await sleep(1500);
+    let job: { state: string; position: number; result?: AnalyzeResponse; error?: string };
     try {
-      const body = (await res.json()) as { detail?: unknown };
-      if (body?.detail) detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-    } catch {
-      // non-JSON error body — keep the generic message
+      const s = await fetch(`${base}/api/jobs/${queued.job_id}`);
+      if (!s.ok) throw new ApiError(await errorDetail(s));
+      job = await s.json();
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new ApiError("Lost connection while waiting for the report.");
     }
-    throw new ApiError(detail);
+    if (job.state === "done" && job.result) return job.result;
+    if (job.state === "error") throw new ApiError(job.error ?? "Report generation failed.");
+    onProgress?.({ state: job.state as AnalyzeProgress["state"], position: job.position });
   }
-  return (await res.json()) as AnalyzeResponse;
+  throw new ApiError("Timed out waiting for the report. The server may be overloaded.");
 }

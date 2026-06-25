@@ -131,7 +131,17 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     try {
       const uri = `${FileSystem.cacheDirectory}trades.csv`;
       await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
-      const res = await analyze({ kind: "file", uri, name: "trades.csv", mimeType: "text/csv" });
+      const res = await analyze(
+        { kind: "file", uri, name: "trades.csv", mimeType: "text/csv" },
+        (p) =>
+          setBusy(
+            p.state === "rendering"
+              ? "RENDERING YOUR REPORT"
+              : p.position > 0
+                ? `IN LINE · ${p.position} AHEAD`
+                : "GENERATING REPORT",
+          ),
+      );
       const base = await getBaseUrl();
       const { cacheUri } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
       // Auto-open is best-effort — the report is already saved to Downloads.
