@@ -4,17 +4,16 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
+import { expectancy, Out, positionSize, requiredRR, requiredWinRate, simulate } from "../lib/calculators";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 import { PressButton, SketchBorder } from "./ui";
 
-type Tone = "neutral" | "good" | "bad";
 // Selecting a symbol fills other fields (its value-per-unit, the stop's unit).
 type Option = { label: string; fill?: Record<string, string> };
 // A field is a numeric input, an in-row unit toggle (`units`, e.g. % / $), or a
 // select dropdown (`options`). `unitFrom` shows another val (e.g. the symbol's
 // stop unit) as the suffix.
 type Field = { key: string; label: string; suffix?: string; default: string; units?: string[]; options?: Option[]; unitFrom?: string };
-type Out = { label: string; value: string; tone?: Tone };
 type IconProps = { size: number; color: string };
 type Compute = (v: Record<string, number>, units: Record<string, string>) => Out[];
 // A tool is one set of fields, or several "variants" picked from a top segmented
@@ -100,26 +99,6 @@ function PercentIcon({ size, color }: IconProps) {
   );
 }
 
-// Deterministic RNG so a given simulator input always draws the same run.
-function mulberry32(seed: number) {
-  let t = seed >>> 0;
-  return () => {
-    t += 0x6d2b79f5;
-    let x = t;
-    x = Math.imul(x ^ (x >>> 15), x | 1);
-    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
-    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—");
-// Lots / contracts: round DOWN to 0.01 (micro-lot step) so you never size above
-// your risk. Display only — the underlying math is unchanged.
-const fmtSize = (n: number) => (Number.isFinite(n) ? (Math.floor(n * 100) / 100).toFixed(2) : "—");
-
-// Risk in account currency: a flat $ amount, or a % of the account.
-const riskAmount = (v: Record<string, number>, u: Record<string, string>) => (u.risk === "$" ? v.risk : v.account * (v.risk / 100));
-
 // Pair -> pip value per 1.0 lot (USD account). USD-quote majors are exactly $10;
 // JPY/cross/metals depend on price, so these are close defaults (editable).
 const fx = (label: string, value: string): Option => ({ label, fill: { value } });
@@ -174,14 +153,7 @@ export const TOOLS: Calc[] = [
           { key: "stop", label: "Stop", suffix: "pips", default: "20" },
           { key: "value", label: "Pip value $ / lot", default: "10" },
         ],
-        compute: (v, u) => {
-          const r = riskAmount(v, u);
-          const per = v.stop * v.value;
-          return [
-            { label: "Risk amount", value: fmt(r) },
-            { label: "Lots", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
-          ];
-        },
+        compute: (v, u) => positionSize(v, u, "Lots"),
       },
       {
         key: "futures",
@@ -194,14 +166,7 @@ export const TOOLS: Calc[] = [
           { key: "stop", label: "Stop", default: "40", unitFrom: "unit" },
           { key: "value", label: "Value per unit $ / contract", default: "2" },
         ],
-        compute: (v, u) => {
-          const r = riskAmount(v, u);
-          const per = v.stop * v.value;
-          return [
-            { label: "Risk amount", value: fmt(r) },
-            { label: "Contracts", value: fmtSize(per > 0 ? r / per : 0), tone: "good" },
-          ];
-        },
+        compute: (v, u) => positionSize(v, u, "Contracts"),
       },
     ],
   },
@@ -216,28 +181,7 @@ export const TOOLS: Calc[] = [
       { key: "rr", label: "Reward : Risk", suffix: ": 1", default: "2" },
       { key: "n", label: "Trades", default: "100" },
     ],
-    compute: (v) => {
-      const n = Math.max(1, Math.min(2000, Math.round(v.n)));
-      const p = v.wr / 100;
-      const rnd = mulberry32(Math.round((v.wr + 1) * 1000 + v.rr * 97 + n));
-      let cum = 0;
-      let peak = 0;
-      let dd = 0;
-      let wins = 0;
-      for (let i = 0; i < n; i++) {
-        if (rnd() < p) {
-          cum += v.rr;
-          wins++;
-        } else cum -= 1;
-        peak = Math.max(peak, cum);
-        dd = Math.min(dd, cum - peak);
-      }
-      return [
-        { label: "Final", value: `${cum >= 0 ? "+" : ""}${cum.toFixed(1)}R`, tone: cum >= 0 ? "good" : "bad" },
-        { label: "Wins", value: `${wins} / ${n}` },
-        { label: "Max drawdown", value: `${dd.toFixed(1)}R`, tone: "bad" },
-      ];
-    },
+    compute: simulate,
   },
   {
     key: "required-winrate",
@@ -246,10 +190,7 @@ export const TOOLS: Calc[] = [
     svg: (p) => <PercentIcon {...p} />,
     blurb: "The win rate you need just to break even at a given reward:risk.",
     fields: [{ key: "rr", label: "Reward : Risk", suffix: ": 1", default: "2" }],
-    compute: (v) => {
-      const be = v.rr > 0 ? 100 / (1 + v.rr) : 0;
-      return [{ label: "Break-even win rate", value: `${be.toFixed(1)}%`, tone: "good" }];
-    },
+    compute: requiredWinRate,
   },
   {
     key: "required-rr",
@@ -258,10 +199,7 @@ export const TOOLS: Calc[] = [
     svg: (p) => <LetterRIcon {...p} />,
     blurb: "The reward:risk you need to break even at a given win rate.",
     fields: [{ key: "wr", label: "Win rate", suffix: "%", default: "50" }],
-    compute: (v) => {
-      const rr = v.wr > 0 && v.wr < 100 ? (100 - v.wr) / v.wr : 0;
-      return [{ label: "Break-even R:R", value: `${rr.toFixed(2)} : 1`, tone: "good" }];
-    },
+    compute: requiredRR,
   },
   {
     key: "expectancy",
@@ -273,11 +211,7 @@ export const TOOLS: Calc[] = [
       { key: "win", label: "Avg win", suffix: "R", default: "2" },
       { key: "loss", label: "Avg loss", suffix: "R", default: "1" },
     ],
-    compute: (v) => {
-      const p = v.wr / 100;
-      const exp = p * v.win - (1 - p) * v.loss;
-      return [{ label: "Expectancy / trade", value: `${exp >= 0 ? "+" : ""}${exp.toFixed(2)}R`, tone: exp >= 0 ? "good" : "bad" }];
-    },
+    compute: expectancy,
   },
 ];
 

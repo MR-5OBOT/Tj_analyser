@@ -10,7 +10,8 @@
     "build:apk": "../scripts/eas-build.sh",
     "test:db": "node scripts/db-smoke.mjs",
     "test:dash": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/dashboard-smoke.mjs",
-    "test": "npm run test:db && npm run test:dash"
+    "test:tools": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/tools-smoke.mjs",
+    "test": "npm run test:db && npm run test:dash && npm run test:tools"
   },
   "dependencies": {
     "@expo-google-fonts/space-grotesk": "^0.4.1",
