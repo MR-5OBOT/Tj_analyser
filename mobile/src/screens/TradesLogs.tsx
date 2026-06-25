@@ -22,9 +22,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
+import { InfoTriangleIcon, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, getTotalR, importTrades, MAX_IMPORT_ROWS, MAX_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
+import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, importTrades, MAX_IMPORT_ROWS, MAX_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -55,6 +55,17 @@ const fmtDate = (iso: string) => iso.replace(/-/g, "/");
 const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
   a === "left" ? "flex-start" : a === "right" ? "flex-end" : "center";
 
+// Shown by the ⚠-icon button next to ACTIONS — the "raw data protocol": how the
+// table's data is bounded and managed. Counts come from the live caps so the text
+// can never drift out of sync with the actual limits.
+const PROTOCOL_TEXT =
+  `Your full journal — every logged or imported trade, newest first.\n\n` +
+  `• Capacity: the table keeps up to ${MAX_ROWS.toLocaleString()} trades on this device.\n\n` +
+  `• Imports: a CSV import reads up to ${MAX_IMPORT_ROWS.toLocaleString()} rows per file; anything past that in a larger file is skipped.\n\n` +
+  `• Auto-trim: when adding or importing pushes you over ${MAX_ROWS.toLocaleString()}, the oldest trades — the bottom rows — drop off so the newest ${MAX_ROWS.toLocaleString()} always stay.\n\n` +
+  `• No duplicates: identical trades (same date, symbol, direction, entry time, size, outcome and R) merge into one automatically.\n\n` +
+  `• On-device: this data never leaves your phone.`;
+
 // memo: no props — must not re-render on a tab switch (keep-alive nav).
 // Rows fetched per page from SQLite as the list scrolls — the table never holds
 // the whole journal in JS, so any row count opens instantly and stays light.
@@ -65,7 +76,6 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // rows immediately — no "LOADING" flash. The mount effect just re-confirms + subscribes.
   const [rows, setRows] = useState<Trade[]>(() => getPage(PAGE, 0)); // loaded pages (newest first)
   const [total, setTotal] = useState(countTrades); // full count (from COUNT, not loaded rows)
-  const [totalR, setTotalR] = useState(getTotalR); // full R sum (from SUM)
   const loadedRef = useRef(rows.length);
   const [active, setActive] = useState<Trade | null>(null);
   const [importing, setImporting] = useState(false);
@@ -74,6 +84,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // One blocking-loader label for every whole-journal op (null = idle).
   const [busy, setBusy] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [protocolOpen, setProtocolOpen] = useState(false); // "raw data — how it works" info modal
   const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
 
@@ -83,7 +94,6 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     loadedRef.current = refreshed.length;
     setRows(refreshed);
     setTotal(countTrades());
-    setTotalR(getTotalR());
   }, []);
   // Append the next page when the list nears its end.
   const loadMore = useCallback(() => {
@@ -208,7 +218,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // ponytail: share is stubbed — wire up the actual share later.
   const shareRow = () => setMenuTrade(null);
 
-  const list = rows; // loaded pages; `total`/`totalR` are whole-journal aggregates
+  const list = rows; // loaded pages; `total` is the whole-journal count
 
   return (
     <View style={styles.root}>
@@ -217,10 +227,12 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
           <Text style={styles.title}>RAW DATA TABLE</Text>
           <Text style={styles.titleSub}>
             {total} {total === 1 ? "entry" : "entries"}
-            {totalR !== 0 ? `  ·  ${totalR > 0 ? "+" : ""}${totalR.toFixed(1)}R` : ""}
           </Text>
         </View>
         <View style={styles.actionsWrap}>
+          <PressButton style={styles.infoBtn} onPress={() => setProtocolOpen(true)} hitSlop={8}>
+            <InfoTriangleIcon size={21} color={colors.textMuted} />
+          </PressButton>
           <PressButton style={styles.actionsBtn} onPress={() => setActionsOpen(true)}>
             <SketchBorder seed={771} straight />
             <Text style={styles.actionsBtnText}>ACTIONS</Text>
@@ -325,6 +337,21 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
 
       <RowMenu trade={menuTrade} onClose={() => setMenuTrade(null)} onShare={shareRow} onDelete={deleteRow} />
       <TradeDetail trade={active} onClose={() => setActive(null)} />
+
+      <Modal visible={protocolOpen} transparent animationType="fade" onRequestClose={() => setProtocolOpen(false)}>
+        <Pressable style={styles.overlay} onPress={() => setProtocolOpen(false)}>
+          <Pressable style={styles.protocolCard} onPress={() => {}}>
+            <SketchBorder seed={772} straight />
+            <Text style={styles.detailTitle}>RAW DATA · HOW IT WORKS</Text>
+            <ScrollView style={styles.protocolScroll} showsVerticalScrollIndicator={false}>
+              <Text style={styles.protocolBody}>{PROTOCOL_TEXT}</Text>
+            </ScrollView>
+            <Pressable style={styles.linkBtn} onPress={() => setProtocolOpen(false)}>
+              <Text style={styles.linkBtnText}>GOT IT</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <LoaderOverlay visible={!!busy} label={busy ?? ""} />
     </View>
@@ -614,7 +641,8 @@ const styles = StyleSheet.create({
 
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
   titleLeft: { gap: 1 },
-  actionsWrap: { marginRight: spacing.md, transform: [{ rotate: "-1deg" }] },
+  actionsWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginRight: spacing.md, transform: [{ rotate: "-1deg" }] },
+  infoBtn: { padding: 2 },
   actionsBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, backgroundColor: colors.surfaceAlt, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   actionsBtnText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 12, letterSpacing: 1 },
   actOverlay: { flex: 1, alignItems: "flex-end", paddingHorizontal: spacing.xl },
@@ -671,6 +699,9 @@ const styles = StyleSheet.create({
 
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
   card: { backgroundColor: colors.surface, padding: spacing.lg },
+  protocolCard: { width: "100%", maxWidth: 360, maxHeight: "78%", backgroundColor: colors.surface, padding: spacing.lg },
+  protocolScroll: { flexGrow: 0, flexShrink: 1, marginTop: spacing.xs },
+  protocolBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13.5, lineHeight: 21 },
   detailTitle: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15, marginBottom: spacing.md },
   detailHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.md },
   detailTitleFlex: { flex: 1, marginBottom: 0 },
