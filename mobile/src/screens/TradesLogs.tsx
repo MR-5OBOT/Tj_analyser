@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { SHARE_SIZES, TradeShareCard } from "../components/TradeShareCard";
+import { STORY, TradeShareCard } from "../components/TradeShareCard";
 import { InfoTriangleIcon, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { exportStamp, saveToExports } from "../lib/exports";
@@ -88,8 +88,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false); // "raw data — how it works" info modal
   const [shareTarget, setShareTarget] = useState<Trade | null>(null); // trade being rendered to a share image
-  const shareStoryRef = useRef<React.ElementRef<typeof Svg>>(null);
-  const shareSquareRef = useRef<React.ElementRef<typeof Svg>>(null);
+  const shareCardRef = useRef<React.ElementRef<typeof Svg>>(null);
   const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
 
@@ -132,14 +131,12 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       try {
         // let the off-screen SVGs lay out before capturing (avoids a blank frame)
         await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-        const story = await capture(shareStoryRef.current, SHARE_SIZES["9:16"].w, SHARE_SIZES["9:16"].h);
-        const square = await capture(shareSquareRef.current, SHARE_SIZES["1:1"].w, SHARE_SIZES["1:1"].h);
+        const png = await capture(shareCardRef.current, STORY.w, STORY.h);
         const base = exportStamp(`TJ-${(t.instrument || "trade").replace(/[^A-Za-z0-9]/g, "") || "trade"}`);
-        const savedTo = await saveToExports(`${base}-story`, "image/png", { kind: "base64", data: story });
-        await saveToExports(`${base}-square`, "image/png", { kind: "base64", data: square });
-        // share sheet needs a file uri — drop the story PNG into cache and share it
-        const cacheUri = `${FileSystem.cacheDirectory}${base}-story.png`;
-        await FileSystem.writeAsStringAsync(cacheUri, story, { encoding: FileSystem.EncodingType.Base64 });
+        const savedTo = await saveToExports(base, "image/png", { kind: "base64", data: png });
+        // share sheet needs a file uri — drop the PNG into cache and share it
+        const cacheUri = `${FileSystem.cacheDirectory}${base}.png`;
+        await FileSystem.writeAsStringAsync(cacheUri, png, { encoding: FileSystem.EncodingType.Base64 });
         if (cancelled) return;
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(cacheUri, { mimeType: "image/png", dialogTitle: "Share trade" });
@@ -266,7 +263,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     ]);
   };
 
-  // Share a trade as a social-ready image (story + square): mount the off-screen
+  // Share a trade as a social-ready 9:16 image: mount the off-screen
   // SVG cards, then the effect above captures → saves to TJ ANALYZER → share sheet.
   const shareRow = (t: Trade) => {
     setMenuTrade(null);
@@ -410,8 +407,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
 
       {shareTarget ? (
         <View style={styles.offscreen} pointerEvents="none">
-          <TradeShareCard ref={shareStoryRef} trade={shareTarget} ratio="9:16" />
-          <TradeShareCard ref={shareSquareRef} trade={shareTarget} ratio="1:1" />
+          <TradeShareCard ref={shareCardRef} trade={shareTarget} />
         </View>
       ) : null}
 
