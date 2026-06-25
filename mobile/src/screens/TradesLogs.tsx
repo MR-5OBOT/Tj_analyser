@@ -22,8 +22,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
+import { TradeShareCard } from "../components/TradeShareCard";
 import { InfoTriangleIcon, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
+import { exportStamp, saveToExports } from "../lib/exports";
 import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, importTrades, MAX_IMPORT_ROWS, MAX_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -85,6 +87,9 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [protocolOpen, setProtocolOpen] = useState(false); // "raw data — how it works" info modal
+  const [shareTarget, setShareTarget] = useState<Trade | null>(null); // trade being rendered to a share image
+  const shareStoryRef = useRef<React.ElementRef<typeof Svg>>(null);
+  const shareSquareRef = useRef<React.ElementRef<typeof Svg>>(null);
   const [frameH, setFrameH] = useState(0); // measured table-frame height → bounds the FlatList
   const insets = useSafeAreaInsets();
 
@@ -111,6 +116,49 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     return subscribe(reload);
   }, [reload]);
 
+  // Capture the off-screen share cards → PNG, save both to TJ ANALYZER, share the story.
+  useEffect(() => {
+    const t = shareTarget;
+    if (!t) return;
+    let cancelled = false;
+    const capture = (node: React.ElementRef<typeof Svg> | null) =>
+      new Promise<string>((resolve, reject) => {
+        const cap = node as unknown as { toDataURL?: (cb: (b64: string) => void) => void } | null;
+        if (!cap?.toDataURL) return reject(new Error("Could not render the image."));
+        cap.toDataURL((b64) => resolve(b64));
+      });
+    (async () => {
+      setBusy("PREPARING IMAGE");
+      try {
+        // let the off-screen SVGs lay out before capturing (avoids a blank frame)
+        await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+        const story = await capture(shareStoryRef.current);
+        const square = await capture(shareSquareRef.current);
+        const base = exportStamp(`TJ-${(t.instrument || "trade").replace(/[^A-Za-z0-9]/g, "") || "trade"}`);
+        const savedTo = await saveToExports(`${base}-story`, "image/png", { kind: "base64", data: story });
+        await saveToExports(`${base}-square`, "image/png", { kind: "base64", data: square });
+        // share sheet needs a file uri — drop the story PNG into cache and share it
+        const cacheUri = `${FileSystem.cacheDirectory}${base}-story.png`;
+        await FileSystem.writeAsStringAsync(cacheUri, story, { encoding: FileSystem.EncodingType.Base64 });
+        if (cancelled) return;
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(cacheUri, { mimeType: "image/png", dialogTitle: "Share trade" });
+        }
+        Alert.alert("Trade image ready", savedTo ? `Saved to ${savedTo}.` : "Image ready to post.");
+      } catch (e) {
+        if (!cancelled) Alert.alert("Share failed", e instanceof Error ? e.message : "Couldn't create the image.");
+      } finally {
+        if (!cancelled) {
+          setBusy(null);
+          setShareTarget(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shareTarget]);
+
   const exportCsv = async () => {
     const all = getAllTrades();
     if (all.length === 0) {
@@ -120,10 +168,15 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     setBusy("EXPORTING");
     await nextFrame();
     try {
-      const uri = `${FileSystem.cacheDirectory}trades.csv`;
-      await FileSystem.writeAsStringAsync(uri, tradesToCsv(all));
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export trades" });
+      const csv = tradesToCsv(all);
+      const savedTo = await saveToExports(exportStamp("tj-journals"), "text/csv", { kind: "string", data: csv });
+      if (savedTo) {
+        Alert.alert("Exported", `${all.length} trade${all.length === 1 ? "" : "s"} saved to ${savedTo}.`);
+      } else {
+        // folder declined — fall back to the share sheet
+        const uri = `${FileSystem.cacheDirectory}trades.csv`;
+        await FileSystem.writeAsStringAsync(uri, csv);
+        if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export trades" });
       }
     } finally {
       setBusy(null);
@@ -153,16 +206,14 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
           ),
       );
       const base = await getBaseUrl();
-      const { cacheUri } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
-      // Auto-open is best-effort — the report is already saved to Downloads.
-      try {
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(cacheUri, { mimeType: "application/pdf", dialogTitle: "Open report" });
-        } else {
-          Alert.alert("Report ready", `${res.rows_processed} trades analysed and saved to Downloads.`);
-        }
-      } catch {
-        Alert.alert("Report ready", "Saved to Downloads — close any open share dialog to open it.");
+      const { cacheUri, savedTo } = await downloadReport(`${base}${res.download_url}`, reportBaseName());
+      if (savedTo) {
+        Alert.alert("Report ready", `${res.rows_processed} trades analysed.\nSaved to ${savedTo}.`);
+      } else if (await Sharing.isAvailableAsync()) {
+        // folder declined — let them grab the PDF via the share sheet
+        await Sharing.shareAsync(cacheUri, { mimeType: "application/pdf", dialogTitle: "Open report" });
+      } else {
+        Alert.alert("Report ready", `${res.rows_processed} trades analysed.`);
       }
     } catch (e) {
       Alert.alert("Report failed", e instanceof Error ? e.message : "Something went wrong.");
@@ -215,8 +266,12 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     ]);
   };
 
-  // ponytail: share is stubbed — wire up the actual share later.
-  const shareRow = () => setMenuTrade(null);
+  // Share a trade as a social-ready image (story + square): mount the off-screen
+  // SVG cards, then the effect above captures → saves to TJ ANALYZER → share sheet.
+  const shareRow = (t: Trade) => {
+    setMenuTrade(null);
+    setShareTarget(t);
+  };
 
   const list = rows; // loaded pages; `total` is the whole-journal count
 
@@ -352,6 +407,13 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {shareTarget ? (
+        <View style={styles.offscreen} pointerEvents="none">
+          <TradeShareCard ref={shareStoryRef} trade={shareTarget} ratio="9:16" />
+          <TradeShareCard ref={shareSquareRef} trade={shareTarget} ratio="1:1" />
+        </View>
+      ) : null}
 
       <LoaderOverlay visible={!!busy} label={busy ?? ""} />
     </View>
@@ -638,6 +700,8 @@ function TradeDetail({ trade, onClose }: { trade: Trade | null; onClose: () => v
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  // Share cards render here off-screen (never visible) so toDataURL can capture them.
+  offscreen: { position: "absolute", left: -100000, top: 0 },
 
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
   titleLeft: { gap: 1 },

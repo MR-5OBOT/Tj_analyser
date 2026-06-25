@@ -1,12 +1,9 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 
-const EXPORT_DIR_KEY = "tj.exportDir";
+import { saveToExports } from "./exports";
 
-// SAF tree URI for the device's public Downloads folder — used as the initial
-// location of the one-time folder prompt so "Downloads" is the obvious default.
-const DOWNLOADS_DIR_URI = "content://com.android.externalstorage.documents/tree/primary%3ADownload";
-
+// cacheUri = the downloaded PDF in cache (for a share/open fallback); savedTo = the
+// "Downloads/TJ ANALYZER" label when it was mirrored to the export folder, else null.
 export type SaveResult = { cacheUri: string; savedTo: string | null };
 
 /** A timestamped base name (no extension) for a generated report. */
@@ -28,29 +25,7 @@ export async function downloadReport(pdfUrl: string, baseName: string): Promise<
   if (dl.status !== 200) {
     throw new Error(`Couldn't fetch the generated report (status ${dl.status}).`);
   }
-  const savedTo = await saveToExportFolder(cacheUri, baseName);
+  // Mirror into the shared TJ ANALYZER folder (asks for the folder once).
+  const savedTo = await saveToExports(baseName, "application/pdf", { kind: "fileUri", uri: cacheUri });
   return { cacheUri, savedTo };
-}
-
-async function saveToExportFolder(cacheUri: string, baseName: string): Promise<string | null> {
-  let dir = (await AsyncStorage.getItem(EXPORT_DIR_KEY))?.trim() || null;
-  if (!dir) {
-    // Open the picker pre-pointed at Downloads; once granted it's remembered and
-    // every later report saves there automatically with no further prompts.
-    const res = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(DOWNLOADS_DIR_URI);
-    if (!res.granted) return null; // declined — caller can offer Share instead
-    dir = res.directoryUri;
-    await AsyncStorage.setItem(EXPORT_DIR_KEY, dir);
-  }
-  try {
-    const base64 = await FileSystem.readAsStringAsync(cacheUri, { encoding: FileSystem.EncodingType.Base64 });
-    const destUri = await FileSystem.StorageAccessFramework.createFileAsync(dir, baseName, "application/pdf");
-    await FileSystem.writeAsStringAsync(destUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-    return destUri;
-  } catch {
-    // The remembered folder may have been revoked (e.g. after reinstall) — forget it
-    // so the next export re-prompts.
-    await AsyncStorage.removeItem(EXPORT_DIR_KEY);
-    return null;
-  }
 }

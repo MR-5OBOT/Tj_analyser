@@ -8,6 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { pingBackend } from "../lib/api";
+import { exportStamp, saveToExports } from "../lib/exports";
 import { clearTrades, countTrades, getAllTrades, tradesToCsv } from "../lib/journals";
 import { colors, font, fontFamily, spacing } from "../theme/tokens";
 
@@ -79,10 +80,14 @@ function DataAndAbout() {
       setBusy("EXPORTING");
       await nextFrame(); // paint the loader before the big CSV stringify/write
       const csv = tradesToCsv(trades);
-      const uri = `${FileSystem.cacheDirectory}journals.csv`;
-      await FileSystem.writeAsStringAsync(uri, csv);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export journals" });
+      const savedTo = await saveToExports(exportStamp("tj-journals"), "text/csv", { kind: "string", data: csv });
+      if (savedTo) {
+        Alert.alert("Exported", `${trades.length} trade${trades.length === 1 ? "" : "s"} saved to ${savedTo}.`);
+      } else {
+        // folder declined — fall back to the share sheet
+        const uri = `${FileSystem.cacheDirectory}journals.csv`;
+        await FileSystem.writeAsStringAsync(uri, csv);
+        if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: "text/csv", dialogTitle: "Export journals" });
       }
     } catch (e) {
       Alert.alert("Export failed", e instanceof Error ? e.message : "Unknown error.");
