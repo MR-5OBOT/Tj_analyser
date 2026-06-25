@@ -46,12 +46,21 @@ export const TradeShareCard = React.forwardRef<React.ElementRef<typeof Svg>, { t
     const rows = rowsFor(trade);
 
     const M = 56; // canvas → card margin
-    const pad = 56; // card inner padding
-    const headerH = 150; // header band height
-    const rowH = 116;
+    // Natural sizes are tuned for the tall story canvas. Scale them down so the SAME
+    // card also fits a shorter canvas (1:1) instead of overflowing past the bottom
+    // (that overflow is what cropped the square image). Story (tall) → scale 1.
+    const naturalH = 56 + 150 + rows.length * 116 + 56;
+    const s = Math.min(1, (h - 2 * M) / naturalH);
+    const pad = 56 * s;
+    const headerH = 150 * s;
+    const rowH = 116 * s;
+    const headerFont = 62 * s;
+    const labelFont = 32 * s;
+    const valueFont = 44 * s;
+
     const cardW = w - 2 * M;
     const cardH = pad + headerH + rows.length * rowH + pad;
-    const cardY = Math.max(M, (h - cardH) / 2); // vertically centred
+    const cardY = Math.max(M, (h - cardH) / 2); // vertically centred, always within the canvas
     const innerL = M + pad;
     const innerR = M + cardW - pad;
     const rowsTop = cardY + pad + headerH;
@@ -62,20 +71,20 @@ export const TradeShareCard = React.forwardRef<React.ElementRef<typeof Svg>, { t
         <Rect x={0} y={0} width={w} height={h} fill={colors.background} />
         <Rect x={M} y={cardY} width={cardW} height={cardH} fill={colors.surface} stroke={colors.borderSoft} strokeWidth={3} />
 
-        <SvgText x={innerL} y={cardY + pad + 72} fill={colors.text} fontFamily={fontFamily.bold} fontSize={62}>
+        <SvgText x={innerL} y={cardY + pad + headerFont} fill={colors.text} fontFamily={fontFamily.bold} fontSize={headerFont}>
           {header}
         </SvgText>
 
         {rows.map((r, i) => {
           const divY = rowsTop + i * rowH;
-          const baseline = divY + rowH / 2 + 14;
+          const baseline = divY + rowH / 2 + valueFont * 0.32;
           return (
             <React.Fragment key={r.label}>
               {i > 0 ? <Line x1={innerL} y1={divY} x2={innerR} y2={divY} stroke={colors.border} strokeWidth={2} /> : null}
-              <SvgText x={innerL} y={baseline} fill={colors.textSubtle} fontFamily={fontFamily.medium} fontSize={32}>
+              <SvgText x={innerL} y={baseline} fill={colors.textSubtle} fontFamily={fontFamily.medium} fontSize={labelFont}>
                 {r.label}
               </SvgText>
-              <SvgText x={innerR} y={baseline} fill={r.color} fontFamily={fontFamily.bold} fontSize={44} textAnchor="end">
+              <SvgText x={innerR} y={baseline} fill={r.color} fontFamily={fontFamily.bold} fontSize={valueFont} textAnchor="end">
                 {r.value}
               </SvgText>
             </React.Fragment>
