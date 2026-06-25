@@ -48,7 +48,8 @@ export function FloatingDock({
 
   return (
     <View
-      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}
+      // Sit the whole grey band ABOVE the gesture bar; don't pad (and paint) into it.
+      style={[styles.wrapper, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
     >
       <View style={styles.dock}>
         <SketchBorder seed={991} color="#000000" tight />
@@ -183,14 +184,15 @@ function ActionButton({
 const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
-    // Inset the wrapper itself so the black bg shrinks with the dock (not full-width).
+    // Inset the wrapper itself so the grey bg shrinks with the dock (not full-width).
     left: 30,
     right: 30,
-    bottom: "2%", // lifted off the bottom edge
+    // `bottom` is set inline from the safe-area inset so the band clears the gesture
+    // bar; padding stays tight so the grey never bleeds into the nav area.
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.sm,
-    paddingTop: 6, // ~3% shorter band (was spacing.sm = 8)
+    paddingVertical: 6,
     backgroundColor: "#505050",
   },
   dock: {
