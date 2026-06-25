@@ -8,20 +8,28 @@ from config import COLORS, PLOT_DEFAULTS, DAY_ORDER
 from helpers.plot_styling import create_figure, style_axes, finalize_plot
 
 
-def _parse_time_value(time_value):
-    if pd.isna(time_value) or str(time_value).strip() == "":
-        return None
+def _time_parts(entry_time: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Return vectorized hour/minute parts from normalized HH:MM[:SS] strings."""
+    parts = entry_time.astype("string").str.strip().str.extract(r"^(\d{1,2}):(\d{2})")
+    hour = pd.to_numeric(parts[0], errors="coerce")
+    minute = pd.to_numeric(parts[1], errors="coerce")
+    valid = hour.between(0, 23) & minute.between(0, 59)
+    return hour.where(valid), minute.where(valid)
 
-    parsed = pd.to_datetime(time_value, errors="coerce")
-    if pd.notna(parsed):
-        return parsed.time()
 
-    text = str(time_value).strip()
-    for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p"):
-        parsed = pd.to_datetime(text, format=fmt, errors="coerce")
-        if pd.notna(parsed):
-            return parsed.time()
-    return None
+def _hour_series(entry_time: pd.Series) -> pd.Series:
+    hour, _ = _time_parts(entry_time)
+    return hour
+
+
+def _minute_of_day_series(entry_time: pd.Series) -> pd.Series:
+    hour, minute = _time_parts(entry_time)
+    return hour * 60 + minute
+
+
+def _minute_of_day(value: str) -> int:
+    hour, minute = value.split(":", 1)
+    return int(hour) * 60 + int(minute)
 
 
 def rr_curve(
@@ -275,7 +283,7 @@ def heatmap_rr(
     temp_df = pd.DataFrame({
         "rr": rr_series,
         "day": days.str.strip().str.lower(),
-        "hour": entry_time.apply(_parse_time_value).apply(lambda x: x.hour if pd.notna(x) else None),
+        "hour": _hour_series(entry_time),
     })
     
     temp_df = temp_df.dropna(subset=["rr", "hour", "day"])
@@ -307,22 +315,22 @@ def bar_outcomes_by_custom_ranges(
 
     df = pd.DataFrame({
         "outcome": outcome,
-        "entry_time": entry_time.apply(_parse_time_value),
+        "entry_minute": _minute_of_day_series(entry_time),
     })
-    df = df.dropna(subset=["entry_time"])
+    df = df.dropna(subset=["entry_minute"])
     if df.empty:
         style_axes(ax, title, xlabel, ylabel)
         ax.text(0.5, 0.5, "No valid time data", ha="center", va="center", color=COLORS["text"])
         return finalize_plot(fig)
 
     parsed_ranges = [
-        (label, pd.to_datetime(start).time(), pd.to_datetime(end).time())
+        (label, _minute_of_day(start), _minute_of_day(end))
         for label, start, end in time_ranges
     ]
 
     data = []
     for label, start, end in parsed_ranges:
-        range_data = df[(df["entry_time"] >= start) & (df["entry_time"] < end)]
+        range_data = df[(df["entry_minute"] >= start) & (df["entry_minute"] < end)]
         for outcome_type in ["WIN", "LOSS", "BE"]:
             count = range_data[range_data["outcome"] == outcome_type].shape[0]
             data.append({"Time Range": label, "Outcome": outcome_type, "Count": count})
@@ -365,7 +373,7 @@ def rr_vs_hour_range_bubble_scatter(
     """Bubble scatter plot of R/R vs hour range."""
     fig, ax = create_figure(figsize)
 
-    hour_ints = entry_time.apply(_parse_time_value).dropna().apply(lambda t: t.hour)
+    hour_ints = _hour_series(entry_time).dropna().astype(int)
     if hour_ints.empty:
         style_axes(ax, title, xlabel, ylabel)
         ax.text(0.5, 0.5, "No valid entry times", ha="center", va="center", color=COLORS["text"])

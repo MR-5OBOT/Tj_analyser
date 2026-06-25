@@ -84,7 +84,7 @@ def _clean_columns(df: pd.DataFrame, outcome_map: dict[str, str]) -> pd.DataFram
 
     for time_column in ("entry_time", "exit_time"):
         if time_column in cleaned.columns:
-            cleaned[time_column] = cleaned[time_column].apply(_normalize_time_value)
+            cleaned[time_column] = _normalize_time_series(cleaned[time_column])
 
     for numeric_column in ("position_size", "rr", "risk_amount", "reward_amount", "stop_loss_points"):
         if numeric_column in cleaned.columns:
@@ -143,21 +143,27 @@ def _safe_to_datetime(series: pd.Series) -> pd.Series:
         return pd.to_datetime(series, errors="coerce")
 
 
-def _normalize_time_value(value) -> str | None:
-    if pd.isna(value):
-        return None
+def _normalize_time_series(series: pd.Series) -> pd.Series:
+    text = series.astype("string").str.strip()
+    text = text.mask(text == "")
+    out = pd.Series(pd.NA, index=series.index, dtype="string")
 
-    timestamp = pd.to_datetime(value, errors="coerce")
-    if pd.notna(timestamp):
-        return timestamp.strftime("%H:%M:%S")
+    parts = text.str.extract(r"^(\d{1,2}):(\d{2})(?::(\d{2}))?$")
+    hour = pd.to_numeric(parts[0], errors="coerce")
+    minute = pd.to_numeric(parts[1], errors="coerce")
+    second = pd.to_numeric(parts[2].fillna("0"), errors="coerce")
+    valid = hour.between(0, 23) & minute.between(0, 59) & second.between(0, 59)
+    if valid.any():
+        h = hour.loc[valid].astype(int).astype(str).str.zfill(2)
+        m = minute.loc[valid].astype(int).astype(str).str.zfill(2)
+        s = second.loc[valid].astype(int).astype(str).str.zfill(2)
+        out.loc[valid] = h + ":" + m + ":" + s
 
-    text = str(value).strip()
-    if not text:
-        return None
+    remaining = out.isna() & text.notna()
+    if remaining.any():
+        parsed = pd.to_datetime(text.loc[remaining], errors="coerce")
+        parsed_valid = parsed.notna()
+        parsed_text = parsed.loc[parsed_valid].dt.strftime("%H:%M:%S")
+        out.loc[parsed_text.index] = parsed_text.astype("string")
 
-    for fmt in ("%H:%M", "%H:%M:%S", "%I:%M %p"):
-        parsed = pd.to_datetime(text, format=fmt, errors="coerce")
-        if pd.notna(parsed):
-            return parsed.strftime("%H:%M:%S")
-
-    return None
+    return out
