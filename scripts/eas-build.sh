@@ -29,7 +29,10 @@ if ! npx tsc --noEmit; then
 fi
 
 echo "› Building Android ($PROFILE)…"
-eas build --platform android --profile "$PROFILE"
+if ! eas build --platform android --profile "$PROFILE"; then
+  echo "✗ Build failed (see above — e.g. out of free EAS builds; the quota resets monthly)." >&2
+  exit 1
+fi
 
 # Reminder: runtimeVersion policy is "appVersion" (mobile/app.config.ts). Bump
 # `version` before a native build if you don't want OTA updates for the new
