@@ -4,7 +4,7 @@ import * as Updates from "expo-updates";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Linking, Modal, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -90,14 +90,56 @@ export function SketchBorder({ seed, straight, color, tight }: { seed?: number; 
   );
 }
 
-// Tabler "info-triangle" — the left header button that opens the R disclaimer.
-export function InfoTriangleIcon({ size, color }: { size: number; color: string }) {
+// Orange-yellow info "i" in a circle — the app's info / disclaimer button.
+export function InfoIcon({ size, color = colors.accent }: { size: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" />
-      <Path d="M12 9h.01" />
-      <Path d="M11 12h1v4h1" />
+      <Circle cx={12} cy={12} r={9} />
+      <Path d="M12 8h.01" />
+      <Path d="M12 11v5" />
     </Svg>
+  );
+}
+
+const SHEET_TOP_RESERVE = 46; // header-bar height — start the sheet just below the header
+const SHEET_BOTTOM_RESERVE = 84; // clear the floating dock at the bottom
+
+/**
+ * A full-height info / disclosure window: title fixed at the top, body scrolls in
+ * the middle, footer (button(s)) pinned at the bottom. Tap the dim backdrop to
+ * close. Used for the long text windows — disclaimer, about, raw-data protocol,
+ * upload warning — so they fill from below the header to above the dock.
+ */
+export function InfoSheet({
+  visible,
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
+        style={[s.sheetOverlay, { paddingTop: insets.top + SHEET_TOP_RESERVE, paddingBottom: insets.bottom + SHEET_BOTTOM_RESERVE }]}
+        onPress={onClose}
+      >
+        <Pressable style={s.sheetCard} onPress={() => {}}>
+          <SketchBorder straight seed={4242} />
+          <Text style={s.sheetTitle}>{title}</Text>
+          <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
+          {footer}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -202,7 +244,7 @@ export function TopHeader({
     <View style={s.topHeader}>
       {/* Left → Disclaimer / About menu */}
       <PressButton onPress={() => setOpen(true)} style={s.logoSlot} hitSlop={8}>
-        <InfoTriangleIcon size={25} color={HEADER_TITLE_COLOR} />
+        <InfoIcon size={25} />
       </PressButton>
       <View style={s.brand}>
         <Text style={s.headerTitle} numberOfLines={1}>
@@ -247,41 +289,37 @@ export function TopHeader({
         </Pressable>
       </Modal>
 
-      <Modal visible={disc} transparent animationType="fade" onRequestClose={() => setDisc(false)}>
-        <Pressable style={s.discOverlay} onPress={() => setDisc(false)}>
-          <Pressable style={s.discCard} onPress={() => {}}>
-            <SketchBorder seed={1313} straight />
-            <Text style={s.discTitle}>MEASURED IN R</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={s.discScroll}>
-              <Text style={s.discBody}>{R_MANIFESTO}</Text>
-            </ScrollView>
-            <PressButton style={s.discClose} onPress={() => setDisc(false)}>
-              <Text style={s.discCloseText}>GOT IT</Text>
-            </PressButton>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <InfoSheet
+        visible={disc}
+        title="MEASURED IN R"
+        onClose={() => setDisc(false)}
+        footer={
+          <PressButton style={s.discClose} onPress={() => setDisc(false)}>
+            <Text style={s.discCloseText}>GOT IT</Text>
+          </PressButton>
+        }
+      >
+        <Text style={s.discBody}>{R_MANIFESTO}</Text>
+      </InfoSheet>
 
-      <Modal visible={about} transparent animationType="fade" onRequestClose={() => setAbout(false)}>
-        <Pressable style={s.discOverlay} onPress={() => setAbout(false)}>
-          <Pressable style={s.discCard} onPress={() => {}}>
-            <SketchBorder seed={1314} straight />
-            <Text style={s.discTitle}>ABOUT</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={s.discScroll}>
-              <Text style={s.discBody}>{ABOUT_TEXT}</Text>
-            </ScrollView>
-            <Text style={s.aboutVersion}>
-              Version {APP_VERSION} · build {APP_BUILD}
-            </Text>
-            <PressButton style={s.aboutLink} onPress={() => Linking.openURL(AUTHOR_URL)}>
-              <Text style={s.aboutLinkText}>🌐  Author's website</Text>
-            </PressButton>
-            <PressButton style={s.discClose} onPress={() => setAbout(false)}>
-              <Text style={s.discCloseText}>CLOSE</Text>
-            </PressButton>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <InfoSheet
+        visible={about}
+        title="ABOUT"
+        onClose={() => setAbout(false)}
+        footer={
+          <PressButton style={s.discClose} onPress={() => setAbout(false)}>
+            <Text style={s.discCloseText}>CLOSE</Text>
+          </PressButton>
+        }
+      >
+        <Text style={s.discBody}>{ABOUT_TEXT}</Text>
+        <Text style={s.aboutVersion}>
+          Version {APP_VERSION} · build {APP_BUILD}
+        </Text>
+        <PressButton style={s.aboutLink} onPress={() => Linking.openURL(AUTHOR_URL)}>
+          <Text style={s.aboutLinkText}>🌐  Author's website</Text>
+        </PressButton>
+      </InfoSheet>
     </View>
   );
 }
@@ -346,11 +384,11 @@ const s = StyleSheet.create({
   menuDivider: { position: "absolute", top: 0, left: -6, right: -6, height: 2, backgroundColor: "#5A5A5A" },
   menuLabel: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 16 },
 
-  // R-R disclaimer modal
-  discOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
-  discCard: { width: "100%", maxWidth: 360, maxHeight: "76%", backgroundColor: colors.surface, padding: spacing.xl },
-  discTitle: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
-  discScroll: { flexGrow: 0 },
+  // Full-height info sheet (disclaimer / about / protocol / upload warning)
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: spacing.xl },
+  sheetCard: { flex: 1, backgroundColor: colors.surface, padding: spacing.lg },
+  sheetTitle: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
+  sheetScroll: { flex: 1, marginBottom: spacing.lg },
   discBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 21 },
   discClose: { marginTop: spacing.lg, backgroundColor: colors.text, height: 46, alignItems: "center", justifyContent: "center" },
   discCloseText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },

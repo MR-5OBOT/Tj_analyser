@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { STORY, TradeShareCard } from "../components/TradeShareCard";
-import { InfoTriangleIcon, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
+import { InfoIcon, InfoSheet, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { exportStamp, saveToExports } from "../lib/exports";
 import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, importTrades, MAX_IMPORT_ROWS, MAX_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
@@ -283,7 +283,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
         </View>
         <View style={styles.actionsWrap}>
           <PressButton style={styles.infoBtn} onPress={() => setProtocolOpen(true)} hitSlop={8}>
-            <InfoTriangleIcon size={21} color={colors.textMuted} />
+            <InfoIcon size={21} />
           </PressButton>
           <PressButton style={styles.actionsBtn} onPress={() => setActionsOpen(true)}>
             <SketchBorder seed={771} straight />
@@ -390,20 +390,18 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       <RowMenu trade={menuTrade} onClose={() => setMenuTrade(null)} onShare={shareRow} onDelete={deleteRow} />
       <TradeDetail trade={active} onClose={() => setActive(null)} />
 
-      <Modal visible={protocolOpen} transparent animationType="fade" onRequestClose={() => setProtocolOpen(false)}>
-        <Pressable style={styles.overlay} onPress={() => setProtocolOpen(false)}>
-          <Pressable style={styles.protocolCard} onPress={() => {}}>
-            <SketchBorder seed={772} straight />
-            <Text style={styles.detailTitle}>RAW DATA · HOW IT WORKS</Text>
-            <ScrollView style={styles.protocolScroll} showsVerticalScrollIndicator={false}>
-              <Text style={styles.protocolBody}>{PROTOCOL_TEXT}</Text>
-            </ScrollView>
-            <Pressable style={styles.linkBtn} onPress={() => setProtocolOpen(false)}>
-              <Text style={styles.linkBtnText}>GOT IT</Text>
-            </Pressable>
+      <InfoSheet
+        visible={protocolOpen}
+        title="RAW DATA · HOW IT WORKS"
+        onClose={() => setProtocolOpen(false)}
+        footer={
+          <Pressable style={styles.linkBtn} onPress={() => setProtocolOpen(false)}>
+            <Text style={styles.linkBtnText}>GOT IT</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
+        }
+      >
+        <Text style={styles.protocolBody}>{PROTOCOL_TEXT}</Text>
+      </InfoSheet>
 
       {shareTarget ? (
         <View style={styles.offscreen} pointerEvents="none">
@@ -759,8 +757,6 @@ const styles = StyleSheet.create({
 
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
   card: { backgroundColor: colors.surface, padding: spacing.lg },
-  protocolCard: { width: "100%", maxWidth: 360, maxHeight: "78%", backgroundColor: colors.surface, padding: spacing.lg },
-  protocolScroll: { flexGrow: 0, flexShrink: 1, marginTop: spacing.xs },
   protocolBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 13.5, lineHeight: 21 },
   detailTitle: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15, marginBottom: spacing.md },
   detailHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.md },

@@ -17,6 +17,7 @@ export const colors = {
   textSubtle: "#6E6E6E",
   positive: "#A8FF60",
   danger: "#FF7A7A",
+  accent: "#F5A623", // orange-yellow — the info "i" icon
 };
 
 export const spacing = {
