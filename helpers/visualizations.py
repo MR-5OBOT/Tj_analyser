@@ -477,7 +477,7 @@ def create_stats_table(
 
     for (i, j), cell in table.get_celld().items():
         cell.set_facecolor(bg_color)
-        cell.set_text_props(color=text_color, weight="medium")
+        cell.set_text_props(color=text_color, weight="normal")
         cell.set_height(0.08)
         cell.PAD = 0.1
         

@@ -4,7 +4,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
-from tqdm import tqdm
 
 from helpers.calculations import stats_table_overall
 from helpers.utils import column_or_none, has_non_empty, series_or_none
@@ -95,7 +94,7 @@ def export_pdf_report(
     pdf_path = str(output_path) if output_path else f"{datetime.now().strftime('%Y-%m-%d')}-{report_type}.pdf"
 
     with PdfPages(pdf_path) as pdf:
-        for func, args in tqdm(figure_list, desc="Generating plots", unit="plot"):
+        for func, args in figure_list:
             fig = func(*args)
             if fig is not None:
                 pdf.savefig(fig)
@@ -107,5 +106,4 @@ def export_pdf_report(
 def build_report(df: pd.DataFrame) -> tuple[list[tuple], dict]:
     """Build the overall report: its plots and summary stats."""
     return generate_plots_overall(df), stats_table_overall(df)
-
 

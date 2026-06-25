@@ -111,4 +111,36 @@ for (const t of legacy) ins2.run(...insertParams(t));
 assert.equal(db2.prepare("SELECT COUNT(*) c FROM trades").get().c, 1, "legacy duplicates should collapse on migration");
 ok("migration collapses legacy duplicates");
 
+// --- global MAX_ROWS cap (mirrors enforceCap from journals.ts) ---
+const MAX_ROWS = 5000;
+const freshDb = () => {
+  const d = new DatabaseSync(":memory:");
+  d.exec(`CREATE TABLE trades (id TEXT PRIMARY KEY NOT NULL, date TEXT NOT NULL, instrument TEXT, direction TEXT, rr REAL, slSize REAL, positionSize REAL, entryTime TEXT, outcome TEXT, tradeLink TEXT, tag TEXT, notes TEXT, createdAt TEXT, dedupe_key TEXT NOT NULL); CREATE UNIQUE INDEX uq ON trades(dedupe_key);`);
+  return d;
+};
+const cap = (d) =>
+  d.prepare("SELECT COUNT(*) c FROM trades").get().c <= MAX_ROWS
+    ? 0
+    : d.prepare(`DELETE FROM trades WHERE id IN (SELECT id FROM trades ORDER BY date DESC, createdAt DESC LIMIT -1 OFFSET ?)`).run(MAX_ROWS).changes;
+const dayStr = (k) => new Date(Date.UTC(2000, 0, 1 + k)).toISOString().slice(0, 10); // unique date per k → unique dedupe key
+
+// 11. inserting past the cap evicts the oldest rows by date
+const db3 = freshDb();
+const ins3 = db3.prepare(INSERT_SQL);
+for (let k = 0; k < MAX_ROWS + 3; k++) ins3.run(...insertParams(T({ id: `cap${k}`, date: dayStr(k), entryTime: "09:30" })));
+const evicted = cap(db3);
+assert.equal(evicted, 3, `should evict 3, got ${evicted}`);
+assert.equal(db3.prepare("SELECT COUNT(*) c FROM trades").get().c, MAX_ROWS, "cap should hold at MAX_ROWS");
+assert.equal(db3.prepare("SELECT COUNT(*) c FROM trades WHERE date IN (?,?,?)").get(dayStr(0), dayStr(1), dayStr(2)).c, 0, "the 3 oldest rows should be gone");
+assert.ok(db3.prepare("SELECT 1 FROM trades WHERE date=?").get(dayStr(MAX_ROWS + 2)), "the newest row must survive");
+ok("global cap evicts the oldest beyond MAX_ROWS (5003 → 5000)");
+
+// 12. under the cap, enforce is a no-op
+const db4 = freshDb();
+const ins4 = db4.prepare(INSERT_SQL);
+for (let k = 0; k < 10; k++) ins4.run(...insertParams(T({ id: `u${k}`, date: dayStr(k), entryTime: "10:00" })));
+assert.equal(cap(db4), 0, "under cap = no eviction");
+assert.equal(db4.prepare("SELECT COUNT(*) c FROM trades").get().c, 10);
+ok("under the cap, enforce evicts nothing");
+
 console.log(`\nALL ${pass} CHECKS PASSED`);

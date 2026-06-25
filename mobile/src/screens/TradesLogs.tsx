@@ -24,7 +24,7 @@ import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
-import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, getTotalR, importTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
+import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, getTotalR, importTrades, MAX_IMPORT_ROWS, MAX_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -154,7 +154,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const onCsv = async (csv: string) => {
     setBusy("IMPORTING");
     await nextFrame(); // paint the loader before the heavy parse/dedupe/persist
-    let parsed: Trade[];
+    let parsed: { trades: Trade[]; rawCount: number };
     try {
       parsed = csvToTrades(csv); // throws CsvError on missing/mismatched columns
     } catch (e) {
@@ -162,17 +162,19 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       Alert.alert("Import failed", e instanceof Error ? e.message : "Could not read the CSV.");
       return; // keep the modal open so they can pick a corrected file
     }
-    let added: number;
+    let added: number, evicted: number;
     try {
-      added = await importTrades(parsed); // persist → emit → reload via subscription
+      ({ added, evicted } = await importTrades(parsed.trades)); // persist → cap → emit → reload
     } finally {
       setBusy(null);
     }
     setImporting(false);
-    const capNote =
-      parsed.length === MAX_IMPORT_ROWS
-        ? `\n\nNote: imports are capped at ${MAX_IMPORT_ROWS.toLocaleString()} rows per file — extra rows were dropped.`
-        : "";
+    // The journal is capped at MAX_ROWS total. Note it only when this import actually
+    // dropped rows — either by truncating an over-size file, or by evicting the oldest.
+    const dropped = parsed.rawCount > MAX_IMPORT_ROWS || evicted > 0;
+    const capNote = dropped
+      ? `\n\nYour journal keeps the most recent ${MAX_ROWS.toLocaleString()} trades — older ones were dropped to make room.`
+      : "";
     Alert.alert(
       "Imported",
       (added === 0 ? "Those rows are already in your journal." : `Added ${added} new trade${added === 1 ? "" : "s"}.`) + capNote,

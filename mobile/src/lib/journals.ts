@@ -6,8 +6,13 @@ import { useEffect, useState } from "react";
 export const JOURNALS_KEY = "tj.journals";
 const MIGRATED_KEY = "tj.sqlite.migrated";
 
-// Hard cap on rows taken from a single uploaded CSV — anything past this is dropped.
+// Hard cap on rows parsed from a single uploaded CSV — bounds the parse memory.
 export const MAX_IMPORT_ROWS = 5000;
+
+// Hard cap on the TOTAL trades kept on-device. Any insert that pushes the table
+// past this evicts the oldest rows (by date), so the journal stays bounded and
+// every read/stat/export stays fast — nothing on this device ever exceeds 5k.
+export const MAX_ROWS = 5000;
 
 export type Trade = {
   id: string;
@@ -70,6 +75,21 @@ function insertMany(trades: Trade[]): void {
       stmt.finalizeSync();
     }
   });
+}
+
+// Keep only the newest MAX_ROWS trades (by date, then createdAt — the same order
+// the table shows). Called after every insert; the COUNT guard makes the common
+// under-cap case a no-op, so only an over-cap insert pays for the ordered delete.
+// Returns how many rows were evicted.
+// ponytail: the ORDER BY sorts <=5k rows (a few ms); revisit only if MAX_ROWS grows.
+function enforceCap(): number {
+  if (countTrades() <= MAX_ROWS) return 0;
+  return db.runSync(
+    `DELETE FROM trades WHERE id IN (
+       SELECT id FROM trades ORDER BY date DESC, createdAt DESC LIMIT -1 OFFSET ?
+     )`,
+    [MAX_ROWS],
+  ).changes;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +157,7 @@ async function migrateFromLegacy(): Promise<void> {
     const arr = JSON.parse(raw);
     if (Array.isArray(arr) && arr.length) {
       insertMany(arr as Trade[]);
+      enforceCap(); // a legacy blob can hold more than MAX_ROWS — trim on the way in
       emit();
     }
   } catch {
@@ -177,6 +198,7 @@ function tradeKey(t: Trade): string {
 
 export async function addTrade(t: Trade): Promise<void> {
   db.runSync(INSERT_SQL, insertParams(t));
+  enforceCap(); // drop the oldest trade if this pushed the journal past MAX_ROWS
   emit();
 }
 
@@ -241,7 +263,7 @@ function parseCsv(text: string): string[][] {
 /** Thrown by csvToTrades when the CSV is missing required columns. */
 export class CsvError extends Error {}
 
-export function csvToTrades(csv: string): Trade[] {
+export function csvToTrades(csv: string): { trades: Trade[]; rawCount: number } {
   const rows = parseCsv(csv);
   if (rows.length < 2) throw new CsvError("The file has no data rows.");
   const head = rows[0].map((h) => h.trim().toUpperCase());
@@ -257,8 +279,10 @@ export function csvToTrades(csv: string): Trade[] {
   };
   const get = (r: string[], idx: number) => (idx >= 0 && idx < r.length ? r[idx].trim() : "");
   const num = (s: string) => { const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
-  // Hard cap: only the first MAX_IMPORT_ROWS data rows are kept; the rest are dropped.
-  return rows.slice(1, 1 + MAX_IMPORT_ROWS).map((r, k) => {
+  const dataRows = rows.slice(1);
+  // Parse cap: only the first MAX_IMPORT_ROWS rows are read; rawCount lets the caller
+  // tell the user when a larger file was truncated (alongside the total-journal cap).
+  const trades: Trade[] = dataRows.slice(0, MAX_IMPORT_ROWS).map((r, k) => {
     const dir = get(r, i.dir).toLowerCase();
     const res = get(r, i.res).toLowerCase();
     return {
@@ -277,14 +301,17 @@ export function csvToTrades(csv: string): Trade[] {
       createdAt: new Date().toISOString(),
     };
   });
+  return { trades, rawCount: dataRows.length };
 }
 
 // Merge imported trades into the journal, deduped on important columns (imported
 // rows win on conflict via INSERT OR REPLACE). Returns how many NEW unique rows
 // were added.
-export async function importTrades(incoming: Trade[]): Promise<number> {
+export async function importTrades(incoming: Trade[]): Promise<{ added: number; evicted: number }> {
   const before = countTrades();
   insertMany(incoming);
+  const added = countTrades() - before; // net-new uniques, measured before any eviction
+  const evicted = enforceCap();
   emit();
-  return countTrades() - before;
+  return { added, evicted };
 }

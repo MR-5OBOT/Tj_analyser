@@ -30,6 +30,11 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> dict:
+    return {"status": "ok", "health": "/api/health"}
+
+
 @app.get("/api/health")
 def health() -> dict:
     logger.info("health_check")
