@@ -115,22 +115,24 @@ export default function Home() {
 
   return (
     <View style={styles.root}>
-      <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
-        <TopHeader title={page.title} onMenu={() => setToolsOpen(true)} />
-        <View style={styles.pages}>
-          {KEEP_ALIVE.map((key) =>
-            visited.has(key) ? (
-              <View key={key} style={active === key ? styles.page : styles.hidden}>
-                {renderScreen(key)}
-              </View>
-            ) : null,
-          )}
-          {active === "settings" ? <View style={styles.page}>{renderScreen("settings")}</View> : null}
-        </View>
-      </SafeAreaView>
+      <View style={styles.column}>
+        <SafeAreaView style={styles.content} edges={["top", "left", "right"]}>
+          <TopHeader title={page.title} onMenu={() => setToolsOpen(true)} />
+          <View style={styles.pages}>
+            {KEEP_ALIVE.map((key) =>
+              visited.has(key) ? (
+                <View key={key} style={active === key ? styles.page : styles.hidden}>
+                  {renderScreen(key)}
+                </View>
+              ) : null,
+            )}
+            {active === "settings" ? <View style={styles.page}>{renderScreen("settings")}</View> : null}
+          </View>
+        </SafeAreaView>
 
-      <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
-      <ToolsMenu open={toolsOpen} onClose={() => setToolsOpen(false)} onSettings={() => select("settings")} />
+        <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
+        <ToolsMenu open={toolsOpen} onClose={() => setToolsOpen(false)} onSettings={() => select("settings")} />
+      </View>
     </View>
   );
 }
@@ -139,6 +141,16 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
+    alignItems: "center", // centre the capped column on wide screens (tablets)
+  },
+  // Cap the whole app to a phone-width column and centre it. On a phone (always
+  // narrower than maxWidth) this is a no-op; on tablets/wide screens it gives clean
+  // side margins instead of stretched tables, cards and a full-width dock. One place
+  // makes every screen + the dock responsive at once.
+  column: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 600,
   },
   content: {
     flex: 1,
