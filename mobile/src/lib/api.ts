@@ -98,22 +98,37 @@ export async function analyze(
   const queued = (await res.json()) as { job_id: string; state: AnalyzeProgress["state"]; position: number };
   onProgress?.({ state: queued.state, position: queued.position });
 
-  // 2) Poll for the place in line, then the finished report.
+  // 2) Poll for the place in line, then the finished report. The render is
+  // server-side, so a single failed poll (dropped packet / cold-server blip) must
+  // NOT abandon a report that's still being made. Tolerate a short streak of bad
+  // polls; a good one resets it. This adds zero time to a healthy report — it only
+  // keeps polling instead of quitting when the network hiccups.
   const deadline = Date.now() + timeoutMs;
+  let misses = 0;
+  const MAX_MISSES = 5; // ~5 bad polls in a row before we conclude the network is really down
   while (Date.now() < deadline) {
     await sleep(1500);
-    let job: { state: string; position: number; result?: AnalyzeResponse; error?: string };
     try {
-      const s = await fetch(`${base}/api/jobs/${queued.job_id}`);
-      if (!s.ok) throw new ApiError(await errorDetail(s));
-      job = await s.json();
+      // Per-poll timeout so one hung connection can't block past the deadline.
+      const ctrl = new AbortController();
+      const pollTimer = setTimeout(() => ctrl.abort(), 10000);
+      let job: { state: string; position: number; result?: AnalyzeResponse; error?: string };
+      try {
+        const s = await fetch(`${base}/api/jobs/${queued.job_id}`, { signal: ctrl.signal });
+        if (!s.ok) throw new Error(`status ${s.status}`); // transient → tolerated below
+        job = await s.json();
+      } finally {
+        clearTimeout(pollTimer);
+      }
+      misses = 0; // a good poll clears the streak
+      if (job.state === "done" && job.result) return job.result;
+      if (job.state === "error") throw new ApiError(job.error ?? "Report generation failed.");
+      onProgress?.({ state: job.state as AnalyzeProgress["state"], position: job.position });
     } catch (e) {
-      if (e instanceof ApiError) throw e;
-      throw new ApiError("Lost connection while waiting for the report.");
+      if (e instanceof ApiError) throw e; // a real server-side render error — stop and show it
+      if (++misses >= MAX_MISSES) throw new ApiError("Lost connection while waiting for the report.");
+      // otherwise a transient blip — keep polling, the server is still rendering
     }
-    if (job.state === "done" && job.result) return job.result;
-    if (job.state === "error") throw new ApiError(job.error ?? "Report generation failed.");
-    onProgress?.({ state: job.state as AnalyzeProgress["state"], position: job.position });
   }
   throw new ApiError("Timed out waiting for the report. The server may be overloaded.");
 }
