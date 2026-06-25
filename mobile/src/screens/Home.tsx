@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { CalendarCard } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { BrutalLoader, SketchBorder } from "../components/ui";
+import { SketchBorder } from "../components/ui";
 import { buildDashboard, Tone } from "../lib/dashboard";
 import { useTrades } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -23,9 +23,11 @@ const STAT_ROWS: { i: number; frac: number; rot: number; mt: number }[][] = [
 // parent re-renders on a tab switch — only when its own trades change.
 export const HomeScreen = React.memo(function HomeScreen() {
   const trades = useTrades();
-  const data = useMemo(() => (trades && trades.length ? buildDashboard(trades) : null), [trades]);
+  // Seeded synchronously by useTrades, so data is ready on the first frame — no
+  // loader path (buildDashboard([]) is a valid empty dashboard, caught below).
+  const data = useMemo(() => buildDashboard(trades), [trades]);
 
-  if (trades && trades.length === 0) {
+  if (trades.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyText}>No trades yet.</Text>
@@ -33,14 +35,6 @@ export const HomeScreen = React.memo(function HomeScreen() {
       </View>
     );
   }
-  // Cold launch: the journal is still parsing. Show the native-driven loader (it
-  // keeps pulsing even while the JS thread is busy) instead of a black screen.
-  if (!data)
-    return (
-      <View style={styles.loading}>
-        <BrutalLoader label="LOADING" />
-      </View>
-    );
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -75,7 +69,6 @@ export const HomeScreen = React.memo(function HomeScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: DOCK_SPACE },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },

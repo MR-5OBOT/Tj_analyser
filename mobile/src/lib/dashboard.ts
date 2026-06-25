@@ -27,7 +27,7 @@ export function buildDashboard(trades: StatsRow[]): Dashboard {
 
 // Compute the whole dashboard from the real journal (R-only metrics).
 function computeDashboard(trades: StatsRow[]): Dashboard {
-  const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date)); // oldest first
+  const sorted = trades; // getStatsRows() already returns rows ORDER BY date (oldest first)
   const rs = sorted.map((t) => t.rr ?? 0);
   const n = sorted.length;
   const totalR = rs.reduce((s, r) => s + r, 0);

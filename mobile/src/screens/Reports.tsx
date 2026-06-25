@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { BarChart, ChartCard, EquityChart, RiskScatter, ScatterChart } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { BrutalLoader } from "../components/ui";
 import { buildDashboard } from "../lib/dashboard";
 import { useTrades } from "../lib/journals";
 import { colors, fontFamily, spacing } from "../theme/tokens";
@@ -14,9 +13,10 @@ import { colors, fontFamily, spacing } from "../theme/tokens";
 // its own trades change. Otherwise every tab tap rebuilds the 5k-point SVG paths.
 export const ReportsScreen = React.memo(function ReportsScreen() {
   const trades = useTrades();
-  const data = useMemo(() => (trades && trades.length ? buildDashboard(trades) : null), [trades]);
+  // Seeded synchronously by useTrades — charts are ready on the first frame.
+  const data = useMemo(() => buildDashboard(trades), [trades]);
 
-  if (trades && trades.length === 0) {
+  if (trades.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyText}>No trades yet.</Text>
@@ -24,13 +24,6 @@ export const ReportsScreen = React.memo(function ReportsScreen() {
       </View>
     );
   }
-  // Cold launch: journal still parsing — native-driven loader, not a black screen.
-  if (!data)
-    return (
-      <View style={styles.loading}>
-        <BrutalLoader label="LOADING" />
-      </View>
-    );
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -66,7 +59,6 @@ export const ReportsScreen = React.memo(function ReportsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: DOCK_SPACE },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },

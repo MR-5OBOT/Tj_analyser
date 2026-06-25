@@ -153,8 +153,8 @@ void migrateFromLegacy();
 // loader flash), and updated synchronously so a write's rebuild batches with the
 // loader closing instead of trailing it.
 // ---------------------------------------------------------------------------
-export function useTrades(): StatsRow[] | null {
-  const [rows, setRows] = useState<StatsRow[] | null>(getStatsRows);
+export function useTrades(): StatsRow[] {
+  const [rows, setRows] = useState<StatsRow[]>(getStatsRows);
   useEffect(() => subscribe(() => setRows(getStatsRows())), []);
   return rows;
 }

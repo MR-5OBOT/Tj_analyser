@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { BrutalLoader, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
+import { LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { countTrades, csvToTrades, deleteTrade, getAllTrades, getPage, getTotalR, importTrades, MAX_IMPORT_ROWS, subscribe, Trade, tradesToCsv } from "../lib/journals";
 import { downloadReport, reportBaseName } from "../lib/report";
@@ -61,10 +61,12 @@ const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
 const PAGE = 50;
 
 export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
-  const [rows, setRows] = useState<Trade[] | null>(null); // loaded pages (newest first)
-  const [total, setTotal] = useState(0); // full count (from COUNT, not loaded rows)
-  const [totalR, setTotalR] = useState(0); // full R sum (from SUM)
-  const loadedRef = useRef(0);
+  // Seeded synchronously from SQLite (like the dashboard) so the first open paints
+  // rows immediately — no "LOADING" flash. The mount effect just re-confirms + subscribes.
+  const [rows, setRows] = useState<Trade[]>(() => getPage(PAGE, 0)); // loaded pages (newest first)
+  const [total, setTotal] = useState(countTrades); // full count (from COUNT, not loaded rows)
+  const [totalR, setTotalR] = useState(getTotalR); // full R sum (from SUM)
+  const loadedRef = useRef(rows.length);
   const [active, setActive] = useState<Trade | null>(null);
   const [importing, setImporting] = useState(false);
   const [warning, setWarning] = useState(false);
@@ -185,13 +187,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
         style: "destructive",
         onPress: async () => {
           setMenuTrade(null);
-          setBusy("DELETING");
-          await nextFrame();
-          try {
-            await deleteTrade(t.id); // persist → emit → reload via subscription
-          } finally {
-            setBusy(null);
-          }
+          await deleteTrade(t.id); // single-row delete → emit → reload via subscription — instant, no loader
         },
       },
     ]);
@@ -200,7 +196,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   // ponytail: share is stubbed — wire up the actual share later.
   const shareRow = () => setMenuTrade(null);
 
-  const list = rows ?? []; // loaded pages; `total`/`totalR` are whole-journal aggregates
+  const list = rows; // loaded pages; `total`/`totalR` are whole-journal aggregates
 
   return (
     <View style={styles.root}>
@@ -225,12 +221,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
       <View style={styles.tableFrame} onLayout={(e) => setFrameH(e.nativeEvent.layout.height)}>
         <SketchBorder straight seed={770} />
 
-        {rows === null ? (
-          // Loading: the loader's pulse is native-driven, so it stays smooth.
-          <View style={styles.loadingInFrame}>
-            <BrutalLoader label="LOADING" />
-          </View>
-        ) : total === 0 ? (
+        {total === 0 ? (
           <View style={styles.emptyInFrame}>
             <Text style={styles.emptyText}>No trades yet.</Text>
             <Text style={styles.emptySub}>Log one with ✎ — or import a CSV ↑.</Text>
@@ -644,7 +635,6 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fontFamily.bold, fontSize: 9.5, letterSpacing: 0.5 },
 
   emptyInFrame: { paddingVertical: spacing.xxl, alignItems: "center" },
-  loadingInFrame: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 15 },
   emptySub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.xs },
 
