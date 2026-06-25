@@ -35,6 +35,35 @@ export type Trade = {
 export type StatsRow = Pick<Trade, "date" | "rr" | "outcome" | "positionSize">;
 
 // ---------------------------------------------------------------------------
+// Field checklist — a COMPILE-TIME guard. A trade field surfaces in several
+// places and a forgotten one fails SILENTLY (no crash, it just goes missing).
+// This map is keyed by `keyof Trade`, so adding a field to `Trade` above won't
+// compile until you list it here — at which point the flags walk you through
+// every spot to wire (the map only REMINDS; it doesn't auto-wire):
+//   form   → AddTrade.tsx   (Draft field + a step input)
+//   table  → TradesLogs.tsx (COLS entry + Cell rendering)
+//   csv    → CSV_COLUMNS    (below — export & import)
+//   stats  → dashboard.ts   (only if it feeds a stat/chart; also widen StatsRow)
+//   report → backend config.py column mapping (so the PDF includes it)
+// ---------------------------------------------------------------------------
+type FieldWiring = { form: boolean; table: boolean; csv: boolean; stats: boolean; report: boolean };
+export const FIELD_CHECKLIST: Record<keyof Trade, FieldWiring | "internal"> = {
+  id: "internal",
+  createdAt: "internal",
+  date: { form: true, table: true, csv: true, stats: true, report: true },
+  instrument: { form: true, table: true, csv: true, stats: false, report: true },
+  direction: { form: true, table: true, csv: true, stats: false, report: false },
+  rr: { form: true, table: true, csv: true, stats: true, report: true },
+  slSize: { form: true, table: true, csv: true, stats: false, report: false },
+  positionSize: { form: true, table: true, csv: true, stats: true, report: true },
+  entryTime: { form: true, table: true, csv: true, stats: false, report: true },
+  outcome: { form: true, table: true, csv: true, stats: true, report: true },
+  tradeLink: { form: true, table: true, csv: true, stats: false, report: false },
+  tag: { form: true, table: true, csv: true, stats: false, report: false },
+  notes: { form: true, table: false, csv: false, stats: false, report: false },
+};
+
+// ---------------------------------------------------------------------------
 // SQLite storage. Rows live in a table, so reads touch only what's needed (a
 // page of rows, a count, an aggregate) and writes are per-row — no whole-journal
 // parse on launch, no whole-blob rewrite on every add/delete.
