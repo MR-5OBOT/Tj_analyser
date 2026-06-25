@@ -61,12 +61,12 @@ const textAlign = (a: Align): "flex-start" | "flex-end" | "center" =>
 // table's data is bounded and managed. Counts come from the live caps so the text
 // can never drift out of sync with the actual limits.
 const PROTOCOL_TEXT =
-  `Your full journal — every logged or imported trade, newest first.\n\n` +
-  `• Capacity: the table keeps up to ${MAX_ROWS.toLocaleString()} trades on this device.\n\n` +
-  `• Imports: a CSV import reads up to ${MAX_IMPORT_ROWS.toLocaleString()} rows per file; anything past that in a larger file is skipped.\n\n` +
-  `• Auto-trim: when adding or importing pushes you over ${MAX_ROWS.toLocaleString()}, the oldest trades — the bottom rows — drop off so the newest ${MAX_ROWS.toLocaleString()} always stay.\n\n` +
-  `• No duplicates: identical trades (same date, symbol, direction, entry time, size, outcome and R) merge into one automatically.\n\n` +
-  `• On-device: this data never leaves your phone.`;
+  `Your full journal — every trade, newest first.\n\n` +
+  `•  Holds up to ${MAX_ROWS.toLocaleString()} trades on this device.\n` +
+  `•  A CSV import reads up to ${MAX_IMPORT_ROWS.toLocaleString()} rows per file; extra rows are skipped.\n` +
+  `•  Past ${MAX_ROWS.toLocaleString()}, the oldest rows drop off — the newest ${MAX_ROWS.toLocaleString()} always stay.\n` +
+  `•  Identical trades merge automatically — no duplicates.\n` +
+  `•  Stays on your phone; nothing is uploaded.`;
 
 // memo: no props — must not re-render on a tab switch (keep-alive nav).
 // Rows fetched per page from SQLite as the list scrolls — the table never holds
