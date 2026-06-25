@@ -104,3 +104,26 @@ Two charts are the deliberate work — do them properly so nothing regresses:
 - One dependency (`expo-print`) + one native rebuild; after that it's OTA-able.
 - Then strip the backend entirely.
 - **Do this AFTER the big-data lag work is closed** (current focus).
+
+## Share trade — social-media recap card
+
+**Goal:** Turn the row long-press "Share" (currently a no-op stub in
+`TradesLogs.tsx`, `shareRow`) into a polished, shareable **trade execution recap**
+— a good-looking image card for a social post, NOT a raw data/CSV share.
+
+### What it is
+- A designed card for one trade: symbol, direction, R result, date/entry time,
+  maybe a mini equity/R sparkline — in the app's neo-brutalist style.
+- Rendered to an image and handed to `expo-sharing` so the user posts it to
+  X/IG/Discord etc.
+
+### Likely approach (decide when building)
+- Render the card off-screen as RN/SVG, capture with `react-native-view-shot`
+  (→ PNG), then `Sharing.shareAsync`. Or reuse the future `expo-print` HTML path
+  to make an image. Pick whichever's already in the app by then.
+- Keep it template-driven so the look is one place to tweak.
+
+### Notes
+- Until built, **hide the Share menu item** so it isn't a dead button.
+- Pairs well with the `expo-print` work (shared rendering/sharing plumbing).
+- **Later — not now.**
