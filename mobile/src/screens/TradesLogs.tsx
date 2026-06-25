@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ColumnsWarning } from "../components/ColumnsWarning";
 import { DOCK_SPACE } from "../components/FloatingDock";
-import { TradeShareCard } from "../components/TradeShareCard";
+import { SHARE_SIZES, TradeShareCard } from "../components/TradeShareCard";
 import { InfoTriangleIcon, LoaderOverlay, nextFrame, PressButton, SketchBorder } from "../components/ui";
 import { analyze, getBaseUrl } from "../lib/api";
 import { exportStamp, saveToExports } from "../lib/exports";
@@ -121,19 +121,19 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     const t = shareTarget;
     if (!t) return;
     let cancelled = false;
-    const capture = (node: React.ElementRef<typeof Svg> | null) =>
+    const capture = (node: React.ElementRef<typeof Svg> | null, w: number, h: number) =>
       new Promise<string>((resolve, reject) => {
-        const cap = node as unknown as { toDataURL?: (cb: (b64: string) => void) => void } | null;
+        const cap = node as unknown as { toDataURL?: (cb: (b64: string) => void, opts?: { width: number; height: number }) => void } | null;
         if (!cap?.toDataURL) return reject(new Error("Could not render the image."));
-        cap.toDataURL((b64) => resolve(b64));
+        cap.toDataURL((b64) => resolve(b64), { width: w, height: h }); // force full-res PNG output
       });
     (async () => {
       setBusy("PREPARING IMAGE");
       try {
         // let the off-screen SVGs lay out before capturing (avoids a blank frame)
         await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-        const story = await capture(shareStoryRef.current);
-        const square = await capture(shareSquareRef.current);
+        const story = await capture(shareStoryRef.current, SHARE_SIZES["9:16"].w, SHARE_SIZES["9:16"].h);
+        const square = await capture(shareSquareRef.current, SHARE_SIZES["1:1"].w, SHARE_SIZES["1:1"].h);
         const base = exportStamp(`TJ-${(t.instrument || "trade").replace(/[^A-Za-z0-9]/g, "") || "trade"}`);
         const savedTo = await saveToExports(`${base}-story`, "image/png", { kind: "base64", data: story });
         await saveToExports(`${base}-square`, "image/png", { kind: "base64", data: square });

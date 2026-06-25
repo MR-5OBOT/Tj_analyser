@@ -1,41 +1,36 @@
 // One home for every file the app writes out — PDF reports, CSV journal exports,
-// and shared trade images all land in a single "TJ ANALYZER" folder. Android's
-// Storage Access Framework grants a location ONCE (we point the picker at
-// Downloads), we create/own a TJ ANALYZER subfolder inside it, remember it, and
+// and shared trade images all land in the SAME user-chosen folder. Android's
+// Storage Access Framework grants a folder ONCE (the user picks/creates one — e.g.
+// "TJ ANALYZER" — since Android won't grant Download itself); we remember it and
 // write everything there with no further prompts.
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 
-const EXPORTS_DIR_KEY = "tj.exportsDir"; // content:// URI of the TJ ANALYZER subfolder
+const EXPORTS_DIR_KEY = "tj.exportsDir"; // content:// URI of the user-granted export folder
 const DOWNLOADS_DIR_URI = "content://com.android.externalstorage.documents/tree/primary%3ADownload";
-const FOLDER_NAME = "TJ ANALYZER";
 const SAF = FileSystem.StorageAccessFramework;
 
-/** Friendly label for "saved to …" messages. */
-export const EXPORTS_LABEL = `Downloads/${FOLDER_NAME}`;
+// Friendly name of the granted folder, read from its tree URI (e.g. "TJ ANALYZER").
+function dirLabel(uri: string): string {
+  try {
+    const seg = decodeURIComponent(uri).split(/[/:]/).pop()?.trim();
+    return seg || "the export folder";
+  } catch {
+    return "the export folder";
+  }
+}
 
-// Get the TJ ANALYZER folder URI, asking for a location + creating the subfolder
-// the first time. Returns null if the user declines the picker.
+// Get the export folder URI, asking the user to pick/create one the first time.
+// Android blocks granting Download (or any root) directly — so the user creates or
+// picks a SUBFOLDER (e.g. "TJ ANALYZER") in the system picker and we save straight
+// into it. The app never creates a folder of its own. Returns null if declined.
 async function ensureDir(): Promise<string | null> {
   const saved = (await AsyncStorage.getItem(EXPORTS_DIR_KEY))?.trim();
   if (saved) return saved;
-
   const res = await SAF.requestDirectoryPermissionsAsync(DOWNLOADS_DIR_URI);
   if (!res.granted) return null;
-  const parent = res.directoryUri;
-
-  // Reuse an existing TJ ANALYZER folder if there is one (avoid "TJ ANALYZER (1)").
-  let dir: string | null = null;
-  try {
-    const children = await SAF.readDirectoryAsync(parent);
-    dir = children.find((u) => decodeURIComponent(u).toUpperCase().endsWith("/" + FOLDER_NAME)) ?? null;
-  } catch {
-    // can't list — fall through and create
-  }
-  if (!dir) dir = await SAF.makeDirectoryAsync(parent, FOLDER_NAME);
-
-  await AsyncStorage.setItem(EXPORTS_DIR_KEY, dir);
-  return dir;
+  await AsyncStorage.setItem(EXPORTS_DIR_KEY, res.directoryUri);
+  return res.directoryUri;
 }
 
 export type ExportContent =
@@ -62,7 +57,7 @@ export async function saveToExports(baseName: string, mime: string, content: Exp
           : await FileSystem.readAsStringAsync(content.uri, { encoding: FileSystem.EncodingType.Base64 });
       await FileSystem.writeAsStringAsync(destUri, base64, { encoding: FileSystem.EncodingType.Base64 });
     }
-    return EXPORTS_LABEL;
+    return dirLabel(dir);
   } catch {
     // The grant was probably revoked (e.g. after reinstall) — forget it so the next
     // export re-prompts instead of failing forever.
