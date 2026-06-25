@@ -1,4 +1,4 @@
-import { StatsRow } from "./journals";
+import type { StatsRow } from "./journals";
 
 export type Tone = "neutral" | "positive" | "negative";
 export type Stat = { label: string; value: string; tone: Tone };
