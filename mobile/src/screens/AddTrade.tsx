@@ -361,11 +361,11 @@ function TimePickerModal({
     const ph = parseInt(hh, 10);
     const pm = parseInt(mm, 10);
     setH(Number.isFinite(ph) ? ph : new Date().getHours());
-    setM(Number.isFinite(pm) ? Math.round(pm / 5) * 5 : 0);
+    setM(Number.isFinite(pm) ? pm : 0);
   }, [visible, value]);
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
-  const mins = Array.from({ length: 12 }, (_, i) => i * 5);
+  const mins = Array.from({ length: 60 }, (_, i) => i); // 1-minute steps (00–59)
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

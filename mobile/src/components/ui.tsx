@@ -384,11 +384,12 @@ const s = StyleSheet.create({
   menuDivider: { position: "absolute", top: 0, left: -6, right: -6, height: 2, backgroundColor: "#5A5A5A" },
   menuLabel: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 16 },
 
-  // Full-height info sheet (disclaimer / about / protocol / upload warning)
-  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: spacing.xl },
-  sheetCard: { flex: 1, backgroundColor: colors.surface, padding: spacing.lg },
+  // Info sheet — the card hugs its text (footer right after it), capped at the safe
+  // region so long text scrolls inside instead of overflowing. Centred in the region.
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", paddingHorizontal: spacing.xl },
+  sheetCard: { maxHeight: "100%", backgroundColor: colors.surface, padding: spacing.lg },
   sheetTitle: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
-  sheetScroll: { flex: 1, marginBottom: spacing.lg },
+  sheetScroll: { flexShrink: 1 },
   discBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 21 },
   discClose: { marginTop: spacing.lg, backgroundColor: colors.text, height: 46, alignItems: "center", justifyContent: "center" },
   discCloseText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },
