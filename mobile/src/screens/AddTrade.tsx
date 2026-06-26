@@ -141,17 +141,19 @@ export function AddTradeScreen({
         ) : (
           <StepReview draft={draft} />
         )}
-      </ScrollView>
 
-      <View style={styles.footer}>
-        {step > 1 ? <FooterButton kind="back" label="BACK" onPress={() => setStep((s) => s - 1)} /> : null}
-        <FooterButton
-          kind="next"
-          label={last ? "SAVE" : "NEXT"}
-          disabled={!canNext}
-          onPress={() => (last ? save() : setStep((s) => s + 1))}
-        />
-      </View>
+        {/* Footer flows directly under this step's inputs (not pinned to the screen),
+            so it follows wherever the fields end and scrolls with longer steps. */}
+        <View style={styles.footer}>
+          {step > 1 ? <FooterButton kind="back" label="BACK" onPress={() => setStep((s) => s - 1)} /> : null}
+          <FooterButton
+            kind="next"
+            label={last ? "SAVE" : "NEXT"}
+            disabled={!canNext}
+            onPress={() => (last ? save() : setStep((s) => s + 1))}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -565,7 +567,8 @@ const BTN_OFFSET = 4; // hard-shadow displacement for footer buttons
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl },
+  // paddingBottom clears the floating dock when a long step scrolls to its footer.
+  scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: DOCK_SPACE },
 
   // Stepper
   stepRow: { flexDirection: "row", paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
@@ -642,8 +645,9 @@ const styles = StyleSheet.create({
   reviewKey: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 11, letterSpacing: 1 },
   reviewVal: { flex: 1, textAlign: "right", color: colors.text, fontFamily: fontFamily.bold, fontSize: 13 },
 
-  // Footer (pinned above the floating dock, lifted a bit higher)
-  footer: { flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.xl, paddingBottom: DOCK_SPACE + spacing.lg },
+  // Footer flows under the step inputs — a gap above; the scroll's paddingBottom
+  // (not the footer) provides the dock clearance on long steps.
+  footer: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xl },
   // Each button = a face over a #505050 hard-offset shadow (dock-button style).
   btnCell: { flex: 1, height: 50 + BTN_OFFSET, position: "relative" },
   btnCellBack: { flex: 0.5 },
