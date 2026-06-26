@@ -177,7 +177,6 @@ function FooterButton({ kind, label, onPress, disabled }: { kind: "back" | "next
         onPressIn={() => spring(1)}
         onPressOut={() => spring(0)}
       >
-        <SketchBorder straight seed={isNext ? 211 : 210} color="#000000" />
         <Text style={isNext ? styles.btnNextText : styles.btnBackText}>{label}</Text>
       </AnimatedPressable>
     </View>
