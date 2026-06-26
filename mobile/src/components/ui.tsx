@@ -102,13 +102,13 @@ export function InfoIcon({ size, color = colors.accent }: { size: number; color?
 }
 
 const SHEET_TOP_RESERVE = 54; // header-bar height — keep the card below the header
-const SHEET_BOTTOM_RESERVE = 120; // keep the card above the floating dock
+const SHEET_BOTTOM_RESERVE = 20; // run down OVER the dock (it's blocked while open); just clear the nav bar
 
 /**
- * Info / disclosure window. The card hugs its body (footer right after it). It's
- * centred in a SAFE region that excludes the header and the floating dock, and a
- * hard pixel cap keeps long text (disclaimer/about) scrolling INSIDE rather than
- * overlapping either. Tap the dim backdrop to close.
+ * Info / disclosure window. The card hugs its body (footer right after it), capped
+ * to a pixel height so long text (disclaimer/about) scrolls INSIDE. Sits just below
+ * the header and runs down over the dock — the dock is behind the modal and blocked
+ * while this is open, so covering it is fine. Tap the dim backdrop to close.
  */
 export function InfoSheet({
   visible,
@@ -125,8 +125,8 @@ export function InfoSheet({
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  // Hard pixel cap = the safe region height, so the card can never spill into the
-  // header or the dock (a "%" maxHeight didn't clamp reliably and overlapped).
+  // Hard pixel cap so the card stays below the header; it may run over the dock,
+  // which is fine (covered + blocked while open). A "%" maxHeight didn't clamp.
   const maxHeight = height - insets.top - insets.bottom - SHEET_TOP_RESERVE - SHEET_BOTTOM_RESERVE;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
