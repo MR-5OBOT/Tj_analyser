@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Linking, Modal, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Animated, Linking, Modal, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
@@ -101,14 +101,14 @@ export function InfoIcon({ size, color = colors.accent }: { size: number; color?
   );
 }
 
-const SHEET_TOP_RESERVE = 46; // header-bar height — start the sheet just below the header
-const SHEET_BOTTOM_RESERVE = 84; // clear the floating dock at the bottom
+const SHEET_TOP_RESERVE = 54; // header-bar height — keep the card below the header
+const SHEET_BOTTOM_RESERVE = 120; // keep the card above the floating dock
 
 /**
- * A full-height info / disclosure window: title fixed at the top, body scrolls in
- * the middle, footer (button(s)) pinned at the bottom. Tap the dim backdrop to
- * close. Used for the long text windows — disclaimer, about, raw-data protocol,
- * upload warning — so they fill from below the header to above the dock.
+ * Info / disclosure window. The card hugs its body (footer right after it). It's
+ * centred in a SAFE region that excludes the header and the floating dock, and a
+ * hard pixel cap keeps long text (disclaimer/about) scrolling INSIDE rather than
+ * overlapping either. Tap the dim backdrop to close.
  */
 export function InfoSheet({
   visible,
@@ -124,13 +124,17 @@ export function InfoSheet({
   footer: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  // Hard pixel cap = the safe region height, so the card can never spill into the
+  // header or the dock (a "%" maxHeight didn't clamp reliably and overlapped).
+  const maxHeight = height - insets.top - insets.bottom - SHEET_TOP_RESERVE - SHEET_BOTTOM_RESERVE;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
         style={[s.sheetOverlay, { paddingTop: insets.top + SHEET_TOP_RESERVE, paddingBottom: insets.bottom + SHEET_BOTTOM_RESERVE }]}
         onPress={onClose}
       >
-        <Pressable style={s.sheetCard} onPress={() => {}}>
+        <Pressable style={[s.sheetCard, { maxHeight }]} onPress={() => {}}>
           <SketchBorder straight seed={4242} />
           <Text style={s.sheetTitle}>{title}</Text>
           <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
@@ -387,7 +391,7 @@ const s = StyleSheet.create({
   // Info sheet — the card hugs its text (footer right after it), capped at the safe
   // region so long text scrolls inside instead of overflowing. Centred in the region.
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", paddingHorizontal: spacing.xl },
-  sheetCard: { maxHeight: "100%", backgroundColor: colors.surface, padding: spacing.lg },
+  sheetCard: { backgroundColor: colors.surface, padding: spacing.lg },
   sheetTitle: { color: colors.text, fontFamily: HEADER_FONT, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
   sheetScroll: { flexShrink: 1 },
   discBody: { color: colors.textMuted, fontFamily: fontFamily.regular, fontSize: 14, lineHeight: 21 },
