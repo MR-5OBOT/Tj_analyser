@@ -32,7 +32,7 @@ export type Trade = {
 
 // The only columns the dashboard needs — queried light so launch never has to
 // materialize full rows just to compute stats.
-export type StatsRow = Pick<Trade, "date" | "rr" | "outcome" | "positionSize">;
+export type StatsRow = Pick<Trade, "date" | "rr" | "outcome" | "positionSize" | "entryTime">;
 
 // ---------------------------------------------------------------------------
 // Field checklist — a COMPILE-TIME guard. A trade field surfaces in several
@@ -56,7 +56,7 @@ export const FIELD_CHECKLIST: Record<keyof Trade, FieldWiring | "internal"> = {
   rr: { form: true, table: true, csv: true, stats: true, report: true },
   slSize: { form: true, table: true, csv: true, stats: false, report: false },
   positionSize: { form: true, table: true, csv: true, stats: true, report: true },
-  entryTime: { form: true, table: true, csv: true, stats: false, report: true },
+  entryTime: { form: true, table: true, csv: true, stats: true, report: true },
   outcome: { form: true, table: true, csv: true, stats: true, report: true },
   tradeLink: { form: true, table: true, csv: true, stats: false, report: false },
   tag: { form: true, table: true, csv: true, stats: false, report: false },
@@ -169,7 +169,7 @@ export function getAllTrades(): Trade[] {
 /** Light per-row columns the dashboard needs, cached + shared across screens. */
 export function getStatsRows(): StatsRow[] {
   if (statsCache) return statsCache;
-  statsCache = db.getAllSync<StatsRow>("SELECT date, rr, outcome, positionSize FROM trades ORDER BY date");
+  statsCache = db.getAllSync<StatsRow>("SELECT date, rr, outcome, positionSize, entryTime FROM trades ORDER BY date");
   return statsCache;
 }
 

@@ -57,4 +57,21 @@ assert.deepEqual(e.scatter, []);
 assert.deepEqual(e.risk, []);
 ok("empty journal → zeroed dashboard, no crash");
 
+// --- time-of-week heatmap: total R per (day-of-week, hour), data-only buckets ---
+// 2025-01-06 = Mon, 01-07 = Tue, 01-08 = Wed (Jan 1 2025 is a Wednesday).
+const HT = [
+  { date: "2025-01-06", rr: 2,  outcome: "win",  positionSize: 1, entryTime: "09:30" }, // Mon 09h
+  { date: "2025-01-06", rr: -1, outcome: "loss", positionSize: 1, entryTime: "09:45" }, // Mon 09h (sums)
+  { date: "2025-01-07", rr: 3,  outcome: "win",  positionSize: 1, entryTime: "14:05" }, // Tue 14h
+  { date: "2025-01-08", rr: 1,  outcome: "win",  positionSize: 1, entryTime: "" },        // no time → skipped
+];
+const h = buildDashboard(HT).heatmap;
+const hcell = (day, hour) => h.cells.find((c) => c.day === day && c.hour === hour);
+assert.deepEqual(h.hours, [9, 14]); ok("heatmap hours = only the hours with data");
+assert.deepEqual(h.days, [1, 2]); ok("heatmap days = data days, ordered Mon→Sun");
+assert.deepEqual(hcell(1, 9), { day: 1, hour: 9, r: 1, trades: 2 }); ok("Mon 09h = summed R (+2 -1 = +1), 2 trades");
+assert.deepEqual(hcell(2, 14), { day: 2, hour: 14, r: 3, trades: 1 }); ok("Tue 14h = +3R, 1 trade");
+assert.equal(h.cells.length, 2); ok("heatmap drops trades with no entryTime");
+assert.equal(h.max, 3); ok("heatmap max = peak |R| (3)");
+
 console.log(`\nALL ${pass} CHECKS PASSED`);

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Path, Polygon, Polyline, Rect } from "react-native-svg";
 
-import { CalDay, Calendar } from "../lib/dashboard";
+import { CalDay, Calendar, HeatCell, Heatmap } from "../lib/dashboard";
 import { colors, fontFamily, spacing } from "../theme/tokens";
 import { SketchBorder } from "./ui";
 
@@ -247,6 +247,63 @@ function CalCell({ cell }: { cell: CalDay | null }) {
   );
 }
 
+const DOW_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// R by day-of-week × hour-of-day. Green where a slot is net-positive, red where
+// negative, intensity ∝ |R| / max. Only the hours that hold trades show (the grid
+// scrolls sideways if there are many). Each cell shows that slot's total R.
+export function HeatmapCard({ heat }: { heat: Heatmap }) {
+  const map = useMemo(() => new Map(heat.cells.map((c) => [`${c.day}:${c.hour}`, c])), [heat]);
+
+  return (
+    <View style={[styles.chartCard, { transform: [{ rotate: "0.6deg" }] }]}>
+      <SketchBorder straight seed={706} />
+      <View style={styles.chartHead}>
+        <Text style={styles.chartTitle}>TOTAL R · DAY × HOUR</Text>
+        <Text style={styles.chartRight}>R / SLOT</Text>
+      </View>
+      {heat.hours.length === 0 ? (
+        <Text style={styles.heatNoData}>No entry times logged yet — add trades with a time to fill this in.</Text>
+      ) : (
+        <View>
+          {/* header: corner + day columns (Mon→Sun) */}
+          <View style={styles.heatRow}>
+            <View style={styles.heatLabel} />
+            {heat.days.map((day) => (
+              <Text key={day} style={styles.heatLabel}>
+                {DOW_LABEL[day]}
+              </Text>
+            ))}
+          </View>
+          {/* one row per hour */}
+          {heat.hours.map((h) => (
+            <View key={h} style={styles.heatRow}>
+              <Text style={styles.heatLabel}>{String(h).padStart(2, "0")}</Text>
+              {heat.days.map((day) => (
+                <HeatCellView key={day} cell={map.get(`${day}:${h}`)} max={heat.max} />
+              ))}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function HeatCellView({ cell, max }: { cell?: HeatCell; max: number }) {
+  if (!cell) return <View style={[styles.heatCell, styles.heatEmpty]} />;
+  const pos = cell.r >= 0;
+  const alpha = 0.15 + 0.55 * Math.min(1, Math.abs(cell.r) / max);
+  return (
+    <View style={[styles.heatCell, { backgroundColor: pos ? `rgba(168,255,96,${alpha})` : `rgba(255,122,122,${alpha})` }]}>
+      <Text style={[styles.heatVal, { color: pos ? colors.positive : colors.danger }]} numberOfLines={1} adjustsFontSizeToFit>
+        {pos ? "+" : ""}
+        {cell.r}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   chartCard: { backgroundColor: colors.surface, padding: spacing.md, marginTop: spacing.lg },
   chartHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
@@ -265,4 +322,11 @@ const styles = StyleSheet.create({
   calFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.sm },
   calFooterLabel: { color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9, letterSpacing: 1 },
   calFooterValue: { fontFamily: fontFamily.bold, fontSize: 16 },
+  // R · day × hour heatmap
+  heatRow: { flexDirection: "row", alignItems: "center", gap: 2, marginBottom: 2 },
+  heatLabel: { width: 34, textAlign: "center", color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9 },
+  heatCell: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
+  heatEmpty: { backgroundColor: colors.surfaceAlt },
+  heatVal: { fontFamily: fontFamily.bold, fontSize: 9, paddingHorizontal: 1 },
+  heatNoData: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, paddingVertical: spacing.md },
 });

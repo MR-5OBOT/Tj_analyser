@@ -4,6 +4,9 @@ export type Tone = "neutral" | "positive" | "negative";
 export type Stat = { label: string; value: string; tone: Tone };
 export type CalDay = { day: number; r: number; trades: number };
 export type Calendar = { monthLabel: string; year: number; firstWeekday: number; days: CalDay[]; monthR: number };
+// Time-of-week heatmap: total R per (day-of-week, hour), only the buckets with data.
+export type HeatCell = { day: number; hour: number; r: number; trades: number };
+export type Heatmap = { days: number[]; hours: number[]; cells: HeatCell[]; max: number };
 export type Dashboard = {
   stats: Stat[];
   equity: number[];
@@ -11,6 +14,7 @@ export type Dashboard = {
   scatter: number[]; // recent R-multiples
   risk: { x: number; y: number }[]; // position size (x) vs R-R (y)
   calendar: Calendar;
+  heatmap: Heatmap;
 };
 
 // One-entry ref cache: Home and Reports both build the dashboard from the same
@@ -102,5 +106,34 @@ function computeDashboard(trades: StatsRow[]): Dashboard {
     monthR: +days.reduce((s, d) => s + d.r, 0).toFixed(1),
   };
 
-  return { stats, equity, monthly, scatter, risk, calendar };
+  // Time-of-week heatmap — total R per (day-of-week, hour-of-day), keeping only the
+  // hours that actually hold trades. entryTime is "HH:MM"; day-of-week from date.
+  const heatAgg = new Map<string, { r: number; trades: number }>();
+  const daySet = new Set<number>();
+  const hourSet = new Set<number>();
+  for (const t of sorted) {
+    if (t.rr == null || !t.entryTime) continue;
+    const hour = parseInt(t.entryTime.slice(0, 2), 10);
+    const [hy, hm, hd] = t.date.split("-").map(Number);
+    if (Number.isNaN(hour) || !hy || !hm || !hd) continue;
+    const dow = new Date(hy, hm - 1, hd).getDay(); // 0=Sun … 6=Sat
+    const key = `${dow}:${hour}`;
+    const cur = heatAgg.get(key) ?? { r: 0, trades: 0 };
+    heatAgg.set(key, { r: cur.r + t.rr, trades: cur.trades + 1 });
+    daySet.add(dow);
+    hourSet.add(hour);
+  }
+  const heatCells: HeatCell[] = Array.from(heatAgg, ([k, v]) => {
+    const [day, hour] = k.split(":").map(Number);
+    return { day, hour, r: +v.r.toFixed(1), trades: v.trades };
+  });
+  const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]; // display Mon→Sun
+  const heatmap: Heatmap = {
+    days: DOW_ORDER.filter((d) => daySet.has(d)),
+    hours: Array.from(hourSet).sort((a, b) => a - b),
+    cells: heatCells,
+    max: heatCells.reduce((m, c) => Math.max(m, Math.abs(c.r)), 0) || 1,
+  };
+
+  return { stats, equity, monthly, scatter, risk, calendar, heatmap };
 }

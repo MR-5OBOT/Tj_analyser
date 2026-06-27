@@ -43,7 +43,7 @@ function ReportsIcon({ size, color }: { size: number; color: string }) {
 // All routable pages (Settings lives in the header ⋮ menu, not the dock).
 const PAGES: Page[] = [
   { key: "home", icon: "home-outline", title: "Home" },
-  { key: "report", icon: "stats-chart-outline", title: "Reports", svg: (p) => <ReportsIcon {...p} /> },
+  { key: "report", icon: "stats-chart-outline", title: "Performance", svg: (p) => <ReportsIcon {...p} /> },
   { key: "add", icon: "add-sharp", title: "Add trade" },
   { key: "journals", icon: "server-outline", title: "Raw Data Table", svg: (p) => <SpreadsheetIcon {...p} /> },
   { key: "settings", icon: "settings-outline", title: "Settings" },

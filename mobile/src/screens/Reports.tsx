@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { BarChart, ChartCard, EquityChart, RiskScatter, ScatterChart } from "../components/Charts";
+import { BarChart, ChartCard, EquityChart, HeatmapCard, RiskScatter, ScatterChart } from "../components/Charts";
 import { DOCK_SPACE } from "../components/FloatingDock";
 import { buildDashboard } from "../lib/dashboard";
 import { useTrades } from "../lib/journals";
@@ -53,6 +53,8 @@ export const ReportsScreen = React.memo(function ReportsScreen() {
           </ChartCard>
         ) : null}
       </View>
+
+      <HeatmapCard heat={data.heatmap} />
     </ScrollView>
   );
 });
