@@ -292,7 +292,7 @@ function parseCsv(text: string): string[][] {
 /** Thrown by csvToTrades when the CSV is missing required columns. */
 export class CsvError extends Error {}
 
-export function csvToTrades(csv: string): { trades: Trade[]; rawCount: number } {
+export function csvToTrades(csv: string): { trades: Trade[]; rawCount: number; weekendDropped: number } {
   const rows = parseCsv(csv);
   if (rows.length < 2) throw new CsvError("The file has no data rows.");
   const head = rows[0].map((h) => h.trim().toUpperCase());
@@ -311,7 +311,7 @@ export function csvToTrades(csv: string): { trades: Trade[]; rawCount: number } 
   const dataRows = rows.slice(1);
   // Parse cap: only the first MAX_IMPORT_ROWS rows are read; rawCount lets the caller
   // tell the user when a larger file was truncated (alongside the total-journal cap).
-  const trades: Trade[] = dataRows.slice(0, MAX_IMPORT_ROWS).map((r, k) => {
+  const parsed: Trade[] = dataRows.slice(0, MAX_IMPORT_ROWS).map((r, k) => {
     const dir = get(r, i.dir).toLowerCase();
     const res = get(r, i.res).toLowerCase();
     return {
@@ -330,7 +330,16 @@ export function csvToTrades(csv: string): { trades: Trade[]; rawCount: number } 
       createdAt: new Date().toISOString(),
     };
   });
-  return { trades, rawCount: dataRows.length };
+  // Markets are closed on weekends — drop any Sat/Sun rows and count them so the
+  // import can tell the user. A malformed date is kept (we don't guess it's a weekend).
+  const isWeekend = (date: string) => {
+    const [y, m, d] = date.split("-").map(Number);
+    if (!y || !m || !d) return false;
+    const dow = new Date(y, m - 1, d).getDay();
+    return dow === 0 || dow === 6;
+  };
+  const trades = parsed.filter((t) => !isWeekend(t.date));
+  return { trades, rawCount: dataRows.length, weekendDropped: parsed.length - trades.length };
 }
 
 // Merge imported trades into the journal, deduped on important columns (imported

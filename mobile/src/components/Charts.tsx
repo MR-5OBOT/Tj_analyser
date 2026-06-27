@@ -268,9 +268,9 @@ export function HeatmapCard({ heat }: { heat: Heatmap }) {
         <View>
           {/* header: corner + day columns (Mon→Sun) */}
           <View style={styles.heatRow}>
-            <View style={styles.heatLabel} />
+            <View style={styles.heatRowLabel} />
             {heat.days.map((day) => (
-              <Text key={day} style={styles.heatLabel}>
+              <Text key={day} style={styles.heatColLabel}>
                 {DOW_LABEL[day]}
               </Text>
             ))}
@@ -278,7 +278,7 @@ export function HeatmapCard({ heat }: { heat: Heatmap }) {
           {/* one row per hour */}
           {heat.hours.map((h) => (
             <View key={h} style={styles.heatRow}>
-              <Text style={styles.heatLabel}>{String(h).padStart(2, "0")}</Text>
+              <Text style={styles.heatRowLabel}>{String(h).padStart(2, "0")}</Text>
               {heat.days.map((day) => (
                 <HeatCellView key={day} cell={map.get(`${day}:${h}`)} max={heat.max} />
               ))}
@@ -324,9 +324,11 @@ const styles = StyleSheet.create({
   calFooterValue: { fontFamily: fontFamily.bold, fontSize: 16 },
   // R · day × hour heatmap
   heatRow: { flexDirection: "row", alignItems: "center", gap: 2, marginBottom: 2 },
-  heatLabel: { width: 34, textAlign: "center", color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9 },
-  heatCell: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
+  heatRowLabel: { width: 28, textAlign: "center", color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 9 },
+  heatColLabel: { flex: 1, textAlign: "center", color: colors.textSubtle, fontFamily: fontFamily.medium, fontSize: 10 },
+  // flex + aspectRatio: cells fill the card width and stay square — bigger with fewer days.
+  heatCell: { flex: 1, aspectRatio: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
   heatEmpty: { backgroundColor: colors.surfaceAlt },
-  heatVal: { fontFamily: fontFamily.bold, fontSize: 9, paddingHorizontal: 1 },
+  heatVal: { fontFamily: fontFamily.bold, fontSize: 13, paddingHorizontal: 1 },
   heatNoData: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, paddingVertical: spacing.md },
 });

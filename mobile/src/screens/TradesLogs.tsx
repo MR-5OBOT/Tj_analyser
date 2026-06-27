@@ -222,7 +222,7 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
   const onCsv = async (csv: string) => {
     setBusy("IMPORTING");
     await nextFrame(); // paint the loader before the heavy parse/dedupe/persist
-    let parsed: { trades: Trade[]; rawCount: number };
+    let parsed: { trades: Trade[]; rawCount: number; weekendDropped: number };
     try {
       parsed = csvToTrades(csv); // throws CsvError on missing/mismatched columns
     } catch (e) {
@@ -243,10 +243,15 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
     const capNote = dropped
       ? `\n\nYour journal keeps the most recent ${MAX_ROWS.toLocaleString()} trades — older ones were dropped to make room.`
       : "";
-    Alert.alert(
-      "Imported",
-      (added === 0 ? "Those rows are already in your journal." : `Added ${added} new trade${added === 1 ? "" : "s"}.`) + capNote,
-    );
+    const wd = parsed.weekendDropped;
+    const weekendNote = wd > 0 ? `\n\nDropped ${wd} weekend trade${wd === 1 ? "" : "s"} (Sat/Sun) — markets are closed then.` : "";
+    const main =
+      parsed.trades.length === 0
+        ? "No weekday trades to import."
+        : added === 0
+          ? "Those rows are already in your journal."
+          : `Added ${added} new trade${added === 1 ? "" : "s"}.`;
+    Alert.alert("Imported", main + weekendNote + capNote);
   };
 
   const deleteRow = (t: Trade) => {
