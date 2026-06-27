@@ -398,5 +398,5 @@ const s = StyleSheet.create({
   discCloseText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 14, letterSpacing: 1 },
   aboutVersion: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 12, marginTop: spacing.md },
   aboutLink: { marginTop: spacing.sm, alignSelf: "flex-start" },
-  aboutLinkText: { color: colors.accent, fontFamily: fontFamily.medium, fontSize: 14, textDecorationLine: "underline" },
+  aboutLinkText: { color: colors.accent, fontFamily: fontFamily.medium, fontSize: 14 },
 });
