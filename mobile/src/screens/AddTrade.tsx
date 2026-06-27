@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
   circle: {
     width: CIRCLE,
     height: CIRCLE,
-    borderRadius: CIRCLE / 2,
+    borderRadius: 0, // square — matches the app's 0-radius brutalist style
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.surfaceAlt,

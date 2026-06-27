@@ -247,7 +247,7 @@ export async function clearTrades(): Promise<void> {
 const CSV_COLUMNS: { header: string; get: (t: Trade) => string | number | null; optional?: boolean }[] = [
   { header: "DATE", get: (t) => t.date },
   { header: "SYMBOL", get: (t) => t.instrument },
-  { header: "DIRECTION", get: (t) => t.direction },
+  { header: "DIRECTION", get: (t) => t.direction, optional: true }, // import defaults missing → "long"
   { header: "ENTRY TIME", get: (t) => t.entryTime },
   { header: "SL SIZE", get: (t) => t.slSize },
   { header: "POSITION SIZE", get: (t) => t.positionSize },
