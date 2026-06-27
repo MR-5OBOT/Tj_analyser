@@ -90,7 +90,7 @@ export function AddTradeScreen({
   // Required fields gate per step; later steps stay open.
   const canNext =
     (step === 1 && !!draft.date && draft.instrument.trim() !== "" && draft.direction !== null) ||
-    (step === 2 && draft.outcome !== null) ||
+    (step === 2 && draft.outcome !== null && numOrNull(draft.rr) !== null) ||
     step > 2;
   const last = step === STEPS.length;
 
