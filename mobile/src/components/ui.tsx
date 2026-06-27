@@ -137,7 +137,7 @@ export function InfoSheet({
         <Pressable style={[s.sheetCard, { maxHeight }]} onPress={() => {}}>
           <SketchBorder straight seed={4242} />
           <Text style={s.sheetTitle}>{title}</Text>
-          <ScrollView style={s.sheetScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={s.sheetScroll} contentContainerStyle={{ paddingBottom: spacing.md }} showsVerticalScrollIndicator={false}>
             {children}
           </ScrollView>
           {footer}
@@ -225,8 +225,7 @@ const R_MANIFESTO =
   "TJ Analyser speaks one language: R.\n\n" +
   "1R is what you risk on a trade. A win that returns twice your risk is +2R, a full loss is -1R, break-even is 0R.\n\n" +
   "No dollars. No percentages. No account size. Strip those away and every trade — across any instrument, any account, any year — sits on the same honest scale. A +3R is a +3R whether you risked $5 or $5,000.\n\n" +
-  "That's the whole system: your edge measured by decisions, not bet size. Win rate is the only percentage here, because it counts trades, not money.\n\n" +
-  "This is a personal performance journal — not financial, investment, or trading advice.";
+  "That's the whole system: your edge measured by decisions, not bet size. Win rate is the only percentage here, because it counts trades, not money.";
 
 /**
  * Shared top app bar used on every page: a "!" info button (left, opens the R-R
