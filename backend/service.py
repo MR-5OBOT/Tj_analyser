@@ -1,7 +1,9 @@
+import ipaddress
 import json
+import socket
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 from uuid import uuid4
 
 import httpx
@@ -36,6 +38,45 @@ def build_runtime_config(
     }
 
 
+def _assert_public_url(url: str) -> None:
+    """SSRF guard: allow only http(s) to a host that resolves entirely to public
+    IPs. Blocks localhost, private/link-local/reserved ranges, and the cloud
+    metadata endpoint (169.254.169.254). Raises ValueError → 400 on violation.
+    ponytail: TOCTOU vs httpx's own DNS (rebinding) left open — pin the IP only if
+    this backend ever holds secrets worth stealing."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Remote file URL must use http or https.")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Remote file URL has no host.")
+    try:
+        infos = socket.getaddrinfo(host, parsed.port, proto=socket.IPPROTO_TCP)
+    except socket.gaierror as exc:
+        raise ValueError("Could not resolve the remote file host.") from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if not ip.is_global or ip.is_multicast:
+            logger.warning("ssrf_blocked url=%s host=%s ip=%s", url, host, ip)
+            raise ValueError("Remote file host is not allowed.")
+
+
+async def _get_following_redirects(
+    client: httpx.AsyncClient, url: str, *, max_redirects: int = 5
+) -> httpx.Response:
+    """GET `url`, following redirects manually and SSRF-checking every hop."""
+    for _ in range(max_redirects + 1):
+        _assert_public_url(url)
+        response = await client.get(url)
+        if not response.is_redirect:
+            return response
+        location = response.headers.get("location")
+        if not location:
+            return response
+        url = urljoin(url, location)
+    raise ValueError("Too many redirects for the remote file.")
+
+
 async def load_dataframe_from_request(
     upload: UploadFile | None,
     file_url: str | None,
@@ -58,13 +99,15 @@ async def load_dataframe_from_request(
 
     file_url = normalize_source_url(file_url)
 
+    # follow_redirects=False: we follow manually so EVERY hop is SSRF-checked —
+    # httpx's own follow would fetch a redirected internal URL before we see it.
     async with httpx.AsyncClient(
         timeout=settings.request_timeout_seconds,
-        follow_redirects=True,
+        follow_redirects=False,
     ) as client:
         try:
             logger.info("loading_remote_file url=%s sheet_name=%s", file_url, sheet_name)
-            response = await client.get(file_url)
+            response = await _get_following_redirects(client, file_url)
             response.raise_for_status()
             resolved_filename = _resolve_remote_filename(file_url, response.headers.get("content-type"))
             return _load_dataframe_from_bytes(
