@@ -8,7 +8,7 @@
 # icon/splash, or touched native fields in app.config. OTA only ships JS.
 #
 #   ./scripts/eas-build.sh                  # cloud preview APK (default, internal install)
-#   ./scripts/eas-build.sh --local          # SAME build on your machine via Docker — no EAS quota, no Android Studio
+#   ./scripts/eas-build.sh --local          # SAME build on your machine — no EAS quota (needs Android SDK + JDK 17)
 #   ./scripts/eas-build.sh --clean          # clear EAS cache first (true clean rebuild)
 #   ./scripts/eas-build.sh --production      # Play Store app-bundle (AAB) instead of APK
 #   ./scripts/eas-build.sh --local --production --clean
@@ -45,17 +45,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$SCRIPT_DIR/../mobile"
 cd "$MOBILE_DIR" || error "mobile/ not found at $MOBILE_DIR"
 
-WHERE=$([ "$LOCAL" = true ] && echo "local (Docker, no quota)" || echo "cloud (EAS)")
+WHERE=$([ "$LOCAL" = true ] && echo "local (this machine, no quota)" || echo "cloud (EAS)")
 info "Profile : $PROFILE  ($([ "$PROFILE" = preview ] && echo APK || echo AAB))"
 info "Where   : $WHERE"
 $CLEAN && info "Cache   : clearing (clean rebuild)"
 echo ""
 
-# ── Local builds need Docker (keeps you off Android Studio) ──────────────────
+# ── Local builds compile on THIS machine (no Docker) → need Android SDK + JDK ─
 if [ "$LOCAL" = true ]; then
-  command -v docker &>/dev/null || error "Docker not found — needed for --local. Install Docker, or drop --local to build in the cloud."
-  docker info &>/dev/null        || error "Docker isn't running. Start it, or drop --local."
-  warn "First local run pulls the EAS build image (~several GB). Be patient."
+  SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+  [ -d "$SDK" ] || error "No Android SDK (looked at \$ANDROID_HOME / \$ANDROID_SDK_ROOT / ~/Android/Sdk).
+        --local builds on this machine and needs it. Either install the Android
+        command-line SDK tools, or just drop --local to build in the cloud."
+  command -v java &>/dev/null || error "No JDK found — local Android builds need JDK 17. Install it, or drop --local."
 fi
 command -v eas &>/dev/null || error "EAS CLI not found. Run: npm install -g eas-cli"
 
