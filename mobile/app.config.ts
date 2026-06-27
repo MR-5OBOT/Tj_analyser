@@ -5,10 +5,11 @@ export default {
   expo: {
     name: "TJ Analyser",
     slug: "tj-analyser-mobile",
+    owner: "ys92",
     version: "0.1.0",
     runtimeVersion: { policy: "appVersion" },
     updates: {
-      url: "https://u.expo.dev/1ce6a3a2-e219-4022-a7e8-a49fa82d6d39",
+      url: "https://u.expo.dev/89b1be0c-46e6-4050-80ae-6c61695128f7",
     },
     orientation: "portrait",
     userInterfaceStyle: "dark",
@@ -41,7 +42,7 @@ export default {
     extra: {
       apiBaseUrl: backendUrl,
       eas: {
-        projectId: "1ce6a3a2-e219-4022-a7e8-a49fa82d6d39",
+        projectId: "89b1be0c-46e6-4050-80ae-6c61695128f7",
       },
     },
   },
