@@ -28,18 +28,30 @@ function SpreadsheetIcon({ size, color }: { size: number; color: string }) {
   );
 }
 
+// Streamline "Analytics Graph Lines 2" — the Reports tab (testing).
+function ReportsIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M23.243 23.25H0.75V0.75" />
+      <Path d="m0.75 6.125 6.74242 4.625 8.76518 -5.125 6.7424 4" />
+      <Path d="M0.75 20.3438 9 15.3357l2.5 1.8548 8.5 2.2258 3 -4.8225" />
+      <Path d="m0.75 11.625 7.21875 -8 6.68755 10.5L23 3.625" />
+    </Svg>
+  );
+}
+
 // All routable pages (Settings lives in the header ⋮ menu, not the dock).
 const PAGES: Page[] = [
   { key: "home", icon: "home-outline", title: "Home" },
-  { key: "report", icon: "stats-chart-outline", title: "Reports" },
-  { key: "add", icon: "create-outline", title: "Add trade" },
+  { key: "report", icon: "stats-chart-outline", title: "Reports", svg: (p) => <ReportsIcon {...p} /> },
+  { key: "add", icon: "add-sharp", title: "Add trade" },
   { key: "journals", icon: "server-outline", title: "Raw Data Table", svg: (p) => <SpreadsheetIcon {...p} /> },
   { key: "settings", icon: "settings-outline", title: "Settings" },
 ];
 
-// The dock shows three nav pages; Add trade sits alone on the far right and
-// Settings is reached from the ⋮ menu.
-const ITEMS: DockItem[] = PAGES.filter((p) => p.key !== "settings" && p.key !== "add").map((p) => ({
+// The dock shows the four nav pages (Home, Reports, Data, Settings) split around the
+// central Add CTA. Order here = left-to-right around the CTA: [Home, Reports] ＋ [Data, Settings].
+const ITEMS: DockItem[] = PAGES.filter((p) => p.key !== "add").map((p) => ({
   key: p.key,
   icon: p.icon,
   svg: p.svg,
@@ -131,7 +143,7 @@ export default function Home() {
         </SafeAreaView>
 
         <FloatingDock items={ITEMS} activeKey={active} onSelect={select} action={ADD_ITEM} />
-        <ToolsMenu open={toolsOpen} onClose={() => setToolsOpen(false)} onSettings={() => select("settings")} />
+        <ToolsMenu open={toolsOpen} onClose={() => setToolsOpen(false)} />
       </View>
     </View>
   );

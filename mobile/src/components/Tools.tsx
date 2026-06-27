@@ -56,23 +56,6 @@ function CalcOffIcon({ size, color }: IconProps) {
   );
 }
 
-// Tabler "adjustments-alt" — the Settings entry at the bottom of the menu.
-function AdjustmentsIcon({ size, color }: IconProps) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M4 8h4v4h-4l0 -4" />
-      <Path d="M6 4l0 4" />
-      <Path d="M6 12l0 8" />
-      <Path d="M10 14h4v4h-4l0 -4" />
-      <Path d="M12 4l0 10" />
-      <Path d="M12 18l0 2" />
-      <Path d="M16 5h4v4h-4l0 -4" />
-      <Path d="M18 4l0 1" />
-      <Path d="M18 9l0 11" />
-    </Svg>
-  );
-}
-
 // Tabler "chart-dots-2" — used for the Simulator tool.
 function ChartDotsIcon({ size, color }: IconProps) {
   return (
@@ -215,8 +198,8 @@ export const TOOLS: Calc[] = [
   },
 ];
 
-/** Right-side header dropdown: the calculators, then Settings at the bottom. */
-export function ToolsMenu({ open, onClose, onSettings }: { open: boolean; onClose: () => void; onSettings: () => void }) {
+/** Right-side header dropdown: the calculators. (Settings lives in the bottom nav.) */
+export function ToolsMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const [tool, setTool] = useState<string | null>(null);
 
@@ -239,17 +222,6 @@ export function ToolsMenu({ open, onClose, onSettings }: { open: boolean; onClos
                 <Text style={styles.menuLabel}>{c.title}</Text>
               </PressButton>
             ))}
-            <PressButton
-              style={styles.menuItem}
-              onPress={() => {
-                onClose();
-                onSettings();
-              }}
-            >
-              <View style={styles.menuDivider} pointerEvents="none" />
-              <AdjustmentsIcon size={18} color={colors.textMuted} />
-              <Text style={styles.menuLabel}>Settings</Text>
-            </PressButton>
             <SketchBorder seed={4519} straight />
           </View>
         </Pressable>
@@ -479,7 +451,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 20, letterSpacing: 1, marginBottom: spacing.md },
   headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md },
   // CALCULATE: primary action; results then open in their own popup.
-  calcBtn: { marginTop: spacing.md, backgroundColor: colors.positive, height: 50, alignItems: "center", justifyContent: "center" },
+  calcBtn: { marginTop: spacing.md, backgroundColor: colors.text, height: 50, alignItems: "center", justifyContent: "center" },
   calcBtnText: { color: colors.background, fontFamily: fontFamily.bold, fontSize: 15, letterSpacing: 1.5 },
   resOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", padding: spacing.xl },
   resCard: { width: "100%", maxWidth: 340, backgroundColor: colors.surface, padding: spacing.xl },

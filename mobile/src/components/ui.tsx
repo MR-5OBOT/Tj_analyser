@@ -1,10 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Updates from "expo-updates";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Linking, Modal, Pressable, PressableProps, ScrollView, StyleProp, StyleSheet, Text, useWindowDimensions, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 
 import { colors, fontFamily, spacing } from "../theme/tokens";
 
@@ -90,13 +89,35 @@ export function SketchBorder({ seed, straight, color, tight }: { seed?: number; 
   );
 }
 
-// Orange-yellow info "i" in a circle — the app's info / disclaimer button.
+// Orange-yellow info "i" — Tabler "info-square" (rounded-square outline). App's info / disclaimer button.
 export function InfoIcon({ size, color = colors.accent }: { size: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Circle cx={12} cy={12} r={9} />
-      <Path d="M12 8h.01" />
-      <Path d="M12 11v5" />
+      <Path d="M12 9h.01" />
+      <Path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14" />
+      <Path d="M11 12h1v4h1" />
+    </Svg>
+  );
+}
+
+// Tabler "exclamation-mark" — bare "!" stroke, used for the header menu items.
+export function AlertIcon({ size, color = colors.textMuted }: { size: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 19v.01" />
+      <Path d="M12 15v-10" />
+    </Svg>
+  );
+}
+
+// Streamline "Messages Bubble Square Question" — header info/help button (testing).
+export function HelpBubbleIcon({ size, color = colors.accent }: { size: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M21.75 18.75h-10.5l-6 4.5v-4.5h-3c-0.39782 0 -0.77936 -0.158 -1.06066 -0.4393C0.908035 18.0294 0.75 17.6478 0.75 17.25v-15c0 -0.39782 0.158035 -0.77936 0.43934 -1.06066C1.47064 0.908035 1.85218 0.75 2.25 0.75h19.5c0.3978 0 0.7794 0.158035 1.0607 0.43934 0.2813 0.2813 0.4393 0.66284 0.4393 1.06066v15c0 0.3978 -0.158 0.7794 -0.4393 1.0607s-0.6629 0.4393 -1.0607 0.4393Z" />
+      <Path d="M9.75 6.75004c0.00011 -0.54997 0.15139 -1.08933 0.4373 -1.55914 0.286 -0.4698 0.6955 -0.85196 1.184 -1.10471 0.4884 -0.25275 1.037 -0.36637 1.5856 -0.32843 0.5487 0.03793 1.0764 0.22596 1.5254 0.54353 0.449 0.31757 0.8021 0.75246 1.0206 1.25714 0.2186 0.50468 0.2942 1.05973 0.2186 1.60448 -0.0756 0.54475 -0.2994 1.05825 -0.6471 1.48436s-0.8059 0.74844 -1.3244 0.93177c-0.2924 0.10338 -0.5456 0.29487 -0.7247 0.54816 -0.1791 0.2532 -0.2753 0.5557 -0.2753 0.8659v0.257" />
+      <Path d="M12.75 15c-0.2071 0 -0.375 -0.1679 -0.375 -0.375s0.1679 -0.375 0.375 -0.375" />
+      <Path d="M12.75 15c0.2071 0 0.375 -0.1679 0.375 -0.375s-0.1679 -0.375 -0.375 -0.375" />
     </Svg>
   );
 }
@@ -247,7 +268,7 @@ export function TopHeader({
     <View style={s.topHeader}>
       {/* Left → Disclaimer / About menu */}
       <PressButton onPress={() => setOpen(true)} style={s.logoSlot} hitSlop={8}>
-        <InfoIcon size={25} />
+        <HelpBubbleIcon size={25} />
       </PressButton>
       <View style={s.brand}>
         <Text style={s.headerTitle} numberOfLines={1}>
@@ -273,7 +294,7 @@ export function TopHeader({
                 setDisc(true);
               }}
             >
-              <Ionicons name="alert-circle-outline" size={18} color={colors.textMuted} />
+              <AlertIcon size={18} color={colors.textMuted} />
               <Text style={s.menuLabel}>Disclaimer</Text>
             </PressButton>
             <PressButton
@@ -284,7 +305,7 @@ export function TopHeader({
               }}
             >
               <View style={s.menuDivider} pointerEvents="none" />
-              <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+              <AlertIcon size={18} color={colors.textMuted} />
               <Text style={s.menuLabel}>About</Text>
             </PressButton>
             <SketchBorder seed={4517} straight />

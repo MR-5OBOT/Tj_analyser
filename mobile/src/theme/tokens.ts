@@ -18,6 +18,10 @@ export const colors = {
   positive: "#A8FF60",
   danger: "#FF7A7A",
   accent: "#F5A623", // orange-yellow — the info "i" icon
+  // Redesign (ui-ux-design): orange = actions + active state; green/red stay P/L only.
+  action: "#F5A623",
+  onAction: "#0A0A0A", // dark icon/text on an orange fill
+  borderStrong: "#333333", // visible structural border on pure-black (layers read by lines)
 };
 
 export const spacing = {

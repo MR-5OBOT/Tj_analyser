@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, spacing } from "../theme/tokens";
-import { SketchBorder } from "./ui";
+import { colors } from "../theme/tokens";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -14,23 +13,19 @@ export type DockItem = {
   svg?: (p: { size: number; color: string }) => React.ReactNode; // custom glyph; overrides `icon`
 };
 
-/** Vertical space the dock occupies, so page content can pad clear of it. */
-export const DOCK_SPACE = 110;
+/** Vertical space the bar (+ raised CTA) occupies, so page content pads clear of it. */
+export const DOCK_SPACE = 104;
 
-// Neo-brutalism: zero radius, bold outlines, and flat hard-offset shadows that the
-// element "pushes into" (collapses) when pressed/selected.
-// Fully monochrome brutalism: grey outlines + grey hard shadows. Active and Add
-// read as light-grey tiles with a dark icon; no accent color in the dock at all.
-const BRUTAL_BORDER = "#111111"; // outline on every element (matches idle face)
-const NAV_SHADOW = "#505050"; // grey hard shadow under idle nav squares
-const ADD_SHADOW = "#A8A8A8"; // light-grey hard shadow under the Add square
-const FILL_HERO = "#A8A8A8"; // muted light-grey fill for active + Add tiles
-const ICON_HERO = "#0A0A0A"; // dark icon on the light-grey tiles
-const CONNECTOR_COLOR = "#000000"; // seam line, black over the grey bg
-const NAV_SIZE = 44;
-const ADD_SIZE = 45;
-const NAV_OFFSET = 4; // hard-shadow displacement for nav buttons
-const ADD_OFFSET = 4; // displacement for the standalone Add button
+// Hybrid bottom nav (see UI_REDESIGN.md): OLED-black bar, bold top rule, 0 radius,
+// flat (no shadow). Center orange CTA; tabs are icon-only, active = orange + filled
+// glyph + a sliding indicator. Subtle native-driver motion only.
+const BAR_H = 60;
+const ICON = 24;
+const CTA = 52;
+const IND_W = 26; // active-tab indicator width
+
+// Ionicons ship "-outline" / filled pairs; the active tab uses the filled glyph.
+const filled = (name: IconName) => name.replace(/-outline$/, "") as IconName;
 
 export function FloatingDock({
   items,
@@ -41,231 +36,141 @@ export function FloatingDock({
   items: DockItem[];
   activeKey: string;
   onSelect: (key: string) => void;
-  /** Standalone primary button shown alone on the far right (e.g. Add trade). */
+  /** Central CTA (Add trade) — sits raised in the middle, splitting the tabs. */
   action?: DockItem;
 }) {
   const insets = useSafeAreaInsets();
+  const [barW, setBarW] = useState(0);
+
+  const slots = items.length + (action ? 1 : 0);
+  const mid = Math.ceil(items.length / 2);
+  const left = items.slice(0, mid);
+  const right = items.slice(mid);
+  // The CTA takes the middle slot, so right-hand tabs shift one slot over.
+  const slotOf = (navIndex: number) => (action && navIndex >= mid ? navIndex + 1 : navIndex);
+
+  const activeNav = items.findIndex((it) => it.key === activeKey);
+  const slotW = slots ? barW / slots : 0;
+
+  const indX = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (activeNav < 0 || slotW === 0) return;
+    Animated.spring(indX, {
+      toValue: slotOf(activeNav) * slotW + (slotW - IND_W) / 2,
+      friction: 9,
+      tension: 120,
+      useNativeDriver: true,
+    }).start();
+  }, [activeNav, slotW]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onLayout = (e: LayoutChangeEvent) => setBarW(e.nativeEvent.layout.width);
 
   return (
-    <View
-      // Sit the whole grey band ABOVE the gesture bar; don't pad (and paint) into it.
-      style={[styles.wrapper, { bottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
-    >
-      <View style={styles.dock}>
-        <SketchBorder seed={991} color="#000000" tight />
-        {items.map((item) => (
-          <DockButton
-            key={item.key}
-            item={item}
-            active={item.key === activeKey}
-            onPress={() => onSelect(item.key)}
-          />
-        ))}
-      </View>
-
-      {action ? (
-        <>
-          <View style={styles.connector} pointerEvents="none">
-            <View style={[styles.connSeg, { transform: [{ rotate: "2deg" }] }]} />
-            <View style={[styles.connSeg, { transform: [{ rotate: "-2.5deg" }] }]} />
-            <View style={[styles.connSeg, { transform: [{ rotate: "1.5deg" }] }]} />
-          </View>
-          <ActionButton
-            item={action}
-            active={action.key === activeKey}
-            onPress={() => onSelect(action.key)}
-          />
-        </>
+    <View style={[styles.bar, { paddingBottom: insets.bottom }]} onLayout={onLayout}>
+      {activeNav >= 0 && slotW > 0 ? (
+        <Animated.View style={[styles.indicator, { transform: [{ translateX: indX }] }]} />
       ) : null}
+
+      {left.map((it) => (
+        <Tab key={it.key} item={it} active={it.key === activeKey} onPress={() => onSelect(it.key)} />
+      ))}
+      {action ? (
+        <Cta item={action} active={action.key === activeKey} onPress={() => onSelect(action.key)} />
+      ) : null}
+      {right.map((it) => (
+        <Tab key={it.key} item={it} active={it.key === activeKey} onPress={() => onSelect(it.key)} />
+      ))}
     </View>
   );
 }
 
-/**
- * Drives the brutalist "push": the face slides into its hard shadow while held
- * down or while selected, then springs back up. Native-driver transform only.
- */
-function usePressDown(active: boolean) {
-  const [pressed, setPressed] = useState(false);
-  const down = useRef(new Animated.Value(active ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.spring(down, {
-      toValue: active || pressed ? 1 : 0,
-      friction: 7,
-      tension: 220,
-      useNativeDriver: true,
-    }).start();
-  }, [active, pressed, down]);
-
+/** Hook: spring a 0→1 press value, native-driver. */
+function usePress(to: 0 | 1, friction = 6) {
+  const v = useRef(new Animated.Value(0)).current;
   return {
-    down,
-    onPressIn: () => setPressed(true),
-    onPressOut: () => setPressed(false),
+    v,
+    onIn: () => Animated.spring(v, { toValue: 1, friction, tension: 220, useNativeDriver: true }).start(),
+    onOut: () => Animated.spring(v, { toValue: 0, friction, tension: 220, useNativeDriver: true }).start(),
   };
 }
 
-/** A dock nav square: white-outlined, casting a flat lime hard shadow. */
-function DockButton({
-  item,
-  active,
-  onPress,
-}: {
-  item: DockItem;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const { down, onPressIn, onPressOut } = usePressDown(active);
-  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, NAV_OFFSET] });
+function Tab({ item, active, onPress }: { item: DockItem; active: boolean; onPress: () => void }) {
+  const { v, onIn, onOut } = usePress(0);
+  const scale = v.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] });
+  const color = active ? colors.text : colors.textMuted; // neutral nav: white active, grey idle
 
   return (
     <Pressable
+      style={styles.slot}
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={onIn}
+      onPressOut={onOut}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      <View style={styles.navCell}>
-        <View style={styles.navShadow} />
-        <Animated.View
-          style={[
-            styles.navFace,
-            active ? styles.navFaceActive : null,
-            { transform: [{ translateX: shift }, { translateY: shift }] },
-          ]}
-        >
-          {item.svg
-            ? item.svg({ size: 19, color: active ? ICON_HERO : colors.textMuted })
-            : <Ionicons name={item.icon} size={18} color={active ? ICON_HERO : colors.textMuted} />}
-        </Animated.View>
-      </View>
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {item.svg
+          ? item.svg({ size: ICON, color })
+          : <Ionicons name={active ? filled(item.icon) : item.icon} size={ICON} color={color} />}
+      </Animated.View>
     </Pressable>
   );
 }
 
-/** Standalone Add button: a solid lime block with a white hard shadow. */
-function ActionButton({
-  item,
-  active,
-  onPress,
-}: {
-  item: DockItem;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const { down, onPressIn, onPressOut } = usePressDown(active);
-  const shift = down.interpolate({ inputRange: [0, 1], outputRange: [0, ADD_OFFSET] });
+function Cta({ item, active, onPress }: { item: DockItem; active: boolean; onPress: () => void }) {
+  const { v, onIn, onOut } = usePress(0);
+  const scale = v.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] });
 
   return (
     <Pressable
+      style={styles.slot}
       onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
+      onPressIn={onIn}
+      onPressOut={onOut}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      <View style={styles.addCell}>
-        <View style={styles.addShadow} />
-        <Animated.View
-          style={[
-            styles.addFace,
-            active ? styles.addFaceActive : null,
-            { transform: [{ translateX: shift }, { translateY: shift }] },
-          ]}
-        >
-          <Ionicons name={item.icon} size={19} color={active ? ICON_HERO : colors.textMuted} />
-        </Animated.View>
-      </View>
+      <Animated.View style={[styles.cta, active ? styles.ctaActive : null, { transform: [{ translateY: -14 }, { scale }] }]}>
+        {item.svg
+          ? item.svg({ size: active ? 40 : 30, color: colors.onAction })
+          : <Ionicons name={active ? filled(item.icon) : item.icon} size={active ? 40 : 30} color={colors.onAction} />}
+      </Animated.View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  bar: {
     position: "absolute",
-    // Inset the wrapper itself so the grey bg shrinks with the dock (not full-width).
-    left: 30,
-    right: 30,
-    // `bottom` is set inline from the safe-area inset so the band clears the gesture
-    // bar; padding stays tight so the grey never bleeds into the nav area.
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    backgroundColor: "#505050",
+    backgroundColor: colors.background,
+    borderTopWidth: 3,
+    borderTopColor: colors.borderSoft, // bold top rule separates nav from content
   },
-  dock: {
-    flexDirection: "row",
+  slot: { flex: 1, height: BAR_H, alignItems: "center", justifyContent: "center" },
+  // Sliding active mark, pinned to the bar's top edge.
+  indicator: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: IND_W,
+    height: 3,
+    backgroundColor: colors.text,
+    zIndex: 2,
+  },
+  // Raised CTA — solid grey block (idle), dark icon.
+  cta: {
+    width: CTA,
+    height: CTA,
     alignItems: "center",
-    gap: 5,
-    // grey layer between the black sketch frame and the buttons
-    paddingHorizontal: 13,
-    paddingVertical: 10,
+    justifyContent: "center",
     backgroundColor: "#A8A8A8",
-    borderRadius: 0,
   },
-  // Hand-drawn seam: three slightly-rotated segments so the line waves.
-  connector: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: spacing.sm,
-  },
-  connSeg: {
-    flex: 1,
-    height: 2,
-    backgroundColor: CONNECTOR_COLOR,
-  },
-  // Nav square — cell reserves room for the offset hard shadow.
-  navCell: { width: NAV_SIZE + NAV_OFFSET, height: NAV_SIZE + NAV_OFFSET },
-  navShadow: {
-    position: "absolute",
-    top: NAV_OFFSET,
-    left: NAV_OFFSET,
-    width: NAV_SIZE,
-    height: NAV_SIZE,
-    backgroundColor: NAV_SHADOW,
-  },
-  navFace: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: NAV_SIZE,
-    height: NAV_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 2,
-    borderColor: BRUTAL_BORDER,
-  },
-  navFaceActive: {
-    backgroundColor: "#505050",
-    borderColor: BRUTAL_BORDER,
-  },
-  // Add square — bigger offset, white hard shadow under a solid lime face.
-  addCell: { width: ADD_SIZE + ADD_OFFSET, height: ADD_SIZE + ADD_OFFSET },
-  addShadow: {
-    position: "absolute",
-    top: ADD_OFFSET,
-    left: ADD_OFFSET,
-    width: ADD_SIZE,
-    height: ADD_SIZE,
-    backgroundColor: ADD_SHADOW,
-  },
-  addFace: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: ADD_SIZE,
-    height: ADD_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 2,
-    borderColor: BRUTAL_BORDER,
-  },
-  addFaceActive: {
-    backgroundColor: FILL_HERO,
-  },
+  // Active (on the Add screen): same block, fill goes white — a clear "you're here"
+  // state vs the grey idle block. Dark plus in both.
+  ctaActive: { backgroundColor: colors.text },
 });

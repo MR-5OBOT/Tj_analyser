@@ -395,9 +395,9 @@ export const TradesLogsScreen = React.memo(function TradesLogsScreen() {
         title="RAW DATA · HOW IT WORKS"
         onClose={() => setProtocolOpen(false)}
         footer={
-          <Pressable style={styles.linkBtn} onPress={() => setProtocolOpen(false)}>
+          <PressButton style={styles.linkBtn} onPress={() => setProtocolOpen(false)}>
             <Text style={styles.linkBtnText}>GOT IT</Text>
-          </Pressable>
+          </PressButton>
         }
       >
         <Text style={styles.protocolBody}>{PROTOCOL_TEXT}</Text>
