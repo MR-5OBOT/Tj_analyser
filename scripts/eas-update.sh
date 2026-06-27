@@ -2,10 +2,15 @@
 #
 # eas-update — ship JS/UI changes over-the-air (no rebuild).
 #
-# One-shot:
-#   ./scripts/eas-update.sh "remove dock"
+# Goes to the PREVIEW lane by default — only your internal test APK (the one
+# from `./scripts/eas-build.sh`) pulls it. Real Play Store users are NOT touched
+# unless you pass --production on purpose.
 #
-# Watch mode (auto-publishes on every saved change to app/ or src/):
+# One-shot:
+#   ./scripts/eas-update.sh "remove dock"              # → preview (test phone)
+#   ./scripts/eas-update.sh --production "ship v3"      # → production (Play Store users)
+#
+# Watch mode (auto-publishes to preview on every saved change to app/ or src/):
 #   ./scripts/eas-update.sh --watch
 #   ./scripts/eas-update.sh --watch "wip"     # custom message prefix
 #
@@ -22,9 +27,11 @@ SETTLE_SECONDS="${EAS_UPDATE_DEBOUNCE:-30}"
 
 WATCH=0
 MESSAGE=""
+TARGET="preview"   # which lane to update; --production switches to real users
 for arg in "$@"; do
   case "$arg" in
-    -w|--watch) WATCH=1 ;;
+    -w|--watch)              WATCH=1 ;;
+    --production|--prod)     TARGET="production" ;;
     *) MESSAGE="$arg" ;;
   esac
 done
@@ -38,8 +45,9 @@ publish() {
     echo "✗ Type errors — update skipped." >&2
     return 1
   fi
-  echo "› Publishing OTA update: $msg"
-  eas update --branch production --environment preview -m "$msg"
+  echo "› Publishing OTA update to '$TARGET': $msg"
+  # branch == channel name; the build's channel (eas.json) decides which updates it pulls.
+  eas update --branch "$TARGET" --environment "$TARGET" -m "$msg"
   echo "✓ Done. Close + reopen the app twice on your phone to pull it."
 }
 
@@ -56,6 +64,12 @@ if [ "$WATCH" -eq 0 ]; then
   fi
   publish "$MESSAGE"
   exit $?
+fi
+
+# ponytail: watch never auto-ships to real users — too easy to fire by accident.
+if [ "$TARGET" = "production" ]; then
+  echo "✗ Refusing --watch --production. Auto-publishing to real users is a footgun; push production one-shot." >&2
+  exit 1
 fi
 
 echo "👀 Watching mobile/app and mobile/src — publishes ${SETTLE_SECONDS}s after your last edit. Ctrl-C to stop."
