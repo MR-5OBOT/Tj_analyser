@@ -47,7 +47,12 @@ publish() {
   fi
   echo "› Publishing OTA update to '$TARGET': $msg"
   # branch == channel name; the build's channel (eas.json) decides which updates it pulls.
-  eas update --branch "$TARGET" --environment "$TARGET" -m "$msg"
+  # rm dist: a stale export makes upload flake with "Can't read metadata.json". CI=1 = non-interactive.
+  rm -rf dist
+  if ! CI=1 eas update --branch "$TARGET" --environment "$TARGET" -m "$msg"; then
+    echo "✗ Publish failed (see above)." >&2
+    return 1
+  fi
   echo "✓ Done. Close + reopen the app twice on your phone to pull it."
 }
 
