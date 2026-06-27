@@ -711,7 +711,8 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontFamily: fontFamily.bold, fontSize: 13, letterSpacing: 0.5 },
   titleSub: { color: colors.textSubtle, fontFamily: fontFamily.regular, fontSize: 11 },
 
-  tableFrame: { flex: 1, position: "relative", marginBottom: DOCK_SPACE, paddingHorizontal: 2, paddingTop: 2 },
+  // marginBottom: DOCK_SPACE, if you want trades logs to not expand bellow floatdock.
+  tableFrame: { flex: 1, position: "relative", marginBottom: spacing.sm, paddingHorizontal: 2, paddingTop: 2 },
 
   headerRow: { flexDirection: "row", backgroundColor: colors.surfaceAlt, borderBottomWidth: 2, borderColor: colors.borderSoft },
   headerCell: { height: HEADER_H, justifyContent: "center", paddingHorizontal: spacing.sm },
