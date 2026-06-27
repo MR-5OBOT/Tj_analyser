@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: 5,
     backgroundColor: "#505050",
   },
   dock: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     gap: 5,
     // grey layer between the black sketch frame and the buttons
     paddingHorizontal: 13,
-    paddingVertical: 10, // ~3% shorter (was 11)
+    paddingVertical: 10,
     backgroundColor: "#A8A8A8",
     borderRadius: 0,
   },
