@@ -11,6 +11,7 @@ class BackendSettings(BaseSettings):
     storage_dir: Path = Path("backend/storage")
     request_timeout_seconds: float = 60.0
     report_ttl_minutes: int = 60
+    max_upload_bytes: int = 10 * 1024 * 1024  # reject journals larger than 10 MB (OOM guard)
 
     model_config = SettingsConfigDict(
         env_prefix="TJ_",

@@ -61,19 +61,38 @@ def _assert_public_url(url: str) -> None:
             raise ValueError("Remote file host is not allowed.")
 
 
-async def _get_following_redirects(
+def _assert_within_size_limit(num_bytes: int) -> None:
+    if num_bytes > settings.max_upload_bytes:
+        raise ValueError("File is too large.")
+
+
+async def _read_capped(response: httpx.Response) -> bytes:
+    """Read a streamed body, aborting if it exceeds the size cap (OOM guard)."""
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in response.aiter_bytes():
+        total += len(chunk)
+        _assert_within_size_limit(total)
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+async def _fetch_public_file(
     client: httpx.AsyncClient, url: str, *, max_redirects: int = 5
-) -> httpx.Response:
-    """GET `url`, following redirects manually and SSRF-checking every hop."""
+) -> tuple[bytes, str | None]:
+    """GET `url` following redirects manually (SSRF-checking every hop) and reading
+    the body streamed with a hard size cap. Returns (content, content_type)."""
     for _ in range(max_redirects + 1):
         _assert_public_url(url)
-        response = await client.get(url)
-        if not response.is_redirect:
-            return response
-        location = response.headers.get("location")
-        if not location:
-            return response
-        url = urljoin(url, location)
+        async with client.stream("GET", url) as response:
+            if response.is_redirect and response.headers.get("location"):
+                url = urljoin(url, response.headers["location"])
+                continue
+            response.raise_for_status()
+            declared = response.headers.get("content-length")
+            if declared and int(declared) > settings.max_upload_bytes:
+                raise ValueError("Remote file is too large.")
+            return await _read_capped(response), response.headers.get("content-type")
     raise ValueError("Too many redirects for the remote file.")
 
 
@@ -91,6 +110,7 @@ async def load_dataframe_from_request(
     if upload is not None:
         logger.info("loading_uploaded_file filename=%s sheet_name=%s", upload.filename, sheet_name)
         content = await upload.read()
+        _assert_within_size_limit(len(content))
         return _load_dataframe_from_bytes(
             content,
             filename=upload.filename or "journal.csv",
@@ -107,11 +127,10 @@ async def load_dataframe_from_request(
     ) as client:
         try:
             logger.info("loading_remote_file url=%s sheet_name=%s", file_url, sheet_name)
-            response = await _get_following_redirects(client, file_url)
-            response.raise_for_status()
-            resolved_filename = _resolve_remote_filename(file_url, response.headers.get("content-type"))
+            content, content_type = await _fetch_public_file(client, file_url)
+            resolved_filename = _resolve_remote_filename(file_url, content_type)
             return _load_dataframe_from_bytes(
-                response.content,
+                content,
                 filename=resolved_filename,
                 sheet_name=sheet_name,
             )
