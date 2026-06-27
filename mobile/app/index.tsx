@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
   },
   pages: { flex: 1 },
   // Active screen fills the area; hidden ones stay mounted but unpainted.
-  page: { ...StyleSheet.absoluteFillObject },
+  // absoluteFillObject was dropped from RN 0.85's StyleSheet types — inline it.
+  page: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   hidden: { display: "none" },
 });

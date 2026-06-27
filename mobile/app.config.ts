@@ -37,7 +37,7 @@ export default {
         backgroundColor: "#000000",
       },
     },
-    plugins: ["expo-router", "expo-sqlite"],
+    plugins: ["expo-router", "expo-sqlite", "expo-font", "expo-sharing", "expo-status-bar"],
     extra: {
       apiBaseUrl: backendUrl,
       eas: {
